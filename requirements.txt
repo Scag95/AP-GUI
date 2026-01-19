@@ -1,0 +1,6 @@
+openseespy
+matplotlib
+numpy
+pandas
+pyqt6
+pyqtgraph
