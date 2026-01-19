@@ -1,30 +1,19 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow,QLabel,QVBoxLayout,QWidget
+from PyQt6.QtWidgets import QApplication
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        
-        self.setWindowTitle("AP-GUI")
-        self.resize(1200,800) #Tamaño de la ventana
+#Importamos la clasee desde su ubicación en src/ui/
+from src.ui.main_window import MainWindow
 
-        # Widget central
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        # Layout principal
-        layout = QVBoxLayout(central_widget)
-        
-        # Un texto de prueba
-        label = QLabel("Bienvenido al entorno de cálculo")
-        layout.addWidget(label)
-        # Aquí añadiremos luego el área de dibujo y barras de herramientas
 def main():
+    # 1. Crear la apliación Qt 
     app = QApplication(sys.argv)
+
+    #2 Instaciar la ventana principal
     window = MainWindow()
     window.show()
-    sys.exit(app.exec())
+
+    #3 Entrar en el bucle de eventos
+    sys.exit(app.exec())    
+
 if __name__ == "__main__":
     main()
-
-
