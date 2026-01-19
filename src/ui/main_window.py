@@ -1,5 +1,8 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow,QLabel,QVBoxLayout,QWidget
-from PyQt6.QtGui import QAction 
+from PyQt6.QtWidgets import QMainWindow
+from src.ui.menus.file_menu import FileMenu
+from src.ui.menus.define_menu import DefineMenu
+
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -8,25 +11,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("AP-GUI")
         self.resize(1200,800) #Tamaño de la ventana
 
-        # Llamamos a las funciones del MainWindow
-        self._setup_ui()
-        self._create_menu()
+        bar = self.menuBar()
 
+        self.file_menu = FileMenu(self)
+        bar.addMenu(self.file_menu)
 
-    def _setup_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-    
-    def _create_menu(self):
-    #Definición de barra de tareas
-        menu = self.menuBar()
-        file_menu = menu.addMenu("&Archivo")
-        define_menu = menu.addMenu("Definir")
-        # Definición de Botones dentro del menú
-        button_materials = QAction("Materiales",self)
-        button_sections = QAction("Secciones",self)
-        define_menu.addAction(button_materials)
-        define_menu.addAction(button_sections)
+        self.define_menu =DefineMenu(self)
+        bar.addMenu(self.define_menu)
+
 
 
 
