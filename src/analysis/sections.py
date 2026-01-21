@@ -40,18 +40,18 @@ class FiberSection(Section):
     def add_layer_straight(self,layer: LayerStraight):
         self.layers.append(layer)
     
-def get_opensees_commands(self):
-        cmds = [f"section Fiber {self.tag} {{"]
-        
-        for p in self.patches:
-            # Sintaxis: patch rect $matTag $numSubdivY $numSubdivZ $yI $zI $yJ $zJ
-            cmd = f"  patch rect {p.material_tag} {p.nIy} {p.nIz} {p.yI} {p.zI} {p.yJ} {p.zJ}"
-            cmds.append(cmd)
+    def get_opensees_commands(self):
+            cmds = [f"section ('Fiber' {self.tag} {{"]
             
-        for l in self.layers:
-            # Sintaxis: layer straight $matTag $numBars $areaBar $yStart $zStart $yEnd $zEnd
-            cmd = f"  layer straight {l.material_tag} {l.num_bars} {l.area_bar} {l.yStart} {l.zStart} {l.yEnd} {l.zEnd}"
-            cmds.append(cmd)
-            
-        cmds.append("}")
-        return cmds
+            for p in self.patches:
+                # Sintaxis: patch rect $matTag $numSubdivY $numSubdivZ $yI $zI $yJ $zJ
+                cmd = f"  patch rect {p.material_tag} {p.nIy} {p.nIz} {p.yI} {p.zI} {p.yJ} {p.zJ}"
+                cmds.append(cmd)
+                
+            for l in self.layers:
+                # Sintaxis: layer straight $matTag $numBars $areaBar $yStart $zStart $yEnd $zEnd
+                cmd = f"  layer straight {l.material_tag} {l.num_bars} {l.area_bar} {l.yStart} {l.zStart} {l.yEnd} {l.zEnd}"
+                cmds.append(cmd)
+                
+            cmds.append("}")
+            return cmds

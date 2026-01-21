@@ -1,32 +1,52 @@
-# Contexto para Nueva Sesión de Chat (AP-GUI)
+# Context Transfer: AP-GUI Project State
+## Role Configuration
+You are a Python/PyQt6 architecture assistant acting as a technical instructor. The user is learning OOP concepts during implementation. Do NOT write code directly unless explicitly requested. Provide step-by-step guidance, explain concepts, and let the user implement the code.
 
-**Rol Antigravity**: Eres un **profesor** experto en Python y Arquitectura de Software.
-**Regla de Oro**: 🎓 **No des el código final de inmediato**. Explica el concepto, sugiere la estructura y guía al usuario para que él lo escriba. Corrige sus errores con paciencia.
+## Project Specifications
+- **Purpose**: GUI application for OpenSees structural analysis engine.
+- **Stack**: Python 3.12, PyQt6.
+- **Architecture**: Strict separation between `src/analysis/` (business logic) and `src/ui/` (presentation).
+- **Naming Convention**: 
+  - Variables/code: English.
+  - UI text/comments: Spanish.
+  - All user-facing strings must be in Spanish.
 
-## Estado Actual del Proyecto
-Estamos construyendo **AP-GUI**, una interfaz gráfica para **OpenSees** (motor de cálculo estructural) usando **PyQt6**.
+## Current Implementation Status
+### Completed (Session 2026-01-21)
+1. **Sections Module (Logic & UI)**:
+   - `ProjectManager` updated to handle `Section` objects (add, delete, get_all).
+   - `src/ui/widgets/section_forms.py`: Created reusable `SectionForm` widget for input data.
+   - `src/ui/dialogs/section_dialog.py` fully functional:
+     - **Add Section**: Calculates geometry coords for `RectPatch` and `LayerStraight` based on user input (b, h, cover, reinforced bars). Creates `FiberSection` objects.
+     - **Delete Section**: Removes from manager and UI list.
+     - **Load Sections**: Correctly repopulates list using stored object names.
+   - `src/analysis/sections.py`: Fixed indentation of `get_opensees_commands`.
 
-- **Entorno**: Python 3.12 (venv configurado).
-- **Arquitectura**: Separación estricta entre Lógica (`src/analysis`) y Vista (`src/ui`).
-- **Idiomas**: Variables y Código en **Inglés**. Interfaz de usuario y comentarios en **Español**.
+### Pending Tasks (Priority Order)
+1. **Section Visualization (User's Goal for Next Session)**:
+   - Create a visualization widget to draw the Cross-Section.
+   - Requirements:
+     - Draw the Concrete `RectPatch` (Rectangle).
+     - Draw the Steel Bars from `LayerStraight` (Points/Circles).
+   - Potential Library: `pyqtgraph` (preferred for speed/interaction) or `Matplotlib`.
+   - Integration: Add this viewer inside `SectionDialog` or Main Window to preview creation.
 
-### Lo que ya funciona:
-1.  **Lanzador**: `main.py` arranca la aplicación correctamente.
-2.  **Menús**: Sistema modular en `src/ui/menus/`. Funciona "Archivo -> Salir" y "Definir -> Materiales".
-3.  **Materiales (Backend)**: Clases `Material`, `Concrete01`, `Steel01` definidas en `src/analysis/materials.py`.
-4.  **Materiales (UI)**: `MaterialDialog` (usando `QStackedWidget`) permite crear materiales y rellenar sus propiedades.
+2. **Persistence**:
+   - Save/Load project state (Materials + Sections) to JSON.
 
-### El Problema Actual:
-Los materiales se guardan **localmente** dentro de `MaterialDialog`. Si cerramos la ventana o intentamos acceder desde otro sitio (ej. Sección), no existen.
+3. **Analysis Integration**:
+   - Start connecting logical objects to actual OpenSees Tcl script generation.
 
-## Objetivo de la Próxima Sesión
-**Implementar un `ProjectManager` (Singleton).**
+## Technical Context for Next Session
+- **Files of Interest**: 
+  - `src/ui/dialogs/section_dialog.py`: Will need to host the new graph widget.
+  - `src/analysis/sections.py`: Source of geometry data (`yI, zI` etc.) to be plotted.
+  - `src/ui/widgets/section_forms.py`: Input source reference.
+- **Key Concepts to Teach**: 
+  - **Custom Painting/Plotting**: How to translate our data models (Patches/Layers) into visual items (Rects/ScatterPlots).
+  - **Observer Pattern (Optional)**: Updating the plot when form values change.
 
-1.  Crear una clase central que viva toda la ejecución del programa.
-2.  Mover la lógica de almacenamiento de `MaterialDialog` a `ProjectManager`.
-3.  Asegurar que cualquier parte de la app pueda decir `ProjectManager.get_materials()`.
-
-## Archivos Clave
-- `src/ui/dialogs/material_dialog.py`: Aquí está la lógica de guardado temporal que hay que refactorizar.
-- `src/analysis/materials.py`: Definición de clases de materiales.
-- `src/analysis/manager.py`: (Aún no existe o está vacío) Aquí irá el nuevo código.
+## User Status
+- User has successfully coupled the UI inputs with the Domain Logic (Creation of objects).
+- User is comfortable with `PyQt6` layouts and basic signals.
+- Next challenge: Graphical representation of data structures.

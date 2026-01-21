@@ -1,62 +1,152 @@
+import math
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
-                             QListWidget, QPushButton, QWidget, QLabel,
-                             QComboBox,QStackedWidget,QListWidgetItem, QFormLayout,
-                             QDoubleSpinBox, QSpinBox, QComboBox, QGroupBox)
+                             QListWidget, QPushButton,QListWidgetItem)
 from PyQt6.QtCore import Qt
 
 from src.analysis.manager import ProjectManager
-from src.analysis.materials import Concrete01, Steel01
+from src.ui.widgets.section_forms import SectionForm
+from src.analysis.sections import FiberSection, RectPatch, LayerStraight
 
 class SectionDialog(QDialog):
     def __init__(self,parent=None):
         super().__init__(parent)
         self.setWindowTitle("Definir Secciones")
         self.resize(800,600)
-
+        
         #Centrar ventana al centro de la pantalla
         qr = self.frameGeometry()
         cp = self.screen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
-        layout = QFormLayout(self)
+ 
+        self.main_layout = QHBoxLayout(self)
+
+        #Panel Izquierdo (Lista)
+        self.left_panel_layout = QVBoxLayout()
+        self.sections_list  = QListWidget()
+        self.left_panel_layout.addWidget(self.sections_list)
+
+        #Botones de control
+        self.btn_add = QPushButton("Añadir sección")
+        self.btn_delete =QPushButton("Borrar sección")
+        self.left_panel_layout.addWidget(self.btn_add)
+        self.left_panel_layout.addWidget(self.btn_delete)
+
+        #Añadimos el Panel izquierdo al layout principal
+        self.main_layout.addLayout(self.left_panel_layout, stretch=1)
+
+        #Añadimos el Panel derecho al layout principal
+        self.right_panel_layout = QVBoxLayout()
+        self.form_section = SectionForm()
+        self.right_panel_layout.addWidget(self.form_section)
+
+        #Añadimos el panel derefcho a layout principal
+        self.main_layout.addLayout(self.right_panel_layout, stretch=2)
+
+        #conectamos los botones
+        self.btn_add.clicked.connect(self.add_section)
+        self.btn_delete.clicked.connect(self.delete_section)
+
+        #cargar secciones existentes
+        self.load_sections()
+
+    def add_section(self):
 
 
-        #Base
-        self.spin_b = QSpinBox()
-        self.spin_b.setRange(0,10000)
-        self.spin_b.setSuffix(" mm")
-        self.spin_b.setValue(300)
-        layout.addRow("base de la sección",self.spin_b)
-        #Altura
-        self.spin_h = QSpinBox()
-        self.spin_h.setRange(0,10000)
-        self.spin_h.setSuffix(" mm")
-        self.spin_h.setValue(300)
-        layout.addRow("altura de la sección",self.spin_h)
+        #1. Recolectar la información de la sección
+        data = self.form_section.get_data()
 
-        self.combo_concrete = QComboBox()
-        self.combo_steel = QComboBox()
+        #Validamos que tengamos materiales creados
+        if data['concrete'] is None or data['steel'] is None:
+            print("Error: Debes de tener materiales")
+            return
         
-        # Llenar los combos
-        self.populate_materials()
+        #2. Preramos ls variables
+        b = data['b']
+        h = data['h']
+        cover = data['cover'] 
+        mat_conc = data['concrete']
+        mat_steel = data['steel']
         
-        layout.addRow("Material Concreto:", self.combo_concrete)
-        layout.addRow("Material Acero:", self.combo_steel)
+        # 3. Crear la Sección
+        #Llamamos del ProjectManager el tag del material.
+        manager = ProjectManager.instance()
+        tag = manager.get_next_section_tag()
+        
+        # Si el usuario no puso nombre, generamos uno
+        name = self.form_section.textbox_name.text()
+        if not name:
+            name = f"Sec_{b}x{h}"
+
+        section = FiberSection(tag, name)
+
+        #4. Creamos la geometría de la sección (Concreto)
+        section.add_rect_patch(RectPatch(
+            material_tag = mat_conc,
+            yI= -h/2, zI= -b/2,
+            yJ=  h/2, zJ=  b/2
+        ))
+
+        #5. Creamos las barras de acero
+        #Capa superior
+        if data['top_qty'] >0:
+            area_top = (math.pi * (data['top_diam']**2))/4
+            section.add_layer_straight(LayerStraight(
+                material_tag = mat_steel,
+                num_bars = data['top_qty'],
+                area_bar = area_top,
+                yStart = h/2 - cover, zStart = -b/2 + cover,
+                yEnd   = h/2 - cover, zEnd   =  b/2 - cover
+            ))
+        # Capa INFERIOR
+        if data['bot_qty'] > 0:
+            area_bot = (math.pi * (data['bot_diam']**2)) / 4
+            section.add_layer_straight(LayerStraight(
+                material_tag=mat_steel,
+                num_bars=data['bot_qty'],
+                area_bar=area_bot,
+                yStart= -h/2 + cover, zStart= -b/2 + cover,
+                yEnd  = -h/2 + cover, zEnd  =  b/2 - cover
+            ))
 
 
 
-    def populate_materials(self):
-        self.combo_concrete.clear()
-        self.combo_steel.clear()
 
-        materials = ProjectManager.instance().get_all_materials()
+        # 6. Guardar y Actualizar UI
+        manager.add_section(section)
+        #Acutalizar la lista en la UI
+        display_text = f"{tag}-{name}"
 
-        for mat in materials:
-            display_text = f"{mat.tag} - {mat.name} ({mat.__class__.__name__})"
+        #Guardamos el ID del material en una "mochila"
+        item=QListWidgetItem(display_text)
+        item.setData(Qt.ItemDataRole.UserRole, tag)
+        self.sections_list.addItem(item)
 
-            if isinstance(mat, Concrete01):
-                self.combo_concrete.addItem(display_text, mat.tag)
+        print(f"[DEBUG] Sección Creada: {name}")
 
-            elif isinstance(mat, Steel01):
-                self.combo_steel.addItem(display_text, mat.tag)
+    def delete_section(self):
+        current_row = self.sections_list.currentRow()
+        manager = ProjectManager.instance()
+        if current_row >=0:
+            item = self.sections_list.item(current_row)
+            tag_to_delete = item.data(Qt.ItemDataRole.UserRole)
+
+            if tag_to_delete is not None:
+                manager.delete_section(tag_to_delete)
+            self.sections_list.takeItem(current_row)
+            del item
+
+    def load_sections(self):
+        self.sections_list.clear()
+        manager = ProjectManager.instance()
+        sections = manager.get_all_sections()
+
+        for  section in sections:
+            display_text = f"{section.tag}-{section.name}"
+            #Guardamos el ID del material en una "mochila"
+            item=QListWidgetItem(display_text)
+            item.setData(Qt.ItemDataRole.UserRole, section.tag)
+            self.sections_list.addItem(item)
+
+ 
 
