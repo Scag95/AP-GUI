@@ -25,7 +25,7 @@ class MaterialDialog(QDialog):
         self.left_panel_layout = QVBoxLayout()
 
         self.materials_list  = QListWidget()
-        self.left_panel_layout.addWidget(self.materials_list )
+        self.left_panel_layout.addWidget(self.materials_list)
 
         #Selector de tipo de material
         self.combo_type =QComboBox()

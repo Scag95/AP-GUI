@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QLabel
+from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox
 
 class ConcreteForm(QWidget):
     def __init__(self):

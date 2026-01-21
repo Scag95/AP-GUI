@@ -2,37 +2,44 @@
 
 ## 🔴 Prioridad 1: Arquitectura de Datos (Centralización)
 El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central.
-- [ ] **Crear `src/analysis/manager.py`**:
-    - [ ] Definir clase `ProjectManager` (Patrón Singleton).
-    - [ ] Implementar listas para materiales, secciones, nodos y elementos.
-    - [ ] Métodos para añadir/borrar/obtener items.
-- [ ] **Refactorizar `MaterialDialog`**:
-    - [ ] Que al dar a "Añadir", llame a `ProjectManager.instance().add_material(...)` en lugar de guardarlo en `self.materials_data`.
+- [x] **Crear `src/analysis/manager.py`**:
+    - [x] Definir clase `ProjectManager` (Patrón Singleton).
+    - [x] Implementar listas para materiales y secciones.
+    - [x] Métodos para añadir/borrar/obtener items.
+    - [ ] Implementar listas para nodos y elementos (Pendiente).
+- [x] **Refactorizar `MaterialDialog`**:
+    - [x] Que al dar a "Añadir", llame a `ProjectManager` en lugar de guardarlo localmente.
 
 ## 🟡 Prioridad 2: Definición de Secciones
-- [ ] **Backend (`src/analysis/sections.py`)**:
-    - [ ] Definir clase base `Section`.
-    - [ ] Implementar `RectangleSection` (b, h, material).
-    - [ ] Implementar `FiberSection` (composición avanzada).
-- [ ] **UI (`src/ui/dialogs/section_dialog.py`)**:
-    - [ ] Crear diálogo similar a Materiales.
-    - [ ] **Reto**: Incluir un `QComboBox` que lea los materiales disponibles del `ProjectManager`.
+- [x] **Backend (`src/analysis/sections.py`)**:
+    - [x] Definir clase base `Section`.
+    - [x] Implementar `FiberSection` (composición de parches y capas).
+    - [x] Lógica de generación de scripts OpenSees (`get_opensees_commands`).
+- [x] **UI (`src/ui/dialogs/section_dialog.py`)**:
+    - [x] Crear formulario de entrada (`SectionForm`).
+    - [x] Incluir `QComboBox` que lea los materiales del `ProjectManager`.
+    - [x] **Lógica de Creación**: Calcular coordenadas `y, z` para parches y barras basado validando inputs (b, h, recubrimiento).
 
 ## 🟢 Prioridad 3: Geometría y Visualización
+- [ ] **Visualización de Sección (`SectionDialog`)**:
+    - [ ] Crear widget gráfico (PyQtGraph/Matplotlib) para previsualizar la sección transversal.
+    - [ ] Dibujar rectángulo de concreto y puntos de acero según coordenadas generadas.
 - [ ] **Dibujo en `MainWindow`**:
     - [ ] Integrar `pyqtgraph` en el widget central.
     - [ ] Dibujar nodos y líneas (elementos) en tiempo real.
 - [ ] **Interacción Gráfica**:
-    - [ ] Poder seleccionar nodos con el ratón (Raycasting o similar).
+    - [ ] Poder seleccionar nodos con el ratón.
 
-## 🔵 Prioridad 4: Motor de Cálculo
+## 🔵 Prioridad 4: Motor de Cálculo y Persistencia
+- [ ] **Persistencia**:
+    - [ ] Guardar/Cargar proyecto completo (Materiales + Secciones) a archivo JSON.
 - [ ] **Generación de Modelo OpenSees**:
     - [ ] Método `run_analysis()` en el Manager.
-    - [ ] Traducir objetos Python -> Comandos OpenSees (`ops.node`, `ops.element`, etc.).
+    - [ ] Traducir objetos Python -> Comandos OpenSees.
 - [ ] **Visualización de Resultados**:
     - [ ] Graficar curva de Histéresis/Pushover.
     - [ ] Mostrar deformada.
 
 ## 🎓 Deuda Técnica / Mejoras
-- [ ] Corregir la lógica de borrado en `MaterialDialog` (actualmente solo borra de la lista visual).
-- [ ] Añadir validaciones (que fpc no sea negativo, etc.).
+- [ ] Añadir validaciones en los inputs (que valores no sean negativos, etc.).
+- [ ] Implementar edición de elementos existentes (no solo crear/borrar).
