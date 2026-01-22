@@ -12,41 +12,40 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
   - All user-facing strings must be in Spanish.
 
 ## Current Implementation Status
-### Completed (Session 2026-01-21)
-1. **Sections Module (Logic & UI)**:
-   - `ProjectManager` updated to handle `Section` objects (add, delete, get_all).
-   - `src/ui/widgets/section_forms.py`: Created reusable `SectionForm` widget for input data.
-   - `src/ui/dialogs/section_dialog.py` fully functional:
-     - **Add Section**: Calculates geometry coords for `RectPatch` and `LayerStraight` based on user input (b, h, cover, reinforced bars). Creates `FiberSection` objects.
-     - **Delete Section**: Removes from manager and UI list.
-     - **Load Sections**: Correctly repopulates list using stored object names.
-   - `src/analysis/sections.py`: Fixed indentation of `get_opensees_commands`.
+### Completed (Session 2026-01-22)
+1. **Visualization Module**:
+   - Implemented `src/ui/widgets/section_preview.py` using `pyqtgraph`.
+   - Drawing Logic: Renders concrete rect (gray/lines) and steel bars (red dots).
+   - Integration: Connected to `SectionDialog` for **Real-Time Preview** (updates on form change).
+   - Style: Engineering style axes (Blue Y-axis, Green Z-axis) fixed to the center.
+
+2. **Analysis Foundation**:
+   - Created `src/analysis/node.py`: Basic `Node` class with OpenSees command generation.
+   - Created `src/analysis/element.py`: `ForceBeamColumn` class connecting two nodes.
 
 ### Pending Tasks (Priority Order)
-1. **Section Visualization (User's Goal for Next Session)**:
-   - Create a visualization widget to draw the Cross-Section.
-   - Requirements:
-     - Draw the Concrete `RectPatch` (Rectangle).
-     - Draw the Steel Bars from `LayerStraight` (Points/Circles).
-   - Potential Library: `pyqtgraph` (preferred for speed/interaction) or `Matplotlib`.
-   - Integration: Add this viewer inside `SectionDialog` or Main Window to preview creation.
+1. **Data Management**:
+   - Update `ProjectManager` (`src/analysis/manager.py`) to store lists/dicts of `Node` and `Element` objects.
+   - Implement add/delete/get methods for these new entities.
 
-2. **Persistence**:
-   - Save/Load project state (Materials + Sections) to JSON.
+2. **Frame Generator (Wizard)**:
+   - Create a simplified tool to generate 2D Frames automatically.
+   - Inputs: Number of stories, number of bays, beam section, column section.
+   - Logic: Auto-generate the grid of Nodes and connect them with Elements.
 
-3. **Analysis Integration**:
-   - Start connecting logical objects to actual OpenSees Tcl script generation.
+3. **Global Visualization**:
+   - Visualize the generated structure (Lines and Points) in the `MainWindow`.
 
 ## Technical Context for Next Session
 - **Files of Interest**: 
-  - `src/ui/dialogs/section_dialog.py`: Will need to host the new graph widget.
-  - `src/analysis/sections.py`: Source of geometry data (`yI, zI` etc.) to be plotted.
-  - `src/ui/widgets/section_forms.py`: Input source reference.
-- **Key Concepts to Teach**: 
-  - **Custom Painting/Plotting**: How to translate our data models (Patches/Layers) into visual items (Rects/ScatterPlots).
-  - **Observer Pattern (Optional)**: Updating the plot when form values change.
+  - `src/analysis/manager.py`: Needs update for nodes/elements.
+  - `src/analysis/node.py` & `src/analysis/element.py`: Already created, ready to use.
+  - `TODO.md`: Contains the roadmap.
+- **Key Strategy**: 
+  - The user chose **Option 1 (Wizard)** for generating models initially. We will build a generator that populates the underlying Node/Element objects.
+  - We use `ForceBeamColumn` elements with "Lobatto" integration.
 
 ## User Status
-- User has successfully coupled the UI inputs with the Domain Logic (Creation of objects).
-- User is comfortable with `PyQt6` layouts and basic signals.
-- Next challenge: Graphical representation of data structures.
+- User has successfully integrated real-time graphics with PyQt signals.
+- User prefers a "Wizard" approach for model creation rather than manual drawing node-by-node.
+- Codebase is clean and modular.
