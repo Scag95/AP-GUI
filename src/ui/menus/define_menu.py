@@ -1,7 +1,10 @@
+from PyQt6.QtWidgets import QMessageBox
+from src.analysis.frame_generator import FrameGenerator
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 from src.ui.dialogs.material_dialog import MaterialDialog
 from src.ui.dialogs.section_dialog import SectionDialog
+from src.ui.dialogs.grid_dialog import gridDialog
 
 
 class DefineMenu(QMenu):
@@ -21,6 +24,10 @@ class DefineMenu(QMenu):
         #Conectar el boton con section_dialog
         self.action_sections.triggered.connect(self.open_section_dialog)
         self.addAction(self.action_sections)
+
+        grid_action = QAction("Generar Pórtico 2D", self)
+        grid_action.triggered.connect(self.show_grid_dialog)
+        self.addAction(grid_action)
         
     def open_material_dialog(self):
         dlg = MaterialDialog(self)
@@ -29,3 +36,27 @@ class DefineMenu(QMenu):
     def open_section_dialog(self):
         dlg = SectionDialog(self)
         dlg.exec()
+
+    def show_grid_dialog(self):
+        dialog = gridDialog(self)
+        if dialog.exec():
+            data = dialog.get_data()
+
+            generator = FrameGenerator()
+            try:
+                generator.generate_2d_frame(
+                    stories= data["stories"],
+                    bays=data["bays"],
+                    story_height=data["story_height"],
+                    bay_width=data["bay_width"],
+                    beam_sec_tag=data["beam_sec_tag"],
+                    col_sec_tag=data["col_sec_tag"]
+                )
+                QMessageBox.information(self, "Exito","Portico generado correctamente")
+                parent_window = self.parent()
+                if hasattr(parent_window, 'viz_widget'):
+                    parent_window.viz_widget.refresh_viz()
+            except Exception as e:
+                print(str(e))
+                QMessageBox.critical(self, "Error", f"Error generando pórtico: {str(e)}")
+                

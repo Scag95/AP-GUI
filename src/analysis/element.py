@@ -5,9 +5,9 @@ class Element:
         self.node_j = node_j # ID del nodo final
 
 class ForceBeamColumn(Element):
-    def __init__(self, tag, node_i, node_j, num_int_points=5, section_tag, transf_tag):
+    def __init__(self, tag, node_i, node_j, section_tag, transf_tag):
         super().__init__(tag, node_i, node_j)
-        self.num_int_points = num_int_points
+        self.num_int_points = 5
         self.section_tag = section_tag
         self.transf_tag = transf_tag
         

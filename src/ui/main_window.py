@@ -1,6 +1,9 @@
 from PyQt6.QtWidgets import QMainWindow
 from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
+from src.ui.widgets.structure_interactor import StructureInteractor
+
+
 
 
 
@@ -19,7 +22,8 @@ class MainWindow(QMainWindow):
         self.define_menu =DefineMenu(self)
         bar.addMenu(self.define_menu)
 
-
+        self.viz_widget = StructureInteractor()
+        self.setCentralWidget(self.viz_widget)
 
 
     

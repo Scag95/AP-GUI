@@ -4,7 +4,7 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 
 ## Project Specifications
 - **Purpose**: GUI application for OpenSees structural analysis engine.
-- **Stack**: Python 3.12, PyQt6.
+- **Stack**: Python 3.12, PyQt6, PyQtGraph.
 - **Architecture**: Strict separation between `src/analysis/` (business logic) and `src/ui/` (presentation).
 - **Naming Convention**: 
   - Variables/code: English.
@@ -12,40 +12,42 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
   - All user-facing strings must be in Spanish.
 
 ## Current Implementation Status
-### Completed (Session 2026-01-22)
-1. **Visualization Module**:
-   - Implemented `src/ui/widgets/section_preview.py` using `pyqtgraph`.
-   - Drawing Logic: Renders concrete rect (gray/lines) and steel bars (red dots).
-   - Integration: Connected to `SectionDialog` for **Real-Time Preview** (updates on form change).
-   - Style: Engineering style axes (Blue Y-axis, Green Z-axis) fixed to the center.
+### Completed (Session 2026-01-24)
+1. **Model Generation (Backend)**:
+   - Implemented `ProjectManager` updates to store/manage `Node` and `Element` objects.
+   - Created `src/analysis/frame_generator.py` ("The Wizard") to generate 2D frames (stories x bays) automatically.
+   - Fixed `Node` and `ForceBeamColumn` classes to be robust.
 
-2. **Analysis Foundation**:
-   - Created `src/analysis/node.py`: Basic `Node` class with OpenSees command generation.
-   - Created `src/analysis/element.py`: `ForceBeamColumn` class connecting two nodes.
+2. **Model Visualization (Frontend)**:
+   - Created `src/ui/widgets/structure_interactor.py`: A specialized widget using `pyqtgraph` to render the structure.
+   - Features: Draws elements as black lines and nodes as blue dots; supports zoom/pan.
+   - Integration: Set as the `CentralWidget` of `MainWindow`.
+
+3. **User Interface**:
+   - Implemented `GridDialog` (Wizard UI) for defining stories, bays, and dimensions.
+   - Connected `Define > Generar Pórtico 2D` menu to the generator and the visualizer.
 
 ### Pending Tasks (Priority Order)
-1. **Data Management**:
-   - Update `ProjectManager` (`src/analysis/manager.py`) to store lists/dicts of `Node` and `Element` objects.
-   - Implement add/delete/get methods for these new entities.
+1. **Graphical Interaction**:
+   - Implement **Mouse Selection**: Allow clicking on nodes/elements to select them in the `StructureInteractor`.
+   - Show properties of the selected item (e.g., in a side panel or tooltip).
 
-2. **Frame Generator (Wizard)**:
-   - Create a simplified tool to generate 2D Frames automatically.
-   - Inputs: Number of stories, number of bays, beam section, column section.
-   - Logic: Auto-generate the grid of Nodes and connect them with Elements.
+2. **OpenSees Analysis Engine**:
+   - Implement `run_analysis()` in `ProjectManager`.
+   - Create logic to translate the internal object model (`Node`, `Element`, `Section`, `Material`) into an OpenSees `.tcl` script or direct `openseespy` calls.
 
-3. **Global Visualization**:
-   - Visualize the generated structure (Lines and Points) in the `MainWindow`.
+3. **Result Visualization**:
+   - Once analysis runs, visualize the **Deformed Shape** and plot **Pushover Curves**.
 
 ## Technical Context for Next Session
 - **Files of Interest**: 
-  - `src/analysis/manager.py`: Needs update for nodes/elements.
-  - `src/analysis/node.py` & `src/analysis/element.py`: Already created, ready to use.
-  - `TODO.md`: Contains the roadmap.
+  - `src/ui/widgets/structure_interactor.py`: Needs update to handle mouse clicks (signals).
+  - `src/analysis/manager.py`: Will need methods to interact with OpenSees.
 - **Key Strategy**: 
-  - The user chose **Option 1 (Wizard)** for generating models initially. We will build a generator that populates the underlying Node/Element objects.
-  - We use `ForceBeamColumn` elements with "Lobatto" integration.
+  - We have a static model visible. Next step is making it interactive (selection) before moving to the complex physics engine.
+  - Maintain the "Instructor" persona: Challenge the user to implement the `mousePressEvent` or `scene().sigMouseClicked`.
 
 ## User Status
-- User has successfully integrated real-time graphics with PyQt signals.
-- User prefers a "Wizard" approach for model creation rather than manual drawing node-by-node.
-- Codebase is clean and modular.
+- User is very hands-on and prefers writing the code themselves.
+- User is comfortable with `PyQt6` layouts and basic `pyqtgraph`.
+- Project structure is well-maintained.

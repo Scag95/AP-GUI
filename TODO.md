@@ -6,9 +6,9 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Definir clase `ProjectManager` (Patrón Singleton).
     - [x] Implementar listas para materiales y secciones.
     - [x] Métodos para añadir/borrar/obtener items.
-    - [ ] **Implementar listas para nodos y elementos (Próxima Sesión)**:
-        - [ ] Actualizar `ProjectManager` con diccionarios para `nodes` y `elements`.
-        - [ ] Crear herramienta de generación automática de pórticos (Wizard).
+    - [x] **Implementar listas para nodos y elementos**:
+        - [x] Actualizar `ProjectManager` con diccionarios para `nodes` y `elements`.
+        - [x] Crear herramienta de generación automática de pórticos (Grid Wizard).
 - [x] **Refactorizar `MaterialDialog`**:
     - [x] Que al dar a "Añadir", llame a `ProjectManager` en lugar de guardarlo localmente.
 
@@ -26,9 +26,9 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
 - [x] **Visualización de Sección (`SectionDialog`)**:
     - [x] Crear widget gráfico (PyQtGraph/Matplotlib) para previsualizar la sección transversal.
     - [x] Dibujar rectángulo de concreto y puntos de acero según coordenadas generadas.
-- [ ] **Dibujo en `MainWindow`**:
-    - [ ] Integrar `pyqtgraph` en el widget central.
-    - [ ] Dibujar nodos y líneas (elementos) en tiempo real.
+- [x] **Dibujo en `MainWindow`**:
+    - [x] Integrar `pyqtgraph` en el widget central.
+    - [x] Dibujar nodos y líneas (elementos) en tiempo real.
 - [ ] **Interacción Gráfica**:
     - [ ] Poder seleccionar nodos con el ratón.
 
