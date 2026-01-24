@@ -16,10 +16,15 @@ class ProjectManager:
         #Base de datos. Guardamos el material.
         self.material = {}
         self.section = {}
+        self.node = {}
+        self.element = {}
 
         #Contador para los IDs automáticos
         self.next_material_tag = 1 
         self.next_section_tag = 1
+        self.next_node_tag = 1
+        self.next_element_tag = 1
+        
 
 
  ## Materiales ##   
@@ -61,4 +66,44 @@ class ProjectManager:
 
     def get_next_section_tag(self):
         return self.next_section_tag
-        
+
+## Nodos ## 
+    def add_node(self, node):
+        self.node[node.tag] = node
+
+        if node.tag >= self.next_node_tag:
+            self.next_node_tag = node.tag + 1
+
+    def get_node(self,tag):
+        return self.node.get(tag)
+
+    def delete_node(self,tag):
+        if tag in self.node:
+            del self.node[tag]
+    
+    def get_next_node_tag(self):
+        return self.next_node_tag
+
+    def get_all_nodes(self):
+        return list(self.node.values())
+
+
+## Elementos ## 
+    def add_element(self, element):
+        self.element[element.tag] = element
+
+        if element.tag >= self.next_element_tag:
+            self.next_element_tag = element.tag + 1
+
+    def get_element(self,tag):
+        return self.element.get(tag)
+
+    def delete_element(self,tag):
+        if tag in self.element:
+            del self.element[tag]
+   
+    def get_next_element_tag(self):
+        return self.next_element_tag
+
+    def get_all_elements(self):
+        return list(self.element.values())
