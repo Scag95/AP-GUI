@@ -14,6 +14,12 @@ class gridDialog(QDialog):
 
         self.init_ui()
 
+        #Centrar ventana al centro de la pantalla
+        qr = self.frameGeometry()
+        cp = self.screen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
     def init_ui(self):
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()

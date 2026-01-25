@@ -29,12 +29,13 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
 - [x] **Dibujo en `MainWindow`**:
     - [x] Integrar `pyqtgraph` en el widget central.
     - [x] Dibujar nodos y líneas (elementos) en tiempo real.
-- [ ] **Interacción Gráfica**:
-    - [ ] Poder seleccionar nodos con el ratón.
+- [x] **Interacción Gráfica**:
+    - [x] Poder seleccionar nodos con el ratón.
+    - [ ] Mostrar propiedades en Panel Lateral (DockWidget).
 
 ## 🔵 Prioridad 4: Motor de Cálculo y Persistencia
-- [ ] **Persistencia**:
-    - [ ] Guardar/Cargar proyecto completo (Materiales + Secciones) a archivo JSON.
+- [x] **Persistencia**:
+    - [x] Guardar/Cargar proyecto completo (Materiales + Secciones) a archivo JSON.
 - [ ] **Generación de Modelo OpenSees**:
     - [ ] Método `run_analysis()` en el Manager.
     - [ ] Traducir objetos Python -> Comandos OpenSees.

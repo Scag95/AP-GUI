@@ -1,5 +1,8 @@
-class ProjectManager:
+from PyQt6.QtCore import QObject, pyqtSignal
+
+class ProjectManager(QObject):
     _instance = None
+    dataChanged = pyqtSignal()
 
     @classmethod
     def instance(cls):
@@ -8,6 +11,7 @@ class ProjectManager:
         return cls._instance
 
     def __init__(self):
+        super().__init__()
         #Un pequeño seguro: si ya está inicializado no hacemos nada
         if hasattr(self,"initialized"):
             return
@@ -107,3 +111,77 @@ class ProjectManager:
 
     def get_all_elements(self):
         return list(self.element.values())
+
+
+## Guardar el projecto ##
+    def save_project(self, filename):
+        import json
+
+        data ={
+            "materials": [m.to_dict() for m in self.get_all_materials()],
+            "sections": [s.to_dict() for s in self.get_all_sections()],
+            "nodes": [n.to_dict() for n in self.get_all_nodes()],
+            "elements": [e.to_dict() for e in self.get_all_elements()]
+        }
+
+        try:
+            with open(filename, 'w') as f:
+                json.dump(data, f, indent = 4)
+            print(f"Proyecto guardado exitosamente en: {filename}")
+            return True
+        except Exception as e:
+            print(f"Error guardando proyecto: {e}")
+            return False
+
+    def load_project(self,filename):
+        import json
+        from src.analysis.materials import Concrete01, Steel01
+        from src.analysis.sections import FiberSection
+        from src.analysis.node import Node
+        from src.analysis.element import ForceBeamColumn
+
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+
+            #Limpiar estado actual
+            self.material = {}
+            self.section = {}
+            self.node = {}
+            self.element = {}
+
+            #1. Cargar Materiales
+            for m_data in data.get("materials",[]):
+                tipo = m_data.get("type")
+                if tipo == "Concrete01":
+                    mat = Concrete01.from_dict(m_data)
+                elif tipo == "Steel01":
+                    mat = Steel01.from_dict(m_data)
+                else:
+                    continue
+                self.add_material(mat)
+
+            #2. Cargar secciones
+            for s_data in data.get("sections",[]):
+                if s_data.get("type") == "FiberSection":
+                    sec = FiberSection.from_dict(s_data)
+                    self.add_section(sec)
+            
+            #3. Cargar Nodos
+            for n_data in data.get("nodes",[]):
+                node = Node.from_dict(n_data)
+                self.add_node(node)
+
+            #4. Cargar Elementos
+            for e_data in data.get("elements", []):
+                if e_data.get("type") == "ForceBeamColumn":
+                    element = ForceBeamColumn.from_dict(e_data)
+                    self.add_element(element)
+            
+            print(f"Projecto cargado: {len(self.node)} nodos, {len(self.element)} elementos")
+            self.dataChanged.emit()
+            return True
+
+        except Exception as e:
+            print(f"Error cargando projecto {e}")
+            return False
