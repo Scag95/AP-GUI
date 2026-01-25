@@ -11,6 +11,24 @@ class RectPatch:
         self.nIy = nIy
         self.nIz = nIz
 
+    def to_dict(self):
+        return{
+            "type": "RectPatch", # Etiqueta para saber qué es
+            "material_tag": self.material_tag,
+            "yI": self.yI,
+            "zI": self.zI,
+            "yJ": self.yJ,
+            "zJ": self.zJ,
+            "nIy": self.nIy,
+            "nIz": self.nIz
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["material_tag"], data["yI"], data["zI"],
+         data["yJ"], data["zJ"], data["nIy"], data["nIz"])
+
+
 class LayerStraight:
     def __init__(self, material_tag, num_bars, area_bar, yStart, zStart, yEnd, zEnd):
         self.material_tag = material_tag
@@ -22,11 +40,43 @@ class LayerStraight:
         self.yEnd = yEnd
         self.zEnd = zEnd
 
+    def to_dict(self):
+        return{
+            "type": "LayerStraight", # Etiqueta para saber qué es
+            "material_tag": self.material_tag,
+            "num_bars": self.num_bars,
+            "area_bar": self.area_bar,
+            "yStart": self.yStart,
+            "zStart": self.zStart,
+            "yEnd": self.yEnd,
+            "zEnd": self.zEnd
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            data["material_tag"], 
+            data["num_bars"], 
+            data["area_bar"],
+            data["yStart"], 
+            data["zStart"], 
+            data["yEnd"], 
+            data["zEnd"]
+        )
+
+
+
 #---------Clases Princpales -------        
 class Section:
     def __init__(self,tag,name):
         self.tag = tag
         self.name = name
+
+    def to_dict(self):
+        return{
+            "tag":self.tag,
+            "name":self.name
+        }
 
 class FiberSection(Section):
     def __init__(self,tag,name):
@@ -55,3 +105,24 @@ class FiberSection(Section):
                 
             cmds.append("}")
             return cmds
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "FiberSection"
+        data["patches"] = [p.to_dict() for p in self.patches]
+        data["layers"] = [l.to_dict() for l in self.layers]
+        return data
+    
+    @classmethod
+    def from_dict(cls, data):
+        new_sec = cls(data["tag"],data["name"])
+
+        for p_data in data.get("patches",[]):
+            patch = RectPatch.from_dict(p_data)
+            new_sec.add_rect_patch(patch)
+
+        for l_data in data.get("layers",[]):
+            layer = LayerStraight.from_dict(l_data)
+            new_sec.add_layer_straight(layer)
+        
+        return new_sec

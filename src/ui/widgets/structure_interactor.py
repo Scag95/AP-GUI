@@ -17,6 +17,7 @@ class StructureInteractor(QWidget):
 
         self.layout.addWidget(self.plot_widget)
         self.manager = ProjectManager.instance()
+        self.manager.dataChanged.connect(self.refresh_viz)
 
     def refresh_viz(self):
         self.plot_widget.clear()
@@ -40,15 +41,25 @@ class StructureInteractor(QWidget):
         if nodes:
             x_vals=[n.x for n in nodes]
             y_vals=[n.y for n in nodes]
+            data_vals = nodes
 
             scatter= pg.ScatterPlotItem(
                 x=x_vals,
                 y=y_vals,
+                data=data_vals,
                 size=8,
-                brush=pg.mkBrush('b')
+                brush=pg.mkBrush('b'),
+                pxMode=True,
+                hoverable = True
             )
+            scatter.sigClicked.connect(self._on_node_clicked)
             self.plot_widget.addItem(scatter)
 
         print("[DEBUG] Visualización actualizada.")
 
+    def _on_node_clicked(self, plot_item, points):
+
+        for p in points:
             
+            nodo = p.data()
+            print(f"Seleccionado Nodo {nodo.tag} (x={nodo.x}, y={nodo.y})")

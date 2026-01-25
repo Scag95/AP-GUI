@@ -25,6 +25,7 @@ class DefineMenu(QMenu):
         self.action_sections.triggered.connect(self.open_section_dialog)
         self.addAction(self.action_sections)
 
+        #Grid
         grid_action = QAction("Generar Pórtico 2D", self)
         grid_action.triggered.connect(self.show_grid_dialog)
         self.addAction(grid_action)

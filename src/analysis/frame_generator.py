@@ -32,11 +32,9 @@ class FrameGenerator:
             for j in range(stories):
                 node_bottom = grid_nodes[(i,j)]
                 node_top = grid_nodes [(i,j+1)]
-
                 ele_tag = self.manager.get_next_element_tag()
-
-            col = ForceBeamColumn(ele_tag, node_bottom.tag, node_top.tag, col_sec_tag, transf_tag)
-            self.manager.add_element(col)
+                col = ForceBeamColumn(ele_tag, node_bottom.tag, node_top.tag, col_sec_tag, transf_tag)
+                self.manager.add_element(col)
 
 
         #Vigas
