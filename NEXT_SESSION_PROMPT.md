@@ -23,48 +23,48 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 - Created `StructureInteractor` using `pyqtgraph` to visualize the model.
 - Connected Wizard -> Manager -> Visualizer.
 
-### Session 4 (2026-01-25) - Persistence & Interaction (COMPLETED)
+### Session 4 (2026-01-25) - Advanced Interaction (COMPLETED)
 1. **Persistence (JSON)**:
    - Implemented `to_dict()`/`from_dict()` in all analysis classes (`Node`, `Material`, `Section`, `Element`).
    - Implemented `ProjectManager.save_project()` and `load_project()`.
    - Connected `FileMenu` to these methods using `QFileDialog`.
+
+### Session 5 (2026-01-25) - Advanced Interaction (COMPLETED)
+1. **Visual Feedback**:
+   - Implemented `_on_node_clicked` and `_deselect_all` in `StructureInteractor`.
+   - Selected nodes turn RED and show a text label with their ID.
+   - Clicking on the background clears the selection.
    
-2. **Architecture Refactor (Signals)**:
-   - Modified `ProjectManager` to inherit from `QObject`.
-   - Implemented `dataChanged` signal to notify UI of changes.
-   - `StructureInteractor` now auto-refreshes when Manager emits signal.
+2. **Properties Panel (DockWidget)**:
+   - Created `PropertiesPanel` (QDockWidget) + `QStackedWidget` for modular forms.
+   - Created `NodeForms` to view and edit Node coordinates (X, Y).
+   - Implemented CLEAN architecture with signals: `NodeForm.dataChanged` -> `PropertiesPanel.dataChanged` -> `MainWindow.refresh_project`.
+   - Editing a node in the panel instantly updates the visualization.
 
-3. **Interaction**:
-   - Implemented `_on_node_clicked` in `StructureInteractor`.
-   - Enabled `hoverable=True` and `pxMode=True` for nodes.
-   - Added `data` field to `ScatterPlotItem` to store `Node` objects.
-   - Implemented visual feedback: Node turns RED upon selection (console prints TAG).
-
-4. **Bugfixes**:
-   - Fixed indentation error in `frame_generator.py` that caused missing columns in base floor.
-   - Fixed `dict object is not callable` error in `load_project`.
+3. **Bugfixes**:
+   - Fixed `AttributeError: NoneType has no attribute updateSpots` when refreshing viz with a selected node (added selection reset logic).
 
 ## Pending Tasks (Priority Order)
-### 1. Advanced Interaction (Next Session Primary Goal)
-- **Visual Feedback**: Ensure only ONE node is red at a time (currently logic exists but verify reset).
-- **Property Panel**: 
-  - Create a DockWidget or SidePanel in `MainWindow`.
-  - Display properties (x, y, tag) of the selected node/element.
-  - Allow editing selected item properties (e.g., move a node).
+### 1. OpenSees Analysis Engine (The "Brain") - NEXT TARGET
+- **Translator**: Create logic to translate the internal object model (`Node`, `Element`, `Section`, `Material`) into OpenSees commands.
+   - Create `src/analysis/opensees_translator.py`?
+- **Execution**: Run the analysis using `openseespy` or calling `opensees.exe`.
+- **Output Parsing**: Capture the results (displacements, forces).
 
-### 2. OpenSees Analysis Engine (The "Brain")
-- Implement `run_analysis()` in `ProjectManager`.
-- **Translator**: Create logic to translate the internal object model (`Node`, `Element`, `Section`, `Material`) into OpenSees commands (`openseespy` or `.tcl`).
-- **Execution**: Run the analysis and capture output.
-
-### 3. Result Visualization
-- Once analysis runs, visualize the **Deformed Shape**.
+### 2. Result Visualization
+- Once analysis runs, visualize the **Deformed Shape** (Mode Shapes).
 - Plot **Pushover Curves** (Base Shear vs Roof Displacement).
+
+### 3. More Interaction
+- Implement `ElementForm` in `properties_forms.py` to edit Element properties.
+- Add deletion (Delete key) for selected nodes/elements.
 
 ## Technical Context for Next Session
 - **Key Files**: 
   - `src/ui/widgets/structure_interactor.py`: Where selection logic lives.
-  - `src/ui/main_window.py`: Where we likely need to add the Property Panel.
+  - `src/ui/widgets/properties_panel.py`: Where editing logic lives.
   - `src/analysis/manager.py`: The brain that will eventually call OpenSees.
-- **New Resource**: `ARCHITECTURE.md` contains the updated Mermaid diagrams of the system.
-- **User Status**: User is very hands-on. Loves "The Golden Rule" (don't write code for them). Prefers clear explanation of logic -> User writes code -> We debug together.
+- **New Architecture components**:
+  - `PropertiesPanel` communicates with `MainWindow` via signals.
+  - `StructureInteractor` emits `nodeSelected(node)` and `selectionCleared()`.
+- **User Status**: User is mastering PyQt signals/slots and modular UI design. Ready for the heavy backend logic (OpenSees).

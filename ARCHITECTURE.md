@@ -15,12 +15,14 @@ graph TD
     Main[MainWindow]
     Manager["ProjectManager <br/> (Singleton)"]
     Viz["StructureInteractor <br/> (PyQtGraph)"]
+    Props["PropertiesPanel <br/> (DockWidget)"]
     
     %% Subsistemas UI
     subgraph UI [src/ui]
         Menus[File/Define Menu]
         Dialogs[Wizard/Material Dialogs]
         Viz
+        Props
     end
     
     %% Subsistemas Lógica
@@ -37,6 +39,7 @@ graph TD
     %% Flujo de Comandos (Flechas Sólidas)
     Menus -->|1. Llamada| Manager
     Dialogs -->|1. Llamada| Manager
+    Props -->|1. Modifica| Nodes
     
     %% Gestión de Datos
     Manager -->|Almacena| Nodes
@@ -47,14 +50,18 @@ graph TD
     %% Flujo de Eventos (Flechas Punteadas)
     Manager -.->|2. Signal: dataChanged| Viz
     Viz -->|3. Lee Datos| Manager
+    Viz -.->|Select| Props
+    Props -.->|Signal: dataChanged| Main
+    Main -.->|Refresh| Manager
 
     %% Dependencias
     Main --> Menus
     Main --> Viz
+    Main --> Props
 ```
 
 ## 🧩 Mapa Detallado de Clases y Métodos
-Detalle de las funciones implementadas hasta la fecha (Sesión de Persistencia).
+Detalle de las funciones implementadas hasta la fecha.
 
 ```mermaid
 classDiagram
@@ -62,25 +69,13 @@ classDiagram
     class ProjectManager {
         +instance() ProjectManager
         +dataChanged Signal
-        %% Materiales
-        +add_material(mat)
-        +get_material(tag)
-        +get_all_materials()
-        %% Secciones
-        +add_section(sec)
-        +get_section(tag)
-        +get_all_sections()
-        %% Nodos
-        +add_node(node)
-        +get_node(tag)
+        %% Materiales/Secciones/Nodos/Elementos
         +get_all_nodes()
-        %% Elementos
-        +add_element(ele)
-        +get_element(tag)
         +get_all_elements()
+        +add_node(node)
         %% Persistencia
-        +save_project(filename) bool
-        +load_project(filename) bool
+        +save_project(filename)
+        +load_project(filename)
     }
 
     %% --- MODEL ---
@@ -88,108 +83,61 @@ classDiagram
         +int tag
         +float x
         +float y
-        +to_dict() dict
-        +from_dict(data) Node
     }
 
     class Element {
         +int tag
         +int node_i
         +int node_j
-        +to_dict() dict
-        +from_dict(data) Element
-    }
-
-    class ForceBeamColumn {
-        +int section_tag
-        +int transf_tag
-        +get_opensees_command() str
-    }
-
-    Element <|-- ForceBeamColumn
-
-    class FiberSection {
-        +add_rect_patch()
-        +add_layer_straight()
-        +get_opensees_commands()
-        +to_dict() dict
-        +from_dict(data) FiberSection
-    }
-
-    class Concrete01 {
-        +to_dict()
-        +from_dict()
-    }
-    class Steel01 {
-        +to_dict()
-        +from_dict()
     }
 
     %% --- UI ---
     class MainWindow {
-        +FileMenu file_menu
-        +DefineMenu define_menu
         +StructureInteractor viz_widget
+        +PropertiesPanel props_panel
+        +refresh_project()
     }
 
     class StructureInteractor {
         +refresh_viz()
-        +_on_node_clicked(plot, points)
+        +_on_node_clicked()
+        +nodeSelected Signal
+        +selectionCleared Signal
     }
     
-    class FileMenu {
-        +open_save_dialog()
-        +open_load_dialog()
-    }
-    
-    class DefineMenu {
-        +open_material_dialog()
-        +open_section_dialog()
-        +show_grid_dialog()
+    class PropertiesPanel {
+        +QStackedWidget stack
+        +NodeForm node_form
+        +show_node(node)
+        +dataChanged Signal
     }
 
-    class FrameGenerator {
-        +generate_2d_frame(stories, bays, ...)
+    class NodeForm {
+        +load_node(node)
+        +apply_changes()
+        +dataChanged Signal
     }
 
     %% --- RELACIONES ---
     MainWindow *-- StructureInteractor
-    MainWindow *-- FileMenu
-    MainWindow *-- DefineMenu
-    DefineMenu ..> FrameGenerator : Usa
-    StructureInteractor ..> ProjectManager : Escucha Señales
-    FrameGenerator ..> ProjectManager : Añade Datos
+    MainWindow *-- PropertiesPanel
+    PropertiesPanel *-- NodeForm
+    StructureInteractor ..> PropertiesPanel : Connect (Select)
+    PropertiesPanel ..> MainWindow : Connect (Changed)
 ```
 
-## 🔄 Flujo de Datos Actual (Ej: Cargar Proyecto)
+## 🔄 Flujo de Selección y Edición
+Como interactúan los componentes cuando el usuario edita un nodo:
 
-1.  **Usuario** hace clic en `Archivo > Cargar`.
-2.  `FileMenu` abre diálogo y obtiene ruta del archivo.
-3.  `FileMenu` llama a `ProjectManager.load_project(ruta)`.
-4.  `ProjectManager` lee el JSON, instancia objetos (`Node`, `Element`, etc.) y los guarda.
-5.  `ProjectManager` emite la señal **`dataChanged`**.
-6.  `StructureInteractor` recibe la señal y ejecuta `refresh_viz()`.
-7.  `StructureInteractor` pide la lista de nodos/elementos al `ProjectManager` y repinta la pantalla.
+1.  **Selección**:
+    *   Usuario hace clic en un Nodo en `StructureInteractor`.
+    *   `StructureInteractor` emite `nodeSelected(node)`.
+    *   `PropertiesPanel` recibe la señal, muestra `NodeForm` y carga los datos (`x, y`).
 
-## 💾 Persistencia
-Los objetos saben guardarse y cargarse a sí mismos mediante diccionarios:
-- `to_dict()`: Objeto -> Diccionario (para JSON).
-- `from_dict()`: Diccionario -> Objeto.
-
-El `ProjectManager` orquesta esto iterando sobre sus listas.
-
-## 🎨 Sistema de Selección (En Progreso)
-```mermaid
-sequenceDiagram
-    participant User
-    participant Plot as Interactor (ScatterPlot)
-    participant Viz as StructureInteractor
-    participant Mgr as ProjectManager
-
-    User->>Plot: Clic en Nodo
-    Plot->>Viz: Signal: sigClicked
-    Viz->>Viz: Identifica nodo (p.data)
-    Viz->>Viz: selected_node = nodo.tag
-    Viz->>Viz: refresh_viz() (Pinta de rojo)
-    Note over Viz: En el futuro, aquí pediremos<br/>datos extra al Manager
-```
+2.  **Edición**:
+    *   Usuario cambia `x` a `5.0` y pulsa "Aplicar".
+    *   `NodeForm` actualiza el objeto `node.x = 5.0` directamente.
+    *   `NodeForm` emite `dataChanged`.
+    *   `PropertiesPanel` re-emite `dataChanged`.
+    *   `MainWindow` recibe la señal y llama a `ProjectManager.instance().dataChanged.emit()`.
+    *   `StructureInteractor` se entera del cambio y repinta todo (el nodo se mueve).

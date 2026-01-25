@@ -30,8 +30,10 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Integrar `pyqtgraph` en el widget central.
     - [x] Dibujar nodos y líneas (elementos) en tiempo real.
 - [x] **Interacción Gráfica**:
-    - [x] Poder seleccionar nodos con el ratón.
-    - [ ] Mostrar propiedades en Panel Lateral (DockWidget).
+    - [x] Poder seleccionar nodos con el ratón (Feedback visual Rojo).
+    - [x] Mostrar etiquetas de ID al seleccionar.
+    - [x] Mostrar propiedades en Panel Lateral (DockWidget).
+    - [x] **Edición**: Modificar coordenadas de nodos desde el panel y refrescar gráfico.
 
 ## 🔵 Prioridad 4: Motor de Cálculo y Persistencia
 - [x] **Persistencia**:
@@ -45,4 +47,4 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
 
 ## 🎓 Deuda Técnica / Mejoras
 - [ ] Añadir validaciones en los inputs (que valores no sean negativos, etc.).
-- [ ] Implementar edición de elementos existentes (no solo crear/borrar).
+- [ ] Implementar edición de elementos existentes (Forms para Elementos).
