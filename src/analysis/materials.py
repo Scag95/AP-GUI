@@ -1,13 +1,15 @@
 
 class Material:
-    def __init__(self, tag, name):
+    def __init__(self, tag, name, rho=0.0):
         self.tag = tag
         self.name = name
+        self.rho = rho
     
     def to_dict(self):
         return{
             "tag": self.tag,
-            "name": self.name
+            "name": self.name,
+            "rho": self.rho
         }
     @classmethod
     def from_dict(cls,data):
@@ -15,8 +17,8 @@ class Material:
 
 
 class Concrete01(Material):
-    def __init__(self,tag,name,fpc,epsc0,fpcu,epsu):
-        super().__init__(tag,name)
+    def __init__(self,tag,name,fpc,epsc0,fpcu,epsu, rho=2500.0):
+        super().__init__(tag,name,rho)
 
         self.fpc = fpc          #Resistencia a la compresión   
         self.epsc0 = epsc0      #Deformación unitaria
@@ -48,8 +50,8 @@ class Concrete01(Material):
         )
 
 class Steel01(Material):
-    def __init__(self,tag,name,Fy,E0,b):
-        super().__init__(tag,name)
+    def __init__(self,tag,name,Fy,E0,b, rho=7850.0):
+        super().__init__(tag,name, rho)
         
         self.Fy = Fy
         self.E0 = E0

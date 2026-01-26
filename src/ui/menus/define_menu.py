@@ -5,7 +5,7 @@ from PyQt6.QtGui import QAction
 from src.ui.dialogs.material_dialog import MaterialDialog
 from src.ui.dialogs.section_dialog import SectionDialog
 from src.ui.dialogs.grid_dialog import gridDialog
-
+from src.ui.dialogs.restraints_dialog import RestraintsDialog
 
 class DefineMenu(QMenu):
     def __init__(self,parent=None):
@@ -24,6 +24,11 @@ class DefineMenu(QMenu):
         #Conectar el boton con section_dialog
         self.action_sections.triggered.connect(self.open_section_dialog)
         self.addAction(self.action_sections)
+
+        #Restricciones
+        self.action_restraints = QAction("Restricciones", self)
+        self.action_restraints.triggered.connect(self.show_restraints_dialog)
+        self.addAction(self.action_restraints)
 
         #Grid
         grid_action = QAction("Generar Pórtico 2D", self)
@@ -60,4 +65,7 @@ class DefineMenu(QMenu):
             except Exception as e:
                 print(str(e))
                 QMessageBox.critical(self, "Error", f"Error generando pórtico: {str(e)}")
-                
+    
+    def show_restraints_dialog(self):
+        dlg = RestraintsDialog(self)
+        dlg.exec() 

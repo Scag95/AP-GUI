@@ -1,9 +1,16 @@
-from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox
+from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox
 
 class ConcreteForm(QWidget):
     def __init__(self):
         super().__init__()
         layout = QFormLayout(self)
+
+        #Densidad
+        self.spin_rho_c = QSpinBox()
+        self.spin_rho_c.setRange(0,10000)
+        self.spin_rho_c.setSuffix(" Kg")
+        self.spin_rho_c.setValue(2500)
+        layout.addRow("Densidad [rho]",self.spin_rho_c)
 
         #Campo fpc
         self.spin_fpc = QDoubleSpinBox()
@@ -38,6 +45,7 @@ class ConcreteForm(QWidget):
     def get_data(self):
         #Devuelve los valores del formulario
         return{
+            "rho":self.spin_rho_c.value(),
             "fpc":self.spin_fpc.value(),
             "epsc0":self.spin_epsc0.value(),
             "fpcu":self.spin_fpcU.value(),
@@ -48,6 +56,13 @@ class SteelForm(QWidget):
     def __init__(self):
         super().__init__()
         layout = QFormLayout(self)
+
+        #Densidad
+        self.spin_rho_s = QSpinBox()
+        self.spin_rho_s.setRange(0,10000)
+        self.spin_rho_s.setSuffix(" Kg")
+        self.spin_rho_s.setValue(7850)
+        layout.addRow("Densidad [rho]",self.spin_rho_s)
 
         #Campo Fy
         self.spin_Fy = QDoubleSpinBox()
@@ -75,6 +90,7 @@ class SteelForm(QWidget):
     def get_data(self):
         #Devuelve los valores del formulario
         return{
+            "rho":self.spin_rho_s.value(),
             "Fy":self.spin_Fy.value(),
             "E0":self.spin_E0.value(),
             "b":self.spin_b.value(),
