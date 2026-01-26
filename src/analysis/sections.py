@@ -126,3 +126,14 @@ class FiberSection(Section):
             new_sec.add_layer_straight(layer)
         
         return new_sec
+
+    def get_mass_per_length(self,material_manager):
+        total_mass = 0.0
+
+        for p in self.patches:
+            mat = material_manager.get_material(p.material_tag)
+            if mat:
+                area = abs(p.yJ - p.yI) * abs(p.zJ-p.zI)
+                total_mass += area * mat.rho
+
+        return total_mass

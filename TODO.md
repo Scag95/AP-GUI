@@ -35,16 +35,29 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Mostrar propiedades en Panel Lateral (DockWidget).
     - [x] **Edición**: Modificar coordenadas de nodos desde el panel y refrescar gráfico.
 
-## 🔵 Prioridad 4: Motor de Cálculo y Persistencia
-- [x] **Persistencia**:
-    - [x] Guardar/Cargar proyecto completo (Materiales + Secciones) a archivo JSON.
-- [ ] **Generación de Modelo OpenSees**:
-    - [ ] Método `run_analysis()` en el Manager.
-    - [ ] Traducir objetos Python -> Comandos OpenSees.
-- [ ] **Visualización de Resultados**:
-    - [ ] Graficar curva de Histéresis/Pushover.
-    - [ ] Mostrar deformada.
+## 🟠 Prioridad 4: Inputs de Análisis (Pre-Cálculo)
+- [x] **Condiciones de Contorno (Restricciones)**:
+    - [x] **Backend**: Añadir atributo `fixity` a la clase `Node` (e.g., `[1, 1, 1]` para empotrado).
+    - [x] **UI**: Crear herramienta/diálogo para seleccionar nodos y asignar restricciones (Fixed, Pinned, Roller).
+- [ ] **Cargas (Loads)**:
+    - [ ] **Backend**: Definir clases para Cargas (`NodalLoad`, `ElementLoad`, `LoadPattern`).
+    - [ ] **UI**: Interfaz para asignar cargas puntuales y distribuidas.
+- [ ] **Propiedades Avanzadas de Elementos**:
+    - [ ] **Backend**: Añadir `mass_density` a `ForceBeamColumn` (para `-mass`).
+    - [ ] **UI**: Permitir editar densidad de masa en `ElementForm`.
+
+## 🔵 Prioridad 5: Motor de Cálculo y Resultados
+- [ ] **Generación de Modelo OpenSees (`src/analysis/opensees_translator.py`)**:
+    - [ ] Traducir Nodos (con sus Restricciones).
+    - [ ] Traducir Elementos (con sus Transformaciones).
+    - [ ] Traducir Materiales y Secciones (Fiber).
+    - [ ] Traducir Cargas a `ops.pattern` y `ops.eleLoad`.
+- [ ] **Ejecución y Resultados**:
+    - [ ] Método `run_analysis()` (Gravedad + Pushover).
+    - [ ] Capturar resultados (Desplazamientos, Cortante Basal).
+    - [ ] **Visualización**: Graficar curva de Histéresis/Pushover y Deformada.
 
 ## 🎓 Deuda Técnica / Mejoras
+- [ ] **Sistema de Unidades**: Implementar convertidor y selector de unidades (N/mm, kN/m, etc.).
 - [ ] Añadir validaciones en los inputs (que valores no sean negativos, etc.).
 - [ ] Implementar edición de elementos existentes (Forms para Elementos).

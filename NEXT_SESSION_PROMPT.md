@@ -44,27 +44,45 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 3. **Bugfixes**:
    - Fixed `AttributeError: NoneType has no attribute updateSpots` when refreshing viz with a selected node (added selection reset logic).
 
+### Session 6 (2026-01-26) - Restraints & Density (COMPLETED)
+1.  **Restricciones (Fixity)**:
+    -   Backend: `Node.fixity` implementado (`[0,0,0]`).
+    -   UI: `RestraintsDialog` (Gestor Avanzado: lista, rangos, selección rápida) creado y conectado al Menú Define.
+    -   UI: Checkboxes básicos añadidos a `PropertiesPanel`.
+2.  **Densidad y Masa**:
+    -   Backend: `rho` añadido a `Material`, `Concrete01`, `Steel01`.
+    -   UI: `MaterialForms` actualizados para input de densidad (SpinBox).
+    -   Backend: `Section.get_mass_per_length()` implementado para cálculo automático de masa lineal.
+3.  **Refactorización**:
+    -   Eliminados métodos `__repr__` innecesarios.
+    -   Corrección de errores en `to_dict`/`from_dict` de Elementos (get vs brackets).
+
 ## Pending Tasks (Priority Order)
-### 1. OpenSees Analysis Engine (The "Brain") - NEXT TARGET
-- **Translator**: Create logic to translate the internal object model (`Node`, `Element`, `Section`, `Material`) into OpenSees commands.
-   - Create `src/analysis/opensees_translator.py`?
-- **Execution**: Run the analysis using `openseespy` or calling `opensees.exe`.
-- **Output Parsing**: Capture the results (displacements, forces).
+### 1. Sistema de Cargas (Loads System) - NEXT TARGET
+-   **Diseño Robusto**: Crear `src/analysis/loads.py` o definir estructura en `Element`.
+    -   Definir estructura de datos para cargas (Uniform, Point).
+-   **UI de Cargas**:
+    -   Implementar `ElementLoadsDialog` (basado en el boceto aprobado del usuario).
+    -   Inputs: `wx`, `wy` (distribuidas), y preparación para puntuales.
+-   **Integración**:
+    -   Visualizar cargas en el `StructureInteractor` (flechas/líneas sobre elementos).
 
-### 2. Result Visualization
-- Once analysis runs, visualize the **Deformed Shape** (Mode Shapes).
-- Plot **Pushover Curves** (Base Shear vs Roof Displacement).
+### 2. OpenSees Analysis Engine (The "Brain")
+-   **Traductor Final**: Completar `src/analysis/opensees_translator.py`.
+    -   Integrar: Nodos + Fixity + Mass + Elements + Loads + Patterns.
+-   **Ejecución**:
+    -   Gravedad (Linear Series).
+    -   Pushover (Displacement Control).
+-   **Output**: Capturar respuestas (JSON).
 
-### 3. More Interaction
-- Implement `ElementForm` in `properties_forms.py` to edit Element properties.
-- Add deletion (Delete key) for selected nodes/elements.
+### 3. Deuda Técnica
+-   Implementar sistema de unidades.
+-   Añadir botón de eliminar elementos.
 
 ## Technical Context for Next Session
-- **Key Files**: 
-  - `src/ui/widgets/structure_interactor.py`: Where selection logic lives.
-  - `src/ui/widgets/properties_panel.py`: Where editing logic lives.
-  - `src/analysis/manager.py`: The brain that will eventually call OpenSees.
-- **New Architecture components**:
-  - `PropertiesPanel` communicates with `MainWindow` via signals.
-  - `StructureInteractor` emits `nodeSelected(node)` and `selectionCleared()`.
-- **User Status**: User is mastering PyQt signals/slots and modular UI design. Ready for the heavy backend logic (OpenSees).
+-   **New UI Concept**: `LoadsDialog` (Similar to `RestraintsDialog` but for Elements).
+-   **Key Files**:
+    -   `src/ui/dialogs/restraints_dialog.py`: Reference implementation for the Loads dialog.
+    -   `src/analysis/sections.py`: Contains mass calc logic.
+    -   `src/analysis/element.py`: Updated with density/mass logic.
+-   **User Status**: Wants a **robust** load system before running analysis.

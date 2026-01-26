@@ -15,16 +15,21 @@ class Element:
     @classmethod
     def from_dict(cls, data):
         return cls(data["tag"], data["node_i"], data["node_j"])
+
 class ForceBeamColumn(Element):
-    def __init__(self, tag, node_i, node_j, section_tag, transf_tag):
+    def __init__(self, tag, node_i, node_j, section_tag, transf_tag, mass_density=0.0):
         super().__init__(tag, node_i, node_j)
         self.num_int_points = 5
         self.section_tag = section_tag
         self.transf_tag = transf_tag
+        self.mass_density = mass_density 
         
     def get_opensees_command(self):
 
-        return f"element forceBeamColumn {self.tag} {self.node_i} {self.node_j} {self.transf_tag} \"Lobatto\" {self.section_tag} {self.num_int_points}"
+        cmd = f"element forceBeamColumn {self.tag} {self.node_i} {self.node_j} {self.transf_tag} \"Lobatto\" {self.section_tag} {self.num_int_points}"
+        if self.mass_density > 0:
+            cmd += f"-mass {self.mass_density}"
+        return cmd
 
     def to_dict(self):
         # 1. Obtenemos el dict básico del padre
@@ -34,6 +39,7 @@ class ForceBeamColumn(Element):
         data["type"] = "ForceBeamColumn"
         data["section_tag"] = self.section_tag
         data["transf_tag"] = self.transf_tag
+        data["mass_density"] = self.mass_density
         return data
 
     @classmethod
@@ -44,6 +50,6 @@ class ForceBeamColumn(Element):
             node_i=data["node_i"],
             node_j=data["node_j"],
             section_tag=data["section_tag"],
-            transf_tag=data["transf_tag"]
+            transf_tag=data["transf_tag"],
+            mass_density=data.get("mass_density",0.0)
         )
-        
