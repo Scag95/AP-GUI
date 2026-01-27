@@ -2,6 +2,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from PyQt6.QtCore import pyqtSignal
 from src.analysis.manager import ProjectManager
+from src.analysis.loads import NodalLoad, ElementLoad
 
 class StructureInteractor(QWidget):
     nodeSelected = pyqtSignal(object)
@@ -63,7 +64,8 @@ class StructureInteractor(QWidget):
             )
             scatter.sigClicked.connect(self._on_node_clicked)
             self.plot_widget.addItem(scatter)
-
+        #3. dibujar Cargas
+        self._draw_loads()
         print("[DEBUG] Visualización actualizada.")
 
     def _on_node_clicked(self, plot_item, points):
@@ -111,3 +113,58 @@ class StructureInteractor(QWidget):
         
         if not hit_node:
             self._deselect_all()
+
+    def _draw_loads(self):
+        loads = self.manager.get_all_loads()
+        for load in loads:
+            if isinstance(load, NodalLoad):
+                self._draw_nodal_load(load)
+
+    def _draw_nodal_load(self,load):
+        node = self.manager.get_node(load.node_tag)
+        if not node:
+            return
+        
+        SIZE = 40
+
+        if abs(load.fx) > 1e-6:
+            angle = 180 if load.fx > 0 else 0 
+            direction = 180 if load.fx > 0 else 0
+            arrow = pg.ArrowItem(
+                pos=(node.x, node.y),
+                angle = direction,
+                tipAngle = 30,
+                baseAngle = 20,
+                headLen=15,
+                tailLen = SIZE,
+                brush = 'g',
+                pen = 'g'
+            )
+            self.plot_widget.addItem(arrow)
+
+            text = pg.TextItem(f"Fx={load.fx:.1f}", color='g', anchor=(0.5,0))
+            text.setPos(node.x, node.y)
+            self.plot_widget.addItem(text)
+
+        if abs(load.fy) > 1e-6:
+            # Fy < 0 (Gravedad) -> Flecha hacia abajo. Punta en nodo.
+            # Angle -90 apunta abajo. Angle 90 apunta arriba.
+            direction = -90 if load.fy < 0 else 90
+            
+            arrow = pg.ArrowItem(
+                pos=(node.x, node.y),
+                angle=direction,
+                tipAngle=30,
+                baseAngle=20,
+                headLen=15,
+                tailLen=SIZE,
+                brush='#FFA500', # Orange Hex
+                pen='#FFA500'
+            )
+            self.plot_widget.addItem(arrow)
+            # Texto
+            # Ajustar anchor para que no tape el nodo
+            anchor = (0.5, 1) if load.fy > 0 else (0.5, 0) 
+            text = pg.TextItem(f"Fy={load.fy:.1f}", color='#FFA500', anchor=anchor)
+            text.setPos(node.x, node.y)
+            self.plot_widget.addItem(text)

@@ -22,13 +22,14 @@ class ProjectManager(QObject):
         self.section = {}
         self.node = {}
         self.element = {}
+        self.load = {}
 
         #Contador para los IDs automáticos
         self.next_material_tag = 1 
         self.next_section_tag = 1
         self.next_node_tag = 1
         self.next_element_tag = 1
-        
+        self.next_load_tag = 1        
 
 
  ## Materiales ##   
@@ -112,6 +113,24 @@ class ProjectManager(QObject):
     def get_all_elements(self):
         return list(self.element.values())
 
+## Cargas (Loads) ##
+    def add_load(self, load):
+        self.load[load.tag] = load
+        if load.tag >= self.next_load_tag:
+            self.next_load_tag = load.tag + 1
+        self.dataChanged.emit()
+    def get_load(self, tag):
+        return self.load.get(tag)
+    def delete_load(self, tag):
+        if tag in self.load:
+            del self.load[tag]
+            self.dataChanged.emit()
+    def get_next_load_tag(self):
+        return self.next_load_tag
+    def get_all_loads(self):
+        return list(self.load.values())
+
+
 
 ## Guardar el projecto ##
     def save_project(self, filename):
@@ -121,7 +140,8 @@ class ProjectManager(QObject):
             "materials": [m.to_dict() for m in self.get_all_materials()],
             "sections": [s.to_dict() for s in self.get_all_sections()],
             "nodes": [n.to_dict() for n in self.get_all_nodes()],
-            "elements": [e.to_dict() for e in self.get_all_elements()]
+            "elements": [e.to_dict() for e in self.get_all_elements()],
+            "loads": [l.to_dict() for l in self.get_all_loads()]
         }
 
         try:
@@ -139,6 +159,7 @@ class ProjectManager(QObject):
         from src.analysis.sections import FiberSection
         from src.analysis.node import Node
         from src.analysis.element import ForceBeamColumn
+        from src.analysis.loads import NodalLoad, ElementLoad   
 
         try:
             with open(filename, 'r') as f:
@@ -177,6 +198,17 @@ class ProjectManager(QObject):
                 if e_data.get("type") == "ForceBeamColumn":
                     element = ForceBeamColumn.from_dict(e_data)
                     self.add_element(element)
+            
+            # 5. Cargar Cargas (Loads)
+            for l_data in data.get("loads", []):
+                tipo = l_data.get("type")
+                if tipo == "NodalLoad":
+                    load = NodalLoad.from_dict(l_data)
+                elif tipo == "ElementLoad":
+                    load = ElementLoad.from_dict(l_data)
+                else:
+                    continue
+                self.add_load(load)
             
             print(f"Projecto cargado: {len(self.node)} nodos, {len(self.element)} elementos")
             self.dataChanged.emit()
