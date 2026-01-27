@@ -39,12 +39,13 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
 - [x] **Condiciones de Contorno (Restricciones)**:
     - [x] **Backend**: Añadir atributo `fixity` a la clase `Node` (e.g., `[1, 1, 1]` para empotrado).
     - [x] **UI**: Crear herramienta/diálogo para seleccionar nodos y asignar restricciones (Fixed, Pinned, Roller).
-- [ ] **Cargas (Loads)**:
-    - [ ] **Backend**: Definir clases para Cargas (`NodalLoad`, `ElementLoad`, `LoadPattern`).
-    - [ ] **UI**: Interfaz para asignar cargas puntuales y distribuidas.
+- [x] **Cargas (Loads)**:
+    - [x] **Backend**: Definir clases para Cargas (`NodalLoad`, `ElementLoad` con ABC).
+    - [x] **UI**: Interfaz para asignar cargas puntuales (`NodalLoadsDialog`) y distribuidas (`ElementLoadsDialog`).
+    - [x] **Visualización**: Flechas escalables en `StructureInteractor` para cargas nodales.
 - [ ] **Propiedades Avanzadas de Elementos**:
-    - [ ] **Backend**: Añadir `mass_density` a `ForceBeamColumn` (para `-mass`).
-    - [ ] **UI**: Permitir editar densidad de masa en `ElementForm`.
+    - [x] **Backend**: Añadir `mass_density` a `ForceBeamColumn` (para `-mass`).
+    - [ ] **UI**: Permitir editar densidad de masa en `ElementForm` (Pendiente integración final).
 
 ## 🔵 Prioridad 5: Motor de Cálculo y Resultados
 - [ ] **Generación de Modelo OpenSees (`src/analysis/opensees_translator.py`)**:
@@ -56,6 +57,12 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [ ] Método `run_analysis()` (Gravedad + Pushover).
     - [ ] Capturar resultados (Desplazamientos, Cortante Basal).
     - [ ] **Visualización**: Graficar curva de Histéresis/Pushover y Deformada.
+
+## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
+- [ ] **NodalLoadsDialog**: Filtrar lista para mostrar solo nodos que tengan cargas asignadas.
+- [ ] **View Options (Comandos de Visualización)**:
+    - [ ] Toggle Visibility: Mostrar u ocultar etiquetas (Tags) de Nodos y Elementos.
+    - [ ] Load Scaling: Input para escalar visualmente el tamaño de las cargas.
 
 ## 🎓 Deuda Técnica / Mejoras
 - [ ] **Sistema de Unidades**: Implementar convertidor y selector de unidades (N/mm, kN/m, etc.).

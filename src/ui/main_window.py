@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import Qt 
 from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
+from src.ui.menus.assign_menu import AssignMenu
 from src.ui.widgets.structure_interactor import StructureInteractor
 from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
@@ -21,6 +22,9 @@ class MainWindow(QMainWindow):
         self.define_menu =DefineMenu(self)
         bar.addMenu(self.define_menu)
 
+        self.assign_menu = AssignMenu(self)
+        bar.addMenu(self.assign_menu) 
+
         self.viz_widget = StructureInteractor()
         self.setCentralWidget(self.viz_widget)
 
@@ -34,6 +38,7 @@ class MainWindow(QMainWindow):
 
         # Conexiones Panel -> Manager (Refrescar gráfico)
         self.props_panel.dataChanged.connect(self.refresh_project)
+
 
     def refresh_project(self):
         ProjectManager.instance().dataChanged.emit()
