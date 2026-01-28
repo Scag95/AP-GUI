@@ -3,7 +3,7 @@
         {
             "tag": 1,
             "name": "Mat_Concreto_1",
-            "rho": 2500,
+            "rho": 2500.0,
             "type": "Concrete01",
             "fpc": 25.0,
             "epsc0": 0.0021,
@@ -13,7 +13,7 @@
         {
             "tag": 2,
             "name": "Mat_Acero_2",
-            "rho": 7850,
+            "rho": 7850.0,
             "type": "Steel01",
             "Fy": 500.0,
             "E0": 200000.0,
@@ -357,6 +357,32 @@
             "section_tag": 2,
             "transf_tag": 1,
             "mass_density": 0.0
+        }
+    ],
+    "loads": [
+        {
+            "type": "NodalLoad",
+            "tag": 1,
+            "node_tag": 2,
+            "fx": 10.0,
+            "fy": 50.0,
+            "mz": 0.0
+        },
+        {
+            "type": "NodalLoad",
+            "tag": 2,
+            "node_tag": 3,
+            "fx": 10.0,
+            "fy": 50.0,
+            "mz": 0.0
+        },
+        {
+            "type": "NodalLoad",
+            "tag": 3,
+            "node_tag": 4,
+            "fx": 10.0,
+            "fy": 50.0,
+            "mz": 0.0
         }
     ]
 }
