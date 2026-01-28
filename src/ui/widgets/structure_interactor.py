@@ -125,46 +125,73 @@ class StructureInteractor(QWidget):
         if not node:
             return
         
-        SIZE = 40
+        SCALE = 0.05
+        HEAD_LEN = 5 * SCALE
+        OFFSET = 2.0 * SCALE 
 
+        # --- Cargas Horizontales (Fx) ---
         if abs(load.fx) > 1e-6:
-            angle = 180 if load.fx > 0 else 0 
-            direction = 180 if load.fx > 0 else 0
+            tail_len = abs(load.fx) * SCALE
+            angle = 180 if load.fx > 0 else 0   
+            dx_offset = -OFFSET if angle == 180 else OFFSET  
+            tip_x = node.x + dx_offset
+            tip_y = node.y
             arrow = pg.ArrowItem(
-                pos=(node.x, node.y),
-                angle = direction,
-                tipAngle = 30,
-                baseAngle = 20,
-                headLen=15,
-                tailLen = SIZE,
-                brush = 'g',
-                pen = 'g'
-            )
-            self.plot_widget.addItem(arrow)
-
-            text = pg.TextItem(f"Fx={load.fx:.1f}", color='g', anchor=(0.5,0))
-            text.setPos(node.x, node.y)
-            self.plot_widget.addItem(text)
-
-        if abs(load.fy) > 1e-6:
-            # Fy < 0 (Gravedad) -> Flecha hacia abajo. Punta en nodo.
-            # Angle -90 apunta abajo. Angle 90 apunta arriba.
-            direction = -90 if load.fy < 0 else 90
-            
-            arrow = pg.ArrowItem(
-                pos=(node.x, node.y),
-                angle=direction,
+                pos=(tip_x, tip_y),
+                angle=angle,
                 tipAngle=30,
                 baseAngle=20,
-                headLen=15,
-                tailLen=SIZE,
-                brush='#FFA500', # Orange Hex
-                pen='#FFA500'
+                headLen=HEAD_LEN,
+                tailLen=tail_len,
+                brush='g',
+                tailWidth=0.1 * SCALE,
+                pen='g',
+                pxMode=False
             )
             self.plot_widget.addItem(arrow)
-            # Texto
-            # Ajustar anchor para que no tape el nodo
-            anchor = (0.5, 1) if load.fy > 0 else (0.5, 0) 
-            text = pg.TextItem(f"Fy={load.fy:.1f}", color='#FFA500', anchor=anchor)
-            text.setPos(node.x, node.y)
+
+            # Calcular la posición exacta del final de la cola
+            total_len = tail_len + HEAD_LEN      
+            
+            # Invertir lógica: Si el usuario dice que sale al revés, probamos el otro lado.
+            shift_x = total_len if angle == 0 else -total_len
+            
+            tail_x = node.x + shift_x
+            tail_y = node.y
+            
+            # Texto "Fx=..." justo encima de la cola
+            text = pg.TextItem(f"Fx={load.fx:.1f}", color='g', anchor=(0.5, 1)) 
+            text.setPos(tail_x, tail_y)
+            self.plot_widget.addItem(text)
+
+        # --- Cargas Verticales (Fy) ---
+        if abs(load.fy) > 1e-6:
+            tail_len = abs(load.fy) * SCALE
+            angle = -90 if load.fy < 0 else 90
+            dy_offset = -OFFSET if angle == -90 else OFFSET
+            tip_x = node.x
+            tip_y = node.y + dy_offset
+            arrow = pg.ArrowItem(
+                pos=(tip_x, tip_y),
+                angle=angle,
+                tipAngle=30,
+                baseAngle=20,
+                headLen=HEAD_LEN,
+                tailWidth =0.1*SCALE,
+                tailLen=tail_len,
+                brush='#FFA500', 
+                pen='#FFA500',
+                pxMode=False
+            )
+            self.plot_widget.addItem(arrow)
+
+            total_len = tail_len + HEAD_LEN
+            dy = total_len if angle == 90 else -total_len
+            
+            tail_x = node.x
+            tail_y = node.y + dy
+            
+            text = pg.TextItem(f"Fy={load.fy:.1f}", color='#FFA500')
+            text.setPos(tail_x, tail_y)
+            
             self.plot_widget.addItem(text)
