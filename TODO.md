@@ -43,6 +43,9 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] **Backend**: Definir clases para Cargas (`NodalLoad`, `ElementLoad` con ABC).
     - [x] **UI**: Interfaz para asignar cargas puntuales (`NodalLoadsDialog`) y distribuidas (`ElementLoadsDialog`).
     - [x] **Visualización**: Flechas escalables en `StructureInteractor` para cargas nodales.
+    - [x] **Visualizar Cargas Distribuidas (`ElementLoad`)**:
+    - [x] Implementar método de dibujo en `StructureInteractor` (rectángulos + flechas).
+    - [x] Unificar estilo visual para Wy y Wx.
 - [ ] **Propiedades Avanzadas de Elementos**:
     - [x] **Backend**: Añadir `mass_density` a `ForceBeamColumn` (para `-mass`).
     - [ ] **UI**: Permitir editar densidad de masa en `ElementForm` (Pendiente integración final).
@@ -59,10 +62,12 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [ ] **Visualización**: Graficar curva de Histéresis/Pushover y Deformada.
 
 ## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
-- [ ] **NodalLoadsDialog**: Filtrar lista para mostrar solo nodos que tengan cargas asignadas.
-- [ ] **View Options (Comandos de Visualización)**:
-    - [ ] Toggle Visibility: Mostrar u ocultar etiquetas (Tags) de Nodos y Elementos.
-    - [ ] Load Scaling: Input para escalar visualmente el tamaño de las cargas.
+- [ ] **NodalLoadsDialog y ElementLoadsDialog**:
+    - [ ] CheckBox para filtrar lista: "Mostrar solo nodos/elementos con carga".
+    - [ ] CheckBox para mostrar/ocultar IDs en el visor (Show Tags) directamente desde el diálogo.
+- [x] **View Options (Comandos de Visualización)**:
+    - [x] Toggle Visibility: Mostrar u ocultar etiquetas (Tags) de Nodos y Elementos (Comando: `tag`).
+    - [x] Load Scaling: Input para escalar visualmente el tamaño de las cargas (Atajos: `Ctrl++`/`Ctrl+-`).
 
 ## 🎓 Deuda Técnica / Mejoras
 - [ ] **Sistema de Unidades**: Implementar convertidor y selector de unidades (N/mm, kN/m, etc.).

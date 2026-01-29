@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QMainWindow, QDockWidget
 from PyQt6.QtCore import Qt 
 from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
@@ -6,6 +6,8 @@ from src.ui.menus.assign_menu import AssignMenu
 from src.ui.widgets.structure_interactor import StructureInteractor
 from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
+from src.ui.widgets.command_line import CommandLineWidget
+from src.analysis.command_processor import CommandProcessor
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -39,11 +41,34 @@ class MainWindow(QMainWindow):
         # Conexiones Panel -> Manager (Refrescar gráfico)
         self.props_panel.dataChanged.connect(self.refresh_project)
 
+        # --- SISTEMA DE COMANDOS ---
+        self.cmd_processor = CommandProcessor()
+        self.console_widget = CommandLineWidget() 
+        self.viz_widget.set_overlay_widget(self.console_widget)
+        
+        # Conectar señal
+        self.console_widget.commandEntered.connect(self.execute_command)
+        self.console_widget.log_message("Sistema listo. Prueba: 'tag nodes on'", "blue")
 
     def refresh_project(self):
         ProjectManager.instance().dataChanged.emit()
 
+    def execute_command(self, cmd):
+        # 1. Procesar lógica
+        msg, action = self.cmd_processor.process_command(cmd)
         
+        # 2. Mostrar respuesta
+        if msg:
+            color = "red" if "error" in msg.lower() else "black"
+            self.console_widget.log_message(msg, color)
+        # 3. Ejecutar acción visual (si la hay)
+        if action:
+            act_type = action.get("action")
+            value = action.get("value")
+            if act_type == "toggle_node_labels":
+                self.viz_widget.toggle_node_labels(value)
+            elif act_type == "toggle_element_labels":
+                self.viz_widget.toggle_element_labels(value)
         
 
 
