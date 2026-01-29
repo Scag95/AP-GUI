@@ -70,11 +70,22 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     -   Actualizado `StructureInteractor` para dibujar flechas (`pg.ArrowItem`) de cargas nodales.
     -   Flechas verdes para X, naranjas para Y, con etiquetas de texto.
 
+### Session 8 (2026-01-29) - Visualization & CLI (COMPLETED)
+1.  **View Options (UX)**:
+    -   Implementado sistema de escalado de cargas (`load_scale`) con atajos (`Ctrl++` / `Ctrl+-`).
+    -   Visualización de IDs (Tags) de Nodos y Elementos.
+2.  **Command Line Interface (CLI)**:
+    -   Creado `CommandLineWidget` (estilo AutoCAD moderno, transparente).
+    -   Creado `CommandProcessor` para interpretar comandos (`tag nodes on`, `clear`, etc.).
+    -   Integración limpia en `MainWindow` como DockWidget inferior.
+3.  **Visualización Cargas Distribuidas**:
+    -   Implementado dibujo de `ElementLoad` en `StructureInteractor`.
+    -   Estilo uniforme rectangular para `Wy` (Naranja) y `Wx` (Morado).
+    -   Corrección de geometría vectorial para la dirección de las flechas.
+
 ## Pending Tasks (Priority Order)
 ### 1. Mejoras de UX / Visualización (Refinamiento)
--   **View Options**: Toolbar/Menú para ocultar ID de nodos/elementos y escalar flechas de carga.
--   **Filtros UI**: Mejorar los diálogos para ver qué nodos ya tienen carga.
--   **Visualización de Element Loads**: Dibujar las cargas distribuidas sobre las vigas (actualmente solo se ven las nodales).
+-   **Filtros UI**: `NodalLoadsDialog` y `ElementLoadsDialog`: Checkboxes para mostrar solo items con carga y activar/desactivar Tags.
 
 ### 2. OpenSees Analysis Engine (The "Brain")
 -   **Traductor Final**: Completar `src/analysis/opensees_translator.py`.
@@ -87,8 +98,8 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 -   Añadir botón de eliminar elementos.
 
 ## Technical Context for Next Session
--   **Estado Actual**: El software ya permite modelar geometría completa y cargas. Falta pulir la visualización y conectar el cerebro (OpenSees).
+-   **Estado Actual**: El software ya permite modelar geometría competa, asignar cargas y visualizarlo todo profesionalmente (cli + shortcuts). Falta conectar el cerebro (OpenSees).
 -   **Archivos Clave**:
-    -   `src/ui/widgets/structure_interactor.py`: Lógica de dibujo (flechas).
-    -   `src/analysis/loads.py`: Definiciones de carga.
--   **Siguiente Paso**: Implementar controles de visualización (View Options) antes de pasar al motor de cálculo.
+    -   `src/ui/widgets/structure_interactor.py`: Lógica de dibujo compleja (Flechas, Cargas distribuidas).
+    -   `src/analysis/command_processor.py`: Lógica de la consola de comandos.
+-   **Siguiente Paso**: Implementar control de visualización en los diálogos de Carga y empezar con el Traductor de OpenSees.

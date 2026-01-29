@@ -40,7 +40,7 @@ class NodalLoad(Load):
 class ElementLoad(Load):
     def __init__(self, tag, element_tag, wx =0.0, wy = 0.0):
         super().__init__(tag)
-        self.elemnet_tag = element_tag
+        self.element_tag = element_tag
         self.wx = wx
         self.wy = wy
         
