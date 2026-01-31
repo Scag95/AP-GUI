@@ -51,15 +51,15 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [ ] **UI**: Permitir editar densidad de masa en `ElementForm` (Pendiente integración final).
 
 ## 🔵 Prioridad 5: Motor de Cálculo y Resultados
-- [ ] **Generación de Modelo OpenSees (`src/analysis/opensees_translator.py`)**:
-    - [ ] Traducir Nodos (con sus Restricciones).
-    - [ ] Traducir Elementos (con sus Transformaciones).
-    - [ ] Traducir Materiales y Secciones (Fiber).
-    - [ ] Traducir Cargas a `ops.pattern` y `ops.eleLoad`.
-- [ ] **Ejecución y Resultados**:
-    - [ ] Método `run_analysis()` (Gravedad + Pushover).
-    - [ ] Capturar resultados (Desplazamientos, Cortante Basal).
-    - [ ] **Visualización**: Graficar curva de Histéresis/Pushover y Deformada.
+- [x] **Generación de Modelo OpenSees (`src/analysis/opensees_translator.py`)**:
+    - [x] Traducir Nodos (con sus Restricciones).
+    - [x] Traducir Elementos (con sus Transformaciones).
+    - [x] Traducir Materiales y Secciones (Fiber).
+    - [x] Traducir Cargas a `ops.pattern` y `ops.eleLoad`.
+- [x] **Ejecución y Resultados**:
+    - [x] Método `run_analysis()` (Gravedad + Pushover bases).
+    - [x] Capturar resultados (Desplazamientos, Cortante Basal).
+    - [x] **Visualización**: Graficar curva de Histéresis/Pushover y Deformada.
 
 ## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
 - [ ] **NodalLoadsDialog y ElementLoadsDialog**:
@@ -75,6 +75,12 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] UI: `UnitSpinBox` para conversión automática (Visual <-> Base).
     - [x] Integración: `MaterialForm` (MPa -> Pa) y `SectionForm` (mm -> m).
     - [x] **Mejora Visual SectionPreview**: Barras a escala real y ejes dinámicos.
-    - [ ] Integración en Cargas (`NodalLoads`, `ElementLoads`) y Grids.
+    - [x] Integración en Cargas (`NodalLoads`, `ElementLoads`) y Grids.
 - [ ] Añadir validaciones en los inputs (que valores no sean negativos, etc.).
 - [ ] Implementar edición de elementos existentes (Forms para Elementos).
+- [x] **Refactorización de Visualización (Patrón Renderer)**:
+    - [x] Crear `ModelRenderer`, `LoadRenderer`, `DeformationRenderer`, `ForceDiagramRenderer`.
+    - [x] Limpiar `StructureInteractor` delegando pintado a renderizadores.
+- [x] **Visualización Avanzada (Deformada)**:
+    - [x] Implementar interpolación cúbica de Hermite para vigas curvas.
+    - [x] Implementar escalado dinámico de deformada (`PgUp`/`PgDown`).

@@ -94,21 +94,38 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 3.  **Validation**:
     -   Verified OpenSees Translator receives correct base values (25000000 Pa, 0.3 m) regardless of UI settings.
 
-## Pending Tasks (Priority Order)
-### 1. Sistema de Unidades - Fase 2 (Cargas)
--   **Integración Crítica**: Aplicar `UnitSpinBox` a `NodalLoadsDialog` y `ElementLoadsDialog`.
-    -   El usuario necesita ingresar kN, pero el sistema base requiere Newtons.
--   Integrar en `GridDialog` (Dimensiones en m/cm).
+### Session 10 (2026-02-01) - Refactoring & Advanced Viz (THE BIG ONE)
+1.  **Unit System Integration (Complete)**:
+    -   Extended `UnitSpinBox` to `NodalLoadsDialog` and `ElementLoadsDialog`.
+    -   User can now input 100 kN, stored as 100,000.0 N correctly.
+    -   Implemented "Fill on Select" for all dialogs (Material/Section/Load), drastically improving UX.
+2.  **Visualization Architecture Refactor**:
+    -   **Problem**: `StructureInteractor` was becoming a God Class.
+    -   **Solution**: Implemented Renderer Pattern (`ModelRenderer`, `LoadRenderer`, `DeformationRenderer`, `ForceDiagramRenderer`).
+    -   `StructureInteractor` now acts strictly as a Coordinator.
+3.  **Hermite Interpolation**:
+    -   Implemented cubic Hermite shape functions in `DeformationRenderer`.
+    -   Users can now see the *true* curvature of beams.
+4.  **UX Improvements**:
+    -   Shortcuts implemented: `Ctrl +/-` (Load Scale), `PgUp/PgDown` (Deformation Scale).
+    -   Verified analysis workflow: Build -> Load -> Analyze -> Visual Deform.
 
-### 2. OpenSees Analysis Engine (The "Brain")
--   **Traductor Final**: Completar `src/analysis/opensees_translator.py`.
--   **Ejecución**: Gravedad y Pushover.
--   **Output**: Capturar respuestas JSON y graficar resultados.
+## Pending Tasks (Priority Order)
+### 1. Diagramas de Esfuerzos (Force Diagrams)
+-   **Objetivo**: Visualizar Momentos, Cortantes y Axiales.
+-   **Backend**: Capturar fuerzas de elementos desde OpenSees (`eleResponse`).
+-   **Frontend**: Implementar `ForceDiagramRenderer`.
+    -   Dibujar polígonos rellenos sobre los elementos.
+    -   Escalado dinámico similar a la deformada.
+
+### 2. Pushover Analysis
+-   **Objetivo**: Realizar análisis no lineal incremental.
+-   **Backend**: Implementar lógica de DisplacementControl en `opensees_translator`.
+-   **Frontend**: Graficar Curva de Capacidad (Cortante Basal vs Desplazamiento Techo).
 
 ## Technical Context for Next Session
--   **Estado Actual**: Core del sistema de unidades implementado y probado en materiales/secciones. Falta extenderlo a Cargas para evitar errores de magnitud (N vs kN).
+-   **Estado Actual**: El sistema es robusto, modular y visualmente potente. La deformada YA ES interpolada (curva).
 -   **Archivos Clave**:
-    -   `src/utils/units.py`: Definición de factores y unidades base.
-    -   `src/ui/widgets/unit_spinbox.py`: El widget mágico que hace la conversión.
-    -   `src/ui/dialogs/nodal_loads_dialog.py`: Próximo objetivo para integración de unidades.
--   **Siguiente Paso**: Completar la integración de unidades en los diálogos de cargas.
+    -   `src/ui/visualizers/force_diagram_renderer.py`: Archivo placeholder listo para ser implementado.
+    -   `src/analysis/opensees_translator.py`: Donde extraeremos los resultados de fuerzas (`eleForce`).
+-   **Siguiente Paso**: Atacar la implementación de Diagramas de Fuerzas.

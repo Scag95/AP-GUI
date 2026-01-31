@@ -43,6 +43,14 @@ class ConcreteForm(QWidget):
         self.spin_epscU.setValue(0.003)
         layout.addRow("Deformación última [epscU]",self.spin_epscU)
 
+    def set_data(self, material):
+        if not material: return
+        self.spin_rho_c.set_value_base(material.rho)
+        self.spin_fpc.set_value_base(material.fpc)
+        self.spin_epsc0.setValue(material.epsc0)
+        self.spin_fpcU.set_value_base(material.fpcu)
+        self.spin_epscU.setValue(material.epsu)
+        
     def get_data(self):
         #Devuelve los valores del formulario
         return{
@@ -52,6 +60,9 @@ class ConcreteForm(QWidget):
             "fpcu": self.spin_fpcU.get_value_base(),
             "epsu": self.spin_epscU.value()
         }
+    
+
+
 
 class SteelForm(QWidget):
     def __init__(self):
@@ -85,6 +96,13 @@ class SteelForm(QWidget):
         self.spin_b.setSingleStep(0.001)
         self.spin_b.setValue(0.01)
         layout.addRow("Ratio de endurecimiento [b]",self.spin_b)
+
+    def set_data(self, material):
+        if not material: return
+        self.spin_rho_s.set_value_base(material.rho)
+        self.spin_Fy.set_value_base(material.Fy)
+        self.spin_E0.set_value_base(material.E0)
+        self.spin_b.setValue(material.b)
 
     def get_data(self):
         #Devuelve los valores del formulario

@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
 from src.analysis.loads import NodalLoad
+from src.ui.widgets.unit_spinbox import UnitSpinBox
+from src.utils.units import UnitType
 
 class NodalLoadsDialog(QDialog):
     def __init__(self, parent=None):
@@ -35,7 +37,8 @@ class NodalLoadsDialog(QDialog):
         self.node_list = QListWidget()
         self.node_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         left_layout.addWidget(self.node_list)
-        
+        #Conectamos la señal para actualizar los campos
+        self.node_list.itemSelectionChanged.connect(self.on_node_selected)
         layout.addLayout(left_layout, stretch=1)
 
         # --- Panel Derecho: Configuración de Carga ---
@@ -45,22 +48,19 @@ class NodalLoadsDialog(QDialog):
         form_layout = QFormLayout()
 
         # Input Fx
-        self.fx_input = QDoubleSpinBox()
-        self.fx_input.setRange(-1e6, 1e6)
+        self.fx_input = UnitSpinBox(UnitType.FORCE)
+        self.fx_input.setRange(-1e12, 1e12)
         self.fx_input.setDecimals(2)
-        self.fx_input.setSuffix(" kN")
         
         # Input Fy
-        self.fy_input = QDoubleSpinBox()
-        self.fy_input.setRange(-1e6, 1e6)
+        self.fy_input = UnitSpinBox(UnitType.FORCE)
+        self.fy_input.setRange(-1e12, 1e12)
         self.fy_input.setDecimals(2)
-        self.fy_input.setSuffix(" kN")
         
         # Input Mz
-        self.mz_input = QDoubleSpinBox()
-        self.mz_input.setRange(-1e8, 1e8)
+        self.mz_input = UnitSpinBox(UnitType.MOMENT)
+        self.mz_input.setRange(-1e12, 1e12)
         self.mz_input.setDecimals(2)
-        self.mz_input.setSuffix(" kNm")
 
         form_layout.addRow("Fuerza X (Fx):", self.fx_input)
         form_layout.addRow("Fuerza Y (Fy):", self.fy_input)
@@ -163,9 +163,9 @@ class NodalLoadsDialog(QDialog):
             QMessageBox.warning(self, "Aviso", "Selecciona nodos.")
             return
 
-        fx = self.fx_input.value()
-        fy = self.fy_input.value()
-        mz = self.mz_input.value()
+        fx = self.fx_input.get_value_base()
+        fy = self.fy_input.get_value_base()
+        mz = self.mz_input.get_value_base()
 
         count = 0
         for node_tag in target_ids:
@@ -180,8 +180,8 @@ class NodalLoadsDialog(QDialog):
             load = NodalLoad(new_tag, node_tag, fx, fy, mz)
             self.manager.add_load(load)
             count += 1
-        
         self.populate_nodes()
+        print(f"fx:{fx}, fy:{fy}, mz:{mz}")
         QMessageBox.information(self, "Éxito", f"Carga aplicada a {count} nodos.")
 
     def clear_loads(self):
@@ -203,3 +203,27 @@ class NodalLoadsDialog(QDialog):
         for load in loads:
             if isinstance(load, NodalLoad) and load.node_tag == node_tag:
                 self.manager.delete_load(load.tag)
+
+    def on_node_selected(self):
+        selected_items = self.node_list.selectedItems()
+        if not selected_items:
+            return
+        item = selected_items[0]
+        node_tag = item.data(Qt.ItemDataRole.UserRole)
+        
+        loads = self.manager.get_all_loads()
+        found_load = None
+        for load in loads:
+            if isinstance(load, NodalLoad) and load.node_tag == node_tag:
+                found_load = load
+                break
+        
+        # Actualizar UI
+        if found_load:
+            self.fx_input.set_value_base(found_load.fx)
+            self.fy_input.set_value_base(found_load.fy)
+            self.mz_input.set_value_base(found_load.mz)
+        else:
+            self.fx_input.set_value_base(0.0)
+            self.fy_input.set_value_base(0.0)
+            self.mz_input.set_value_base(0.0)

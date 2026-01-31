@@ -54,6 +54,8 @@ class SectionDialog(QDialog):
         self.btn_add.clicked.connect(self.add_section)
         self.btn_delete.clicked.connect(self.delete_section)
 
+        #conectamos la señal para actualizar los campos
+        self.sections_list.itemClicked.connect(self.on_section_selected)
         #cargar secciones existentes
         self.load_sections()
 
@@ -150,7 +152,7 @@ class SectionDialog(QDialog):
         item.setData(Qt.ItemDataRole.UserRole, tag)
         self.sections_list.addItem(item)
 
-        print(f"[DEBUG] Sección Creada: {name}")
+        print(f"[DEBUG] Sección Creada: {name} | Arg: {data}")
 
     def delete_section(self):
         current_row = self.sections_list.currentRow()
@@ -240,4 +242,12 @@ class SectionDialog(QDialog):
             ))
             
         return section
-
+    def on_section_selected(self, item):
+        tag = item.data(Qt.ItemDataRole.UserRole)
+        manager = ProjectManager.instance()
+        section = manager.get_section(tag)
+        
+        if section and isinstance(section, FiberSection):
+            self.form_section.set_data(section)
+            # Forzamos update de la preview
+            self.update_preview()

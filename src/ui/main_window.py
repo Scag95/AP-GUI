@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt
 from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
 from src.ui.menus.assign_menu import AssignMenu
+from src.ui.menus.analyze_menu import AnalyzeMenu
 from src.ui.widgets.structure_interactor import StructureInteractor
 from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
@@ -26,6 +27,9 @@ class MainWindow(QMainWindow):
 
         self.assign_menu = AssignMenu(self)
         bar.addMenu(self.assign_menu) 
+        
+        self.analyze_menu = AnalyzeMenu(self)
+        bar.addMenu(self.analyze_menu) 
 
         self.viz_widget = StructureInteractor()
         self.setCentralWidget(self.viz_widget)

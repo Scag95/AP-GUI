@@ -43,7 +43,9 @@ class OpenSeesTranslator:
         print("[OpenSees] Modelo construido exitosamente.")
 
     def _build_nodes(self):
+        print(f"[DEBUG] --- Construcción de Nodos ---")
         for node in self.manager.get_all_nodes():
+            print(f"[DEBUG] Create Node {node.tag}: ({node.x}, {node.y}) Fix: {node.fixity}")
             ops.node(node.tag, node.x, node.y)
             
             # Aplicar restricciones (Fixity)
@@ -66,7 +68,9 @@ class OpenSeesTranslator:
                 ops.section('Fiber', sec.tag)
                 
                 # Definir Parches (Patches)
+                # Definir Parches (Patches)
                 for p in sec.patches:
+                    print(f"[DEBUG] Sec {sec.tag} Patch: Mat={p.material_tag} yI={p.yI} zI={p.zI} yJ={p.yJ} zJ={p.zJ}")
                     ops.patch('rect', p.material_tag, p.nIy, p.nIz, p.yI, p.zI, p.yJ, p.zJ)
                 
                 # Definir Capas (Layers)
@@ -102,11 +106,14 @@ class OpenSeesTranslator:
         ops.pattern('Plain', pattern_tag, ts_tag)
         
         # Iterar todas las cargas
+        print(f"[DEBUG] --- Construcción de Cargas ---")
         for load in self.manager.get_all_loads():
             if isinstance(load, NodalLoad):
+                print(f"[DEBUG] Load Node {load.node_tag}: Fx={load.fx}, Fy={load.fy}, Mz={load.mz}")
                 ops.load(load.node_tag, load.fx, load.fy, load.mz)
                 
             elif isinstance(load, ElementLoad):
+                print(f"[DEBUG] EleLoad {load.element_tag}: wy={load.wy}")
                 ops.eleLoad('-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
 
     def run_gravity_analysis(self):
@@ -122,8 +129,27 @@ class OpenSeesTranslator:
         
         if ok == 0:
             print("[OpenSees] Análisis de Gravedad completado con EXITO")
+            return True
         else:
             print(f"[OpenSees] FALLÓ el análisis de Gravedad.")
+            return False
+
+    def get_analysis_results(self):
+        results = {
+            "displacements":{},
+            "reactions":{}
+        }
+
+        ops.reactions()
+        for node in self.manager.get_all_nodes():
+            #1. Desplazamientos [dx, dy, rz]
+            disp = ops.nodeDisp(node.tag)
+            results["displacements"][node.tag] = disp
+
+            reac = ops.nodeReaction(node.tag)
+            results["reactions"][node.tag] = reac
+
+        return results
 
     def dump_model_to_file(self, filename="model_dump.out"):
         """Vuelca el estado actual de OpenSees a un archivo de texto."""

@@ -8,6 +8,7 @@ class UnitType(Enum):
     MOMENT = "Moment"
     STRESS = "Stress"
     DENSITY = "Density"
+    DISTRIBUTED_FORCE = "DistributedForce"
 
 class UnitManager(QObject):
     _instance = None
@@ -66,8 +67,14 @@ class UnitManager(QObject):
                 "kg/m3": 1.0,        # BASE
                 "Ton/m3": 1000.0,
                 "g/cm3": 1000.0,
-                "kN/m3": 101.97,
                 "lb/ft3": 16.0185
+            },
+            UnitType.DISTRIBUTED_FORCE: {
+                "N/m": 1.0,          # BASE
+                "kN/m": 1000.0,
+                "kgf/m": 9.80665,
+                "Ton/m": 9806.65,
+                "kips/ft": 14593.9
             }
         }
 
@@ -77,7 +84,8 @@ class UnitManager(QObject):
             UnitType.FORCE: "kN",
             UnitType.MOMENT: "kNm",
             UnitType.STRESS: "MPa",
-            UnitType.DENSITY: "kg/m3"
+            UnitType.DENSITY: "kg/m3",
+            UnitType.DISTRIBUTED_FORCE: "kN/m"
         }
 
     def get_current_unit(self, unit_type: UnitType):
