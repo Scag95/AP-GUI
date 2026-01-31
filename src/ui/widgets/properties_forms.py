@@ -1,10 +1,13 @@
-from PyQt6.QtWidgets import QWidget, QFormLayout, QLabel, QDoubleSpinBox, QPushButton, QVBoxLayout, QCheckBox,QHBoxLayout
+from PyQt6.QtWidgets import (QWidget, QFormLayout, QDoubleSpinBox, 
+                             QLineEdit, QLabel, QVBoxLayout,QCheckBox,QHBoxLayout,QPushButton)
 from PyQt6.QtCore import pyqtSignal
+from src.ui.widgets.unit_spinbox import UnitSpinBox
+from src.utils.units import UnitType
 
 class NodeForms(QWidget):
     dataChanged = pyqtSignal()
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent = None):
+        super().__init__(parent)
 
         # Layout Principal Vertical
         main_layout = QVBoxLayout(self)
@@ -14,10 +17,18 @@ class NodeForms(QWidget):
         
         # Inputs        
         self.lbl_tag = QLabel("-")
-        self.spin_x = QDoubleSpinBox()
-        self.spin_x.setRange(-10000, 10000) # Rango amplio
-        self.spin_y = QDoubleSpinBox()
-        self.spin_y.setRange(-10000, 10000)
+        self.spin_x = UnitSpinBox(UnitType.LENGTH)
+        self.spin_x.setRange(-1e6, 1e6) # Rango amplio
+        self.spin_x.setDecimals(3)
+
+        self.spin_y = UnitSpinBox(UnitType.LENGTH)
+        self.spin_y.setRange(-1e6, 1e6)
+        self.spin_y.setDecimals(3)
+
+        #Conectamos signals
+        self.spin_x.valueChanged.connect(self._on_value_changed)
+        self.spin_y.valueChanged.connect(self._on_value_changed)
+
 
         #CheckBox para las restricciones
 
@@ -49,11 +60,19 @@ class NodeForms(QWidget):
         self.current_node = None
         
     def load_node(self,node):
-        #Carga datos en el form
+        # Carga datos en el form
         self.current_node = node
         self.lbl_tag.setText(str(node.tag))
-        self.spin_x.setValue(node.x)
-        self.spin_y.setValue(node.y)
+        # Bloqueamos la señal
+        self.spin_x.blockSignals(True)
+        self.spin_y.blockSignals(True)
+        # Definimos los valores base
+        self.spin_x.set_value_base(node.x)
+        self.spin_y.set_value_base(node.y)
+        # Desbloqueammos la señal
+        self.spin_x.blockSignals(False)
+        self.spin_y.blockSignals(False)
+
         fixity= node.fixity
         self.chk_fix_x.setChecked(bool(fixity[0]))
         self.chk_fix_y.setChecked(bool(fixity[1]))
@@ -63,8 +82,8 @@ class NodeForms(QWidget):
     def apply_changes(self):
         #Guarda cambios en el objetivo y emite señal
         if self.current_node:
-            self.current_node.x = self.spin_x.value()
-            self.current_node.y = self.spin_y.value()
+            self.current_node.x = self.spin_x.get_value_base()
+            self.current_node.y = self.spin_y.get_value_base()
 
             new_fixity = [
                 1 if self.chk_fix_x.isChecked() else 0,
@@ -73,6 +92,11 @@ class NodeForms(QWidget):
         ]
             self.current_node.fixity = new_fixity
             self.dataChanged.emit()
+
+    def _on_value_changed(self):
+        """Habilita el botón de aplicar cuando hay cambios pendientes."""
+        if self.current_node:
+            self.btn_apply.setEnabled(True)
 
 
 

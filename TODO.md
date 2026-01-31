@@ -63,13 +63,18 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
 
 ## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
 - [ ] **NodalLoadsDialog y ElementLoadsDialog**:
-    - [ ] CheckBox para filtrar lista: "Mostrar solo nodos/elementos con carga".
-    - [ ] CheckBox para mostrar/ocultar IDs en el visor (Show Tags) directamente desde el diálogo.
+    - [x] CheckBox para filtrar lista: "Mostrar solo nodos/elementos con carga".
+    - [x] CheckBox para mostrar/ocultar IDs en el visor (Show Tags) directamente desde el diálogo.
 - [x] **View Options (Comandos de Visualización)**:
     - [x] Toggle Visibility: Mostrar u ocultar etiquetas (Tags) de Nodos y Elementos (Comando: `tag`).
     - [x] Load Scaling: Input para escalar visualmente el tamaño de las cargas (Atajos: `Ctrl++`/`Ctrl+-`).
 
 ## 🎓 Deuda Técnica / Mejoras
-- [ ] **Sistema de Unidades**: Implementar convertidor y selector de unidades (N/mm, kN/m, etc.).
+- [x] **Sistema de Unidades (Core & Materials/Sections)**:
+    - [x] Backend: `UnitManager` (Singleton) y `UnitType` (Length, Force, Stress, Density).
+    - [x] UI: `UnitSpinBox` para conversión automática (Visual <-> Base).
+    - [x] Integración: `MaterialForm` (MPa -> Pa) y `SectionForm` (mm -> m).
+    - [x] **Mejora Visual SectionPreview**: Barras a escala real y ejes dinámicos.
+    - [ ] Integración en Cargas (`NodalLoads`, `ElementLoads`) y Grids.
 - [ ] Añadir validaciones en los inputs (que valores no sean negativos, etc.).
 - [ ] Implementar edición de elementos existentes (Forms para Elementos).

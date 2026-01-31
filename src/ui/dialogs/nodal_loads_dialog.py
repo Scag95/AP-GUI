@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QListWidget, QListWidgetItem, QDoubleSpinBox, 
-                             QPushButton, QGroupBox, QFormLayout, QMessageBox, QLineEdit)
+                             QPushButton, QGroupBox, QFormLayout, QMessageBox, QLineEdit, QCheckBox)
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
 from src.analysis.loads import NodalLoad
@@ -21,6 +21,15 @@ class NodalLoadsDialog(QDialog):
         self.txt_nodes.setPlaceholderText("1,2,5-9")
         self.txt_nodes.returnPressed.connect(self.select_from_text)
         left_layout.addWidget(self.txt_nodes)
+
+        # Filtros y opciones de visualización
+        self.chk_assigned_only = QCheckBox("Mostrar solo con carga")
+        self.chk_assigned_only.toggled.connect(self.populate_nodes)
+        left_layout.addWidget(self.chk_assigned_only)
+
+        self.chk_show_tags = QCheckBox("Mostrar Etiquetas (IDs)")
+        self.chk_show_tags.toggled.connect(self.toggle_tags)
+        left_layout.addWidget(self.chk_show_tags)
 
         left_layout.addWidget(QLabel("Lista de Nodos:"))
         self.node_list = QListWidget()
@@ -72,8 +81,17 @@ class NodalLoadsDialog(QDialog):
         right_layout.addStretch()
         layout.addLayout(right_layout, stretch=1)
 
+        # Inicializar estado del checkbox de etiquetas según el visor
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            is_visible = self.parent().viz_widget.show_node_labels
+            self.chk_show_tags.setChecked(is_visible)
+
         # Inicializar
         self.populate_nodes()
+
+    def toggle_tags(self, checked):
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            self.parent().viz_widget.toggle_node_labels(checked)
 
     def populate_nodes(self):
         self.node_list.clear()
@@ -87,6 +105,10 @@ class NodalLoadsDialog(QDialog):
                 node_load_map[load.node_tag] = load
 
         for n in nodes:
+            # Filtro: Solo mostrar si tiene carga asignada
+            if self.chk_assigned_only.isChecked() and n.tag not in node_load_map:
+                continue
+
             item = QListWidgetItem(f"Nodo {n.tag}")
             item.setData(Qt.ItemDataRole.UserRole, n.tag)
             

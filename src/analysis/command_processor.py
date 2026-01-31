@@ -1,5 +1,11 @@
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QAction
+
 from src.analysis.manager import ProjectManager
 from src.analysis.node import Node
+from src.analysis.opensees_translator import OpenSeesTranslator
+from src.utils.units import UnitManager, UnitType
+
 
 class CommandProcessor:
     def __init__(self):
@@ -35,7 +41,57 @@ class CommandProcessor:
                 
                 else:
                     return "Objetivo desconocido. Usa 'nodes' o 'elements'.", None
-            # --- OTROS COMANDOS ... ---
+            
+            # --- COMANDO: ANALYZE ---
+            elif verb == "analyze":
+                try:
+                    translator = OpenSeesTranslator()
+                    translator.build_model()
+                    translator.run_gravity_analysis()
+                    return "Análisis finalizado. Revisa la terminal para detalles.", None
+                except Exception as e:
+                    return f"Error en análisis: {str(e)}", None
+
+            # --- COMANDO: CLEAR ---
+            elif verb == "clear":
+                return "Consola limpiada", {"action": "clear_console"}
+
+            # --- COMANDO: UNITS ---
+            elif verb == "units":
+                if not args:
+                    return "Uso: units [m|cm|mm|ft|in]", None
+                
+                unit_name = args[0]
+                manager = UnitManager.instance()
+                # Cambiamos solo la longitud para probar
+                manager.set_unit(UnitType.LENGTH, unit_name)
+                return f"Unidad de longitud cambiada a: {unit_name}", None # {"action": "refresh_ui"} si fuera necesario
+
+            elif verb == "check":
+                try:
+                    # Creamos traductor solo para volcar el modelo (asumiendo que ya se hizo analyze antes, 
+                    # pero ojo: opensees es stateful global. Si ya corriste analyze, el modelo sigue vivo).
+                    # Si no, esto crearía uno nuevo. 
+                    
+                    # MEJOR ESTRATEGIA: Como la instancia de ops es global, 
+                    # simplemente llamamos a printModel directamente o a través del traductor.
+                    
+                    translator = OpenSeesTranslator()
+                    # Si no hay modelo, construimos uno rápido para ver qué sale
+                    # Pero lo ideal es usarlo después de analyze.
+                    # Asumiremos que el usuario hace 'analyze' primero, o que el translator lo construye.
+                    
+                    # Opción segura: Construir y volcar.
+                    translator.build_model()
+                    translator.dump_model_to_file("debug_model.out")
+                    return "Modelo volcado a 'debug_model.out'. Revisa ese archivo.", None
+                except Exception as e:
+                    return f"Error en check: {str(e)}", None
+            
+            elif verb == "exit":
+                QApplication.instance().quit()
+                return "Cerrando aplicación...", None
+            
             else:
                 return f"Comando desconocido: '{verb}'", None
         except Exception as e:

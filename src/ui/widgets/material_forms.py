@@ -1,4 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox
+from src.ui.widgets.unit_spinbox import UnitSpinBox 
+from src.utils.units import UnitType
 
 class ConcreteForm(QWidget):
     def __init__(self):
@@ -6,18 +8,17 @@ class ConcreteForm(QWidget):
         layout = QFormLayout(self)
 
         #Densidad
-        self.spin_rho_c = QSpinBox()
-        self.spin_rho_c.setRange(0,10000)
-        self.spin_rho_c.setSuffix(" Kg")
-        self.spin_rho_c.setValue(2500)
+        self.spin_rho_c = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho_c.setDecimals(0)
+        self.spin_rho_c.setRange(0, 1e6)
+        self.spin_rho_c.set_value_base(2500)
         layout.addRow("Densidad [rho]",self.spin_rho_c)
 
         #Campo fpc
-        self.spin_fpc = QDoubleSpinBox()
+        self.spin_fpc = UnitSpinBox(UnitType.STRESS)
         self.spin_fpc.setDecimals(0)
-        self.spin_fpc.setRange(0,100) #Rango de 0 a 100 MPa
-        self.spin_fpc.setSuffix( "MPa")
-        self.spin_fpc.setValue(25)
+        self.spin_fpc.setRange(0, 1e10) 
+        self.spin_fpc.set_value_base(25*1e6) # 25 MPa = 25,000,000 Pa
         layout.addRow("Resistencia a la compresión [fpc]",self.spin_fpc)
 
         #Campo epsc0
@@ -28,11 +29,11 @@ class ConcreteForm(QWidget):
         layout.addRow("Deformación Unitaria [epsc0]",self.spin_epsc0)
 
         #Campo fpcU
-        self.spin_fpcU = QDoubleSpinBox()
+        self.spin_fpcU = UnitSpinBox(UnitType.STRESS)
         self.spin_fpcU.setDecimals(0)
-        self.spin_fpcU.setRange(0,100) #Rango de 0 a 100 MPa
-        self.spin_fpcU.setSuffix( "MPa")
-        self.spin_fpcU.setValue(25)
+        self.spin_fpcU.setRange(0, 1e10)
+        self.spin_fpcU.set_value_base(25*1e6) # 25 MPa
+
         layout.addRow("Resistencia al aplastamiento [fpcU]",self.spin_fpcU)
 
         #Campo epscU
@@ -45,11 +46,11 @@ class ConcreteForm(QWidget):
     def get_data(self):
         #Devuelve los valores del formulario
         return{
-            "rho":self.spin_rho_c.value(),
-            "fpc":self.spin_fpc.value(),
-            "epsc0":self.spin_epsc0.value(),
-            "fpcu":self.spin_fpcU.value(),
-            "epsu":self.spin_epscU.value()
+            "rho": self.spin_rho_c.get_value_base(),
+            "fpc": self.spin_fpc.get_value_base(),
+            "epsc0": self.spin_epsc0.value(),
+            "fpcu": self.spin_fpcU.get_value_base(),
+            "epsu": self.spin_epscU.value()
         }
 
 class SteelForm(QWidget):
@@ -58,26 +59,24 @@ class SteelForm(QWidget):
         layout = QFormLayout(self)
 
         #Densidad
-        self.spin_rho_s = QSpinBox()
-        self.spin_rho_s.setRange(0,10000)
-        self.spin_rho_s.setSuffix(" Kg")
-        self.spin_rho_s.setValue(7850)
+        self.spin_rho_s = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho_s.setDecimals(0)
+        self.spin_rho_s.setRange(0, 1e6)
+        self.spin_rho_s.set_value_base(7850)
         layout.addRow("Densidad [rho]",self.spin_rho_s)
 
         #Campo Fy
-        self.spin_Fy = QDoubleSpinBox()
+        self.spin_Fy = UnitSpinBox(UnitType.STRESS)
         self.spin_Fy.setDecimals(0)
-        self.spin_Fy.setRange(0,1000) #Rango de 0 a 1000 MPa
-        self.spin_Fy.setSuffix( "MPa")
-        self.spin_Fy.setValue(500)
+        self.spin_Fy.setRange(0, 1e10) 
+        self.spin_Fy.set_value_base(500*1e6) # 500 MPa = 500e6 Pa
         layout.addRow("Esfuerzo de fluencia [Fy]",self.spin_Fy)
 
         #Campo E0
-        self.spin_E0 = QDoubleSpinBox()
+        self.spin_E0 = UnitSpinBox(UnitType.STRESS)
         self.spin_E0.setDecimals(0)
-        self.spin_E0.setRange(0,1000000) #Rango de 0 a 1000 MPa
-        self.spin_E0.setSuffix( "MPa")
-        self.spin_E0.setValue(200000) #Rango de 0 a 1000 MPa
+        self.spin_E0.setRange(0, 1e12)
+        self.spin_E0.set_value_base(200*1e9) # 200 GPa = 200,000 MPa = 200e9 Pa
         layout.addRow("Módulo de elasticidad [E0]",self.spin_E0)
 
         #Campo b
@@ -90,8 +89,8 @@ class SteelForm(QWidget):
     def get_data(self):
         #Devuelve los valores del formulario
         return{
-            "rho":self.spin_rho_s.value(),
-            "Fy":self.spin_Fy.value(),
-            "E0":self.spin_E0.value(),
-            "b":self.spin_b.value(),
+            "rho": self.spin_rho_s.get_value_base(),
+            "Fy": self.spin_Fy.get_value_base(),
+            "E0": self.spin_E0.get_value_base(),
+            "b": self.spin_b.value(),
         }

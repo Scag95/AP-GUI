@@ -1,8 +1,10 @@
 
 from PyQt6.QtWidgets import (QWidget, QFormLayout, QGroupBox, QComboBox,
-                             QDoubleSpinBox, QSpinBox, QLineEdit)
+                             QSpinBox, QLineEdit)
 from src.analysis.manager import ProjectManager
 from src.analysis.materials import Concrete01, Steel01
+from src.ui.widgets.unit_spinbox import UnitSpinBox
+from src.utils.units import UnitType
 
 
 class SectionForm(QWidget):
@@ -17,16 +19,17 @@ class SectionForm(QWidget):
         layout.addRow("Nombre de la sección",self.textbox_name)
         
         #Base
-        self.spin_b = QSpinBox()
-        self.spin_b.setRange(0,10000)
-        self.spin_b.setSuffix(" mm")
-        self.spin_b.setValue(300)
-        layout.addRow("Base de la sección:",self.spin_b)
+        self.spin_b = UnitSpinBox(UnitType.SECTION_DIM)
+        self.spin_b.setRange(0, 1e6) # Rango amplio visual (ej. 1,000,000 mm)
+        self.spin_b.setDecimals(2)   # 2 decimales fijos
+        self.spin_b.set_value_base(0.3) # 300 mm = 0.3 m
+        layout.addRow("Base de la sección:", self.spin_b)
+
         #Altura
-        self.spin_h = QSpinBox()
-        self.spin_h.setRange(0,10000)
-        self.spin_h.setSuffix(" mm")
-        self.spin_h.setValue(300)
+        self.spin_h = UnitSpinBox(UnitType.SECTION_DIM)
+        self.spin_h.setRange(0,1e6)  # Rango amplio visual (ej. 1,000,000 mm)
+        self.spin_b.setDecimals(2)   # 2 decimales fijos
+        self.spin_h.set_value_base(0.3)    # 300 mm = 0.3 m
         layout.addRow("Altura de la sección:",self.spin_h)
 
         self.combo_concrete = QComboBox()
@@ -39,10 +42,10 @@ class SectionForm(QWidget):
         layout.addRow("Material Acero:", self.combo_steel)
 
         # --- Recubrimiento ---
-        self.spin_cover = QSpinBox()
-        self.spin_cover.setRange(0, 150)
-        self.spin_cover.setSuffix(" mm")
-        self.spin_cover.setValue(40)
+        self.spin_cover = UnitSpinBox(UnitType.SECTION_DIM)
+        self.spin_cover.setRange(0, 1e6)
+        self.spin_cover.setDecimals(2)
+        self.spin_cover.set_value_base(0.040)
         layout.addRow("Recubrimiento:", self.spin_cover)
 
         # --- Refuerzo Superior ---
@@ -56,10 +59,10 @@ class SectionForm(QWidget):
         self.spin_top_qty.setValue(3)
         form_top.addRow("Cantidad:", self.spin_top_qty)
         
-        self.spin_top_diam = QSpinBox()
+        self.spin_top_diam = UnitSpinBox(UnitType.SECTION_DIM)
         self.spin_top_diam.setRange(0, 100)
-        self.spin_top_diam.setSuffix(" mm")
-        self.spin_top_diam.setValue(20)
+        self.spin_top_diam.setDecimals(2)
+        self.spin_top_diam.set_value_base(0.020)
         form_top.addRow("Diámetro:", self.spin_top_diam)
         
         layout.addRow(group_top)
@@ -73,9 +76,10 @@ class SectionForm(QWidget):
         self.spin_bot_qty.setValue(3)
         form_bot.addRow("Cantidad:", self.spin_bot_qty)
         
-        self.spin_bot_diam = QSpinBox()
-        self.spin_bot_diam.setSuffix(" mm")
-        self.spin_bot_diam.setValue(20)
+        self.spin_bot_diam = UnitSpinBox(UnitType.SECTION_DIM)
+        self.spin_bot_diam.setRange(0, 100)
+        self.spin_bot_diam.setDecimals(2)
+        self.spin_bot_diam.set_value_base(0.020)
         form_bot.addRow("Diámetro:", self.spin_bot_diam)
         
         layout.addRow(group_bot)
@@ -100,13 +104,14 @@ class SectionForm(QWidget):
     def get_data(self):
         #Devuelve los valores del formulario
         return{
-            "b":self.spin_b.value(),
-            "h":self.spin_h.value(),
-            "concrete":self.combo_concrete.currentData(),
-            "steel":self.combo_steel.currentData(),
-            "cover":self.spin_cover.value(),
-            "bot_qty":self.spin_bot_qty.value(),
-            "bot_diam":self.spin_bot_diam.value(),
-            "top_qty":self.spin_top_qty.value(),
-            "top_diam":self.spin_top_diam.value()
+            "name": self.textbox_name.text(),
+            "b": self.spin_b.get_value_base(),
+            "h": self.spin_h.get_value_base(),
+            "concrete": self.combo_concrete.currentData(),
+            "steel": self.combo_steel.currentData(),
+            "cover": self.spin_cover.get_value_base(),
+            "bot_qty": self.spin_bot_qty.value(),
+            "bot_diam": self.spin_bot_diam.get_value_base(),
+            "top_qty": self.spin_top_qty.value(),
+            "top_diam": self.spin_top_diam.get_value_base()
         }
