@@ -1,0 +1,267 @@
+Current Domain Information
+	Current Time: 0
+	Committed Time: 0
+NODE DATA: NumNodes: 12
+
+numComponents: 12
+
+ Node: 1
+	Coordinates  : 0 0 
+	Disps: 0 0 0 
+
+
+ Node: 2
+	Coordinates  : 0 3.5 
+	Disps: 0 0 0 
+
+
+ Node: 3
+	Coordinates  : 0 7 
+	Disps: 0 0 0 
+
+
+ Node: 4
+	Coordinates  : 0 10.5 
+	Disps: 0 0 0 
+
+
+ Node: 5
+	Coordinates  : 6 0 
+	Disps: 0 0 0 
+
+
+ Node: 6
+	Coordinates  : 6 3.5 
+	Disps: 0 0 0 
+
+
+ Node: 7
+	Coordinates  : 6 7 
+	Disps: 0 0 0 
+
+
+ Node: 8
+	Coordinates  : 6 10.5 
+	Disps: 0 0 0 
+
+
+ Node: 9
+	Coordinates  : 12 0 
+	Disps: 0 0 0 
+
+
+ Node: 10
+	Coordinates  : 12 3.5 
+	Disps: 0 0 0 
+
+
+ Node: 11
+	Coordinates  : 12 7 
+	Disps: 0 0 0 
+
+
+ Node: 12
+	Coordinates  : 12 10.5 
+	Disps: 0 0 0 
+
+ELEMENT DATA: NumEle: 15
+
+numComponents: 15
+
+Element: 1 Type: ForceBeamColumn2d 	Connected Nodes: 1 2 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 2 Type: ForceBeamColumn2d 	Connected Nodes: 2 3 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 3 Type: ForceBeamColumn2d 	Connected Nodes: 3 4 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 4 Type: ForceBeamColumn2d 	Connected Nodes: 5 6 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 5 Type: ForceBeamColumn2d 	Connected Nodes: 6 7 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 6 Type: ForceBeamColumn2d 	Connected Nodes: 7 8 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 7 Type: ForceBeamColumn2d 	Connected Nodes: 9 10 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 8 Type: ForceBeamColumn2d 	Connected Nodes: 10 11 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 9 Type: ForceBeamColumn2d 	Connected Nodes: 11 12 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 10 Type: ForceBeamColumn2d 	Connected Nodes: 2 6 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 11 Type: ForceBeamColumn2d 	Connected Nodes: 6 10 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 12 Type: ForceBeamColumn2d 	Connected Nodes: 3 7 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 13 Type: ForceBeamColumn2d 	Connected Nodes: 7 11 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 14 Type: ForceBeamColumn2d 	Connected Nodes: 4 8 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+Element: 15 Type: ForceBeamColumn2d 	Connected Nodes: 8 12 
+	Number of Sections: 5	Mass density: 0
+Lobatto
+	End 1 Forces (P V M): 0 0 0
+	End 2 Forces (P V M): 0 0 0
+
+SP_Constraints: numConstraints: 9
+
+numComponents: 9
+SP_Constraint: 0	 Node: 1 DOF: 1 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 1	 Node: 1 DOF: 2 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 2	 Node: 1 DOF: 3 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 3	 Node: 5 DOF: 1 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 4	 Node: 5 DOF: 2 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 5	 Node: 5 DOF: 3 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 6	 Node: 9 DOF: 1 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 7	 Node: 9 DOF: 2 ref value: 0 current value: 0 initial value: 0
+SP_Constraint: 8	 Node: 9 DOF: 3 ref value: 0 current value: 0 initial value: 0
+
+Pressure_Constraints: numConstraints: 0
+
+numComponents: 0
+
+MP_Constraints: numConstraints: 0
+
+numComponents: 0
+
+LOAD PATTERNS: numPatterns: 1
+
+
+numComponents: 1
+Load Pattern: 1
+  Scale Factor: 1
+Linear Series: constant factor: 1
+  Nodal Loads: 
+
+numComponents: 3
+Nodal Load: 2 load : 10 50 0 
+Nodal Load: 3 load : 10 50 0 
+Nodal Load: 4 load : 10 50 0 
+
+  Elemental Loads: 
+
+numComponents: 15
+Beam2dUniformLoad - tag 15
+  Transverse: -10
+  Axial:      0
+  Element acted on: 10
+Beam2dUniformLoad - tag 16
+  Transverse: -10
+  Axial:      0
+  Element acted on: 11
+Beam2dUniformLoad - tag 17
+  Transverse: -10
+  Axial:      0
+  Element acted on: 12
+Beam2dUniformLoad - tag 18
+  Transverse: -10
+  Axial:      0
+  Element acted on: 13
+Beam2dUniformLoad - tag 19
+  Transverse: -10
+  Axial:      0
+  Element acted on: 14
+Beam2dUniformLoad - tag 20
+  Transverse: -10
+  Axial:      0
+  Element acted on: 15
+Beam2dUniformLoad - tag 21
+  Transverse: 10
+  Axial:      0
+  Element acted on: 1
+Beam2dUniformLoad - tag 22
+  Transverse: 10
+  Axial:      0
+  Element acted on: 2
+Beam2dUniformLoad - tag 23
+  Transverse: 10
+  Axial:      0
+  Element acted on: 3
+Beam2dUniformLoad - tag 24
+  Transverse: 10
+  Axial:      0
+  Element acted on: 4
+Beam2dUniformLoad - tag 25
+  Transverse: 0
+  Axial:      10
+  Element acted on: 5
+Beam2dUniformLoad - tag 26
+  Transverse: 0
+  Axial:      10
+  Element acted on: 6
+Beam2dUniformLoad - tag 27
+  Transverse: 0
+  Axial:      10
+  Element acted on: 7
+Beam2dUniformLoad - tag 28
+  Transverse: 0
+  Axial:      -10
+  Element acted on: 8
+Beam2dUniformLoad - tag 29
+  Transverse: 0
+  Axial:      -10
+  Element acted on: 9
+
+  Single Point Constraints: 
+
+numComponents: 0
+
+PARAMETERS: numParameters: 0
+
+
+numComponents: 0

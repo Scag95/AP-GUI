@@ -207,7 +207,7 @@ class StructureInteractor(QWidget):
                 headLen=HEAD_LEN,
                 tailLen=tail_len,
                 brush='g',
-                tailWidth=0.1 * SCALE,
+                tailWidth=0.3 * SCALE,
                 pen='g',
                 pxMode=False
             )
@@ -240,10 +240,10 @@ class StructureInteractor(QWidget):
                 tipAngle=30,
                 baseAngle=20,
                 headLen=HEAD_LEN,
-                tailWidth =0.1*SCALE,
+                tailWidth =0.3*SCALE,
                 tailLen=tail_len,
                 brush='#FFA500', 
-                pen='#FFA500',
+                pen='#FFA500', 
                 pxMode=False
             )
             self.plot_widget.addItem(arrow)

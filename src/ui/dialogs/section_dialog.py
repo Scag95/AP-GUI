@@ -67,6 +67,10 @@ class SectionDialog(QDialog):
         # Cantidades de acero
         self.form_section.spin_top_qty.valueChanged.connect(self.update_preview)
         self.form_section.spin_bot_qty.valueChanged.connect(self.update_preview)
+
+        # Diamentro
+        self.form_section.spin_top_diam.valueChanged.connect(self.update_preview)
+        self.form_section.spin_bot_diam.valueChanged.connect(self.update_preview)
         
         # Materiales (Combos)
         self.form_section.combo_concrete.currentIndexChanged.connect(self.update_preview)

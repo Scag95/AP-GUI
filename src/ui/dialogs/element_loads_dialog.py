@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QListWidget, QListWidgetItem, QDoubleSpinBox, 
-                             QPushButton, QGroupBox, QFormLayout, QMessageBox, QLineEdit)
+                             QPushButton, QGroupBox, QFormLayout, QMessageBox, QLineEdit, QCheckBox)
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
 from src.analysis.loads import ElementLoad
@@ -25,6 +25,15 @@ class ElementLoadsDialog(QDialog):
         # Tip: Si pulsas Enter en el cuadro de texto, se seleccionan en la lista visual
         self.txt_elements.returnPressed.connect(self.select_from_text)
         left_layout.addWidget(self.txt_elements)
+
+        # Filtros y opciones de visualización
+        self.chk_assigned_only = QCheckBox("Mostrar solo con carga")
+        self.chk_assigned_only.toggled.connect(self.populate_elements)
+        left_layout.addWidget(self.chk_assigned_only)
+
+        self.chk_show_tags = QCheckBox("Mostrar Etiquetas (IDs)")
+        self.chk_show_tags.toggled.connect(self.toggle_tags)
+        left_layout.addWidget(self.chk_show_tags)
 
         left_layout.addWidget(QLabel("Lista de Elementos:"))
         self.element_list = QListWidget()
@@ -69,8 +78,17 @@ class ElementLoadsDialog(QDialog):
         right_layout.addStretch()
         layout.addLayout(right_layout, stretch=1)
 
+        # Inicializar estado del checkbox según el visor
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            is_visible = self.parent().viz_widget.show_element_labels
+            self.chk_show_tags.setChecked(is_visible)
+
         # Inicializar datos
         self.populate_elements()
+
+    def toggle_tags(self, checked):
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            self.parent().viz_widget.toggle_element_labels(checked)
 
     def populate_elements(self):
         self.element_list.clear()
@@ -83,6 +101,10 @@ class ElementLoadsDialog(QDialog):
                 element_load_map[load.element_tag] = load
 
         for el in elements:
+            # Filtro: Solo mostrar si tiene carga asignada
+            if self.chk_assigned_only.isChecked() and el.tag not in element_load_map:
+                continue
+
             item = QListWidgetItem(f"Elemento {el.tag}")
             item.setData(Qt.ItemDataRole.UserRole, el.tag)
 

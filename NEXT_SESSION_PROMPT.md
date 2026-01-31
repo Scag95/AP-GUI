@@ -83,23 +83,32 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     -   Estilo uniforme rectangular para `Wy` (Naranja) y `Wx` (Morado).
     -   Corrección de geometría vectorial para la dirección de las flechas.
 
+### Session 9 (2026-01-31) - Unit System & Base Integration (COMPLETED)
+1.  **Framework de Unidades**:
+    -   Backend: `UnitManager` central para gestionar conversiones. Definida base SI pura (m, N, Pa, kg).
+    -   UI: Created `UnitSpinBox` widget that handles `Visual Value <-> Base Value` automatically.
+    -   Applied to: `MaterialForms` (User inputs MPa -> Stored as Pa) and `SectionForms` (User inputs mm -> Stored as m).
+2.  **Section Preview Pro**:
+    -   Updated `SectionPreview` to draw reinforcement bars at real scale (using `pxMode=False`).
+    -   Implemented dynamic, self-scaling axes with arrow styles (using `pg.ArrowItem`).
+3.  **Validation**:
+    -   Verified OpenSees Translator receives correct base values (25000000 Pa, 0.3 m) regardless of UI settings.
+
 ## Pending Tasks (Priority Order)
-### 1. Mejoras de UX / Visualización (Refinamiento)
--   **Filtros UI**: `NodalLoadsDialog` y `ElementLoadsDialog`: Checkboxes para mostrar solo items con carga y activar/desactivar Tags.
+### 1. Sistema de Unidades - Fase 2 (Cargas)
+-   **Integración Crítica**: Aplicar `UnitSpinBox` a `NodalLoadsDialog` y `ElementLoadsDialog`.
+    -   El usuario necesita ingresar kN, pero el sistema base requiere Newtons.
+-   Integrar en `GridDialog` (Dimensiones en m/cm).
 
 ### 2. OpenSees Analysis Engine (The "Brain")
 -   **Traductor Final**: Completar `src/analysis/opensees_translator.py`.
-    -   Integrar: Nodos + Fixity + Elements + Loads + Patterns.
 -   **Ejecución**: Gravedad y Pushover.
--   **Output**: Capturar respuestas JSON.
-
-### 3. Deuda Técnica
--   Implementar sistema de unidades.
--   Añadir botón de eliminar elementos.
+-   **Output**: Capturar respuestas JSON y graficar resultados.
 
 ## Technical Context for Next Session
--   **Estado Actual**: El software ya permite modelar geometría competa, asignar cargas y visualizarlo todo profesionalmente (cli + shortcuts). Falta conectar el cerebro (OpenSees).
+-   **Estado Actual**: Core del sistema de unidades implementado y probado en materiales/secciones. Falta extenderlo a Cargas para evitar errores de magnitud (N vs kN).
 -   **Archivos Clave**:
-    -   `src/ui/widgets/structure_interactor.py`: Lógica de dibujo compleja (Flechas, Cargas distribuidas).
-    -   `src/analysis/command_processor.py`: Lógica de la consola de comandos.
--   **Siguiente Paso**: Implementar control de visualización en los diálogos de Carga y empezar con el Traductor de OpenSees.
+    -   `src/utils/units.py`: Definición de factores y unidades base.
+    -   `src/ui/widgets/unit_spinbox.py`: El widget mágico que hace la conversión.
+    -   `src/ui/dialogs/nodal_loads_dialog.py`: Próximo objetivo para integración de unidades.
+-   **Siguiente Paso**: Completar la integración de unidades en los diálogos de cargas.
