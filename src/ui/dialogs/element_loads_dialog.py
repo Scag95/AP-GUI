@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
 from src.analysis.loads import ElementLoad
+from src.ui.widgets.unit_spinbox import UnitSpinBox
+from src.utils.units import UnitType
 
 class ElementLoadsDialog(QDialog):
     def __init__(self, parent=None):
@@ -40,7 +42,9 @@ class ElementLoadsDialog(QDialog):
         self.element_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         # Sincronizar: al clicar en la lista, actualizar el texto (opcional, puede ser complejo bidireccional)
         left_layout.addWidget(self.element_list)
-        
+        #Conectamos la señal para acutalizar los campos
+        self.element_list.itemSelectionChanged.connect(self.on_element_selected)
+
         layout.addLayout(left_layout, stretch=1)
 
         # --- Panel Derecho: Configuración ---
@@ -50,15 +54,16 @@ class ElementLoadsDialog(QDialog):
         form_layout = QFormLayout()
 
         # Inputs
-        self.wx_input = QDoubleSpinBox()
-        self.wx_input.setRange(-1e6, 1e6)
+        # Inputs
+        self.wx_input = UnitSpinBox(UnitType.DISTRIBUTED_FORCE)
+        self.wx_input.setRange(-1e12, 1e12)
         self.wx_input.setDecimals(2)
-        self.wx_input.setSuffix(" kN/m") 
+        # self.wx_input.setSuffix(" kN/m") # Handled by UnitSpinBox
 
-        self.wy_input = QDoubleSpinBox()
-        self.wy_input.setRange(-1e6, 1e6)
+        self.wy_input = UnitSpinBox(UnitType.DISTRIBUTED_FORCE)
+        self.wy_input.setRange(-1e12, 1e12)
         self.wy_input.setDecimals(2)
-        self.wy_input.setSuffix(" kN/m") 
+        # self.wy_input.setSuffix(" kN/m") # Handled by UnitSpinBox 
 
         form_layout.addRow("Carga X (wx):", self.wx_input)
         form_layout.addRow("Carga Y (wy):", self.wy_input)
@@ -169,8 +174,8 @@ class ElementLoadsDialog(QDialog):
             QMessageBox.warning(self, "Aviso", "No hay elementos seleccionados (escribe IDs o selecciona en la lista).")
             return
 
-        wx = self.wx_input.value()
-        wy = self.wy_input.value()
+        wx = self.wx_input.get_value_base()
+        wy = self.wy_input.get_value_base()
 
         count = 0
         for el_tag in target_ids:
@@ -210,3 +215,26 @@ class ElementLoadsDialog(QDialog):
         for load in loads:
             if isinstance(load, ElementLoad) and load.element_tag == element_tag:
                 self.manager.delete_load(load.tag)
+
+    def on_element_selected(self):
+        selected_items = self.element_list.selectedItems()
+        if not selected_items: return
+        # Tomamos el primero
+        item = selected_items[0]
+        el_tag = item.data(Qt.ItemDataRole.UserRole)
+        
+        # Buscar Carga
+        loads = self.manager.get_all_loads()
+        found_load = None
+        for load in loads:
+            if isinstance(load, ElementLoad) and load.element_tag == el_tag:
+                found_load = load
+                break
+        
+        # Actualizar UI
+        if found_load:
+            self.wx_input.set_value_base(found_load.wx)
+            self.wy_input.set_value_base(found_load.wy)
+        else:
+            self.wx_input.set_value_base(0.0)
+            self.wy_input.set_value_base(0.0)

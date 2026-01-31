@@ -6,7 +6,7 @@ from src.ui.dialogs.restraints_dialog import RestraintsDialog
 
 class AssignMenu(QMenu):
     def __init__(self, parent=None):
-        super().__init__("Assign",parent)
+        super().__init__("Asignar",parent)
 
         # 1. Restricciones en los nodos
         self.action_restraints = QAction("Restricciones", self)

@@ -5,6 +5,7 @@ from src.analysis.manager import ProjectManager
 from src.analysis.materials import Concrete01, Steel01
 from src.ui.widgets.unit_spinbox import UnitSpinBox
 from src.utils.units import UnitType
+import math
 
 
 class SectionForm(QWidget):
@@ -115,3 +116,50 @@ class SectionForm(QWidget):
             "top_qty": self.spin_top_qty.value(),
             "top_diam": self.spin_top_diam.get_value_base()
         }
+
+    def set_data(self, section):
+        if not section: return
+
+        #1. Nombre
+        self.textbox_name.setText(section.name)
+        
+        #2. Geometría
+        if section.patches and len(section.patches) > 0:
+            core = section.patches[0]
+            # h  = yJ - yI
+            h = abs(core.yJ - core.yI)
+            # b = zJ - zI
+            b = abs(core.zJ - core.zI)
+
+            self.spin_h.set_value_base(h)
+            self.spin_b.set_value_base(b)
+
+            idx = self.combo_concrete.findData(core.material_tag)
+            if idx >= 0:
+                self.combo_concrete.setCurrentIndex(idx)
+                
+        self.spin_top_qty.setValue(0)
+        self.spin_bot_qty.setValue(0)
+
+        found_steel_mat = False
+
+        for layer in section.layers:
+            if not found_steel_mat:
+                idx = self.combo_steel.findData(layer.material_tag)
+                if idx>=0:
+                    self.combo_steel.setCurrentIndex(idx)
+                    found_steel_mat = True
+
+            diam = math.sqrt(4*layer.area_bar/math.pi)
+
+            if layer.yStart > 0:
+                self.spin_top_qty.setValue(layer.num_bars)
+                self.spin_top_diam.set_value_base(diam)
+                h_val = self.spin_h.get_value_base()
+                cover = (h_val/2) - layer.yStart
+
+                if cover >0:
+                    self.spin_cover.set_value_base(cover)
+            elif layer.yStart <0:
+                self.spin_bot_qty.setValue(layer.num_bars)
+                self.spin_bot_diam.set_value_base(diam)

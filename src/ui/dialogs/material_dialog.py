@@ -64,6 +64,8 @@ class MaterialDialog(QDialog):
         self.btn_add.clicked.connect(self.add_material)
         self.btn_delete.clicked.connect(self.delete_material)
 
+        self.materials_list.itemClicked.connect(self.on_material_selected)
+
         #cargar materiales existentes
         self.load_materials()
 
@@ -125,5 +127,26 @@ class MaterialDialog(QDialog):
             item=QListWidgetItem(display_text)
             item.setData(Qt.ItemDataRole.UserRole, material.tag)
             self.materials_list.addItem(item)
+
+
+    def on_material_selected(self,item):
+        tag = item.data(Qt.ItemDataRole.UserRole)
+        manager = ProjectManager.instance()
+        material = manager.get_material(tag)
+
+        if material:
+            #1. Cambiar el combo al tipo correcto
+            if isinstance(material, Concrete01):
+                index = self.combo_type.findText("Concrete01")
+                if index >= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_concrete.set_data(material)
+            
+            elif isinstance(material, Steel01):
+                index = self.combo_type.findText("Steel01")
+                if index>= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_steel.set_data(material)
+            
 
 

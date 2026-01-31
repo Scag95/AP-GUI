@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout,
                               QPushButton, QDialogButtonBox,QLabel)
 from src.analysis.manager import ProjectManager
 from src.analysis.frame_generator import FrameGenerator
+from src.ui.widgets.unit_spinbox import UnitSpinBox
+from src.utils.units import UnitType
 
 class gridDialog(QDialog):
     def __init__(self,parent=None):
@@ -27,20 +29,18 @@ class gridDialog(QDialog):
         # -- Geometría --
         self.stories_input = QSpinBox()
         self.stories_input.setValue(1)
-        self.stories_input.setMinimum(1)
+        self.stories_input.setMinimum(0)
 
         self.bays_input = QSpinBox()
         self.bays_input.setValue(1)
-        self.bays_input.setMinimum(1)
+        self.bays_input.setMinimum(0)
 
-        self.story_height_input = QDoubleSpinBox()
-        self.story_height_input.setValue(3.0) # Metros
-        self.story_height_input.setSuffix(" m")
+        self.story_height_input = UnitSpinBox(UnitType.LENGTH)
+        self.story_height_input.set_value_base(3.0) 
         self.story_height_input.setMinimum(0.1)
 
-        self.bay_width_input = QDoubleSpinBox()
-        self.bay_width_input.setValue(3.0) # Metros
-        self.bay_width_input.setSuffix(" m")
+        self.bay_width_input = UnitSpinBox(UnitType.LENGTH)
+        self.bay_width_input.set_value_base(3.0)
         self.bay_width_input.setMinimum(0.1)
 
         form_layout.addRow("Numero de Pisos:",self.stories_input)
@@ -79,8 +79,8 @@ class gridDialog(QDialog):
         return{
             "stories": self.stories_input.value(),
             "bays": self.bays_input.value(),
-            "story_height": self.story_height_input.value(),
-            "bay_width": self.bay_width_input.value(),
+            "story_height": self.story_height_input.get_value_base(),
+            "bay_width": self.bay_width_input.get_value_base(),
             # currentData() devuelve el TAG que guardamos (el segundo argumento en addItem)
             "col_sec_tag": self.col_sec_combo.currentData(),
             "beam_sec_tag": self.beam_sec_combo.currentData()
