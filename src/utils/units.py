@@ -74,7 +74,10 @@ class UnitManager(QObject):
                 "kN/m": 1000.0,
                 "kgf/m": 9.80665,
                 "Ton/m": 9806.65,
-                "kips/ft": 14593.9
+                "kips/ft": 14593.9,
+                "N/mm": 1000.0,
+                "kips/in": 175126.8,
+                "lb/in": 175.127
             }
         }
 

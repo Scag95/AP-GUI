@@ -12,6 +12,10 @@ class FileMenu(QMenu):
 
     def setup_actions(self):
 
+        #Nuevo projecto
+        self.actions_new_project = QAction("Nuevo Projecto",self)
+        self.actions_new_project.triggered.connect(self.open_new_project)
+        self.addAction(self.actions_new_project)
         
         #Cargar projecto
         self.actions_load_project = QAction("Cargar Projecto",self)
@@ -51,3 +55,7 @@ class FileMenu(QMenu):
         )
         if filename:
             manager.load_project(filename)
+
+    def open_new_project(self):
+        manager = ProjectManager.instance()
+        manager.new_project()

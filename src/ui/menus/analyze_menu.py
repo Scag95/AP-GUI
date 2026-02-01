@@ -8,10 +8,43 @@ from PyQt6.QtGui import QAction
 class AnalyzeMenu(QMenu):
     def __init__(self, parent = None):
         super().__init__("Analizar",parent)
+        
+        # Acción Principal: Ejecutar Gravedad
         self.action_gravity = QAction("Ejecutar Análisis de Gravedad",self)
+        self.action_gravity.setShortcut("F5")
         self.action_gravity.setStatusTip("Construye el modelo y ejecuta un análisis estático lineal")
         self.action_gravity.triggered.connect(self.run_gravity)
         self.addAction(self.action_gravity)
+
+        self.addSeparator()
+
+        # Submenú de Resultados
+        self.results_menu = QMenu("Ver Resultados", self)
+        self.addMenu(self.results_menu)
+
+        # Acciones de Diagramas
+        self.act_moment = QAction("Momentos (M)", self)
+        self.act_moment.triggered.connect(lambda: self._show_diagram("M"))
+        self.results_menu.addAction(self.act_moment)
+
+        self.act_shear = QAction("Cortantes (V)", self)
+        self.act_shear.triggered.connect(lambda: self._show_diagram("V"))
+        self.results_menu.addAction(self.act_shear)
+
+        self.act_axial = QAction("Axiales (P)", self)
+        self.act_axial.triggered.connect(lambda: self._show_diagram("P"))
+        self.results_menu.addAction(self.act_axial)
+
+        self.results_menu.addSeparator()
+
+        self.act_clear = QAction("Ocultar Diagramas", self)
+        self.act_clear.triggered.connect(lambda: self._show_diagram(None))
+        self.results_menu.addAction(self.act_clear)
+
+
+    def _show_diagram(self, type_):
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            self.parent().viz_widget.show_force_diagrams(type_)
 
     def run_gravity(self):
         #1. Instancia al traductor
@@ -31,25 +64,16 @@ class AnalyzeMenu(QMenu):
                 # Debug: Mostrar en consola para verificar
                 print("[DEBUG] [Resultados obtenidos]")
                 print(f"Nodos con desplazamiento: {len(results['displacements'])}")
-                print("\n--- DESPLAZAMIENTOS ---")
-                for node_tag, disp in results["displacements"].items():
-                    dx, dy, rz = disp
-                    if abs(dx) > 1e-9 or abs(dy) > 1e-9: # Filtro de ceros
-                        print(f"Nodo {node_tag}: dx={dx:.6e}, dy={dy:.6e}")
-
+                
                 # Visualizar en el Graph Widget
-                # Asumimos que parent() es MainWindow y tiene el atributo viz_widget
                 if self.parent() and hasattr(self.parent(), "viz_widget"):
-                    # Factor de escala fijo por ahora (100x)
-                    self.parent().viz_widget.show_deformation(results["displacements"])
+                    # Pasamos el objeto results COMPLETO
+                    self.parent().viz_widget.show_deformation(results)
 
-            if results['displacements']:
-                first_node = list(results['displacements'].keys())[0]
-                print(f"Nodo {first_node} Disp:{results['displacements'][first_node]}")
                 QMessageBox.information(self, "Análisis Completado", "El análisis finalizó correctamente.")
             else:
-                QMessageBox.warning(self, "Error de análisis")
+                QMessageBox.warning(self, "Error de análisis", "El análisis de gravedad falló en OpenSees.")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error crítico," f"Ocurrio error inesperado \n{str(e)}")
+            QMessageBox.critical(self, "Error crítico", f"Ocurrió error inesperado:\n{str(e)}")
             print(e)

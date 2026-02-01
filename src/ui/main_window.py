@@ -45,6 +45,10 @@ class MainWindow(QMainWindow):
         # Conexiones Panel -> Manager (Refrescar gráfico)
         self.props_panel.dataChanged.connect(self.refresh_project)
 
+        # Conectar cambios de unidades -> Refrescar gráfico
+        from src.utils.units import UnitManager
+        UnitManager.instance().unitsChanged.connect(self.refresh_project)
+
         # --- SISTEMA DE COMANDOS ---
         self.cmd_processor = CommandProcessor()
         self.console_widget = CommandLineWidget() 
