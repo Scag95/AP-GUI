@@ -6,7 +6,6 @@ class ModelRenderer:
         self.node_items = {} # map tag -> ScatterPlotItem (spot)
         self.element_items = {} # map tag -> PlotCurveItem
         self.labels = []
-        
         # Estilos
         self.pen_element = pg.mkPen(color='k', width=2)
         self.brush_node = pg.mkBrush(color='#2196F3')
@@ -20,6 +19,7 @@ class ModelRenderer:
             pen=self.pen_node,
             hoverable=True
         )
+        self.scatter_nodes.setZValue(100)
 
     def attach(self, plot_widget):
         """Añade los items base al plot."""

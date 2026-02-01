@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 from src.analysis.loads import NodalLoad, ElementLoad
+from src.utils.units import UnitType, UnitManager
 import math
 
 class LoadRenderer:
@@ -19,7 +20,7 @@ class LoadRenderer:
     def draw_loads(self, plot_widget, manager, scale=1.0):
         """Dibuja todas las cargas del manager en el plot_widget."""
         self.clear(plot_widget)
-        
+
         loads = manager.get_all_loads()
         valid_nodes = {n.tag: n for n in manager.get_all_nodes()}
         valid_elements = {e.tag: e for e in manager.get_all_elements()}
@@ -40,12 +41,15 @@ class LoadRenderer:
 
     def _draw_nodal_load(self, plot_widget, node, load, scale):
         # Parametros graficos
-        HEAD_LEN = 5 * scale
+        HEAD_LEN = 2 * scale
         OFFSET = 2.0 * scale 
-        
+        TAIL_WIDTH = 0.1*scale
+        um = UnitManager.instance()
+
+
         # FX
         if abs(load.fx) > 1e-6:
-            tail_len = abs(load.fx) * scale
+            tail_len = abs(um.from_base(load.fx,UnitType.FORCE)) * scale
             
             # Ángulo de la flecha
             angle = 180 if load.fx > 0 else 0
@@ -58,7 +62,7 @@ class LoadRenderer:
                 pos=(tip_x, node.y),
                 angle=angle,
                 tipAngle=30, baseAngle=20, headLen=HEAD_LEN,
-                tailLen=tail_len, tailWidth=0.3*scale,
+                tailLen=tail_len, tailWidth=TAIL_WIDTH,
                 brush='g', pen='g', pxMode=False
             )
             plot_widget.addItem(item)
@@ -69,14 +73,14 @@ class LoadRenderer:
             total_len = tail_len + HEAD_LEN
             shift_x = total_len if angle == 0 else -total_len
             
-            text = pg.TextItem(f"Fx={load.fx:.1f}", color='g', anchor=(0.5, 1))
+            text = pg.TextItem(f"Fx={um.from_base(load.fx,UnitType.FORCE):.1f} {um.get_current_unit(UnitType.FORCE)}", color='g', anchor=(0.5, 1))
             text.setPos(node.x + shift_x, node.y)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
         # FY
         if abs(load.fy) > 1e-6:
-            tail_len = abs(load.fy) * scale
+            tail_len = abs(abs(um.from_base(load.fy,UnitType.FORCE))) * scale
             angle = -90 if load.fy < 0 else 90 # Arriba(90) o Abajo(-90)
             
             dy_offset = -OFFSET if angle == -90 else OFFSET
@@ -86,7 +90,7 @@ class LoadRenderer:
                 pos=(node.x, tip_y),
                 angle=angle,
                 tipAngle=30, baseAngle=20, headLen=HEAD_LEN,
-                tailLen=tail_len, tailWidth=0.3*scale,
+                tailLen=tail_len, tailWidth=TAIL_WIDTH,
                 brush='#FFA500', pen='#FFA500', pxMode=False
             )
             plot_widget.addItem(item)
@@ -96,12 +100,14 @@ class LoadRenderer:
             total_len = tail_len + HEAD_LEN
             dy = total_len if angle == 90 else -total_len
             
-            text = pg.TextItem(f"Fy={load.fy:.1f}", color='#FFA500')
+            text = pg.TextItem(f"Fy={um.from_base(load.fy,UnitType.FORCE):.1f} {um.get_current_unit(UnitType.FORCE)}", color='#FFA500')
             text.setPos(node.x, node.y + dy)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
     def _draw_element_load(self, plot_widget, ni, nj, load, scale):
+        um = UnitManager.instance()
+
         dx = nj.x - ni.x
         dy = nj.y - ni.y
         length = math.sqrt(dx*dx + dy*dy)
@@ -151,7 +157,7 @@ class LoadRenderer:
                 
                 arrow = pg.ArrowItem(
                     pos=(bx, by),
-                    headLen=5 * scale, tailLen=0,
+                    headLen=3 * scale, tailLen=0,
                     brush=color, pen=None, pxMode=False
                 )
                 arrow.setStyle(angle=angle)
@@ -166,12 +172,12 @@ class LoadRenderer:
             # Label
             mid_x = (p1_load[0] + p2_load[0]) / 2
             mid_y = (p1_load[1] + p2_load[1]) / 2
-            label = f"{'wx' if is_axial else 'wy'}={magnitude:.2f}"
+            label = f"{'wx' if is_axial else 'wy'}={magnitude:.2f} {um.get_current_unit(UnitType.DISTRIBUTED_FORCE)}"
             text = pg.TextItem(label, color=color, anchor=(0.5, 0))
             text.setPos(mid_x, mid_y)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
         # Llamadas
-        draw_block(load.wy, self.color_nodal_load, False) # Wy usa color naranja/rojo
-        draw_block(load.wx, self.color_dist_load, True)   # Wx usa color morado
+        draw_block(um.from_base(load.wy,UnitType.DISTRIBUTED_FORCE), self.color_nodal_load, False) # Wy usa color naranja/rojo
+        draw_block(um.from_base(load.wx,UnitType.DISTRIBUTED_FORCE), self.color_dist_load, True)   # Wx usa color morado

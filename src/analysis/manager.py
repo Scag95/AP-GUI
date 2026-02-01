@@ -165,12 +165,8 @@ class ProjectManager(QObject):
             with open(filename, 'r') as f:
                 data = json.load(f)
 
-            #Limpiar estado actual
-            self.material = {}
-            self.section = {}
-            self.node = {}
-            self.element = {}
-
+            #Limpieza de datos antiguos
+            self.new_project() 
             #1. Cargar Materiales
             for m_data in data.get("materials",[]):
                 tipo = m_data.get("type")
@@ -217,3 +213,21 @@ class ProjectManager(QObject):
         except Exception as e:
             print(f"Error cargando projecto {e}")
             return False
+    
+    def new_project(self):
+        """Reinicia completamente el estado del proyecto."""
+        # Limpiar diccionarios
+        self.material.clear()
+        self.section.clear()
+        self.node.clear()
+        self.element.clear()
+        self.load.clear()
+        # Reiniciar contadores
+        self.next_material_tag = 1
+        self.next_section_tag = 1
+        self.next_node_tag = 1
+        self.next_element_tag = 1
+        self.next_load_tag = 1
+        
+        # Notificar a la UI que todo cambió (se borró)
+        self.dataChanged.emit()

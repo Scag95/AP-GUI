@@ -57,9 +57,23 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Traducir Materiales y Secciones (Fiber).
     - [x] Traducir Cargas a `ops.pattern` y `ops.eleLoad`.
 - [x] **Ejecución y Resultados**:
-    - [x] Método `run_analysis()` (Gravedad + Pushover bases).
-    - [x] Capturar resultados (Desplazamientos, Cortante Basal).
-    - [x] **Visualización**: Graficar curva de Histéresis/Pushover y Deformada.
+    - [x] Método `run_analysis()` (Gravedad).
+    - [x] Capturar resultados (Desplazamientos, Reaciones).
+    - [x] **Visualización**:
+        - [x] Deformada (Hermite Cúbico + Escala Dinámica).
+        - [x] **Diagramas de Esfuerzos**: (M, V, P) funcionando (`ForceDiagramRenderer`) con escala de unidades.
+
+## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (Próximo)
+- [ ] **Módulo Pushover**:
+    - [ ] Traducir lógica de `test.py` a `opensees_translator.py` (`run_pushover`).
+    - [ ] Configurar Recorders específicos (Drift, Base Shear).
+    - [ ] Extraer Cortantes de Piso (Story Shears) robustos.
+- [ ] **Debugging de Elementos**:
+    - [ ] Resolver discrepancias de fuerza en extremos libres (Equilibrio estricto con `-iter` vs Configuración Análisis).
+    - [ ] Implementar sistema de logs para validar comandos Tcl.
+- [ ] **Visualización Pushover**:
+    - [ ] Ventana de gráficos X-Y (Curva Pushover).
+    - [ ] Animación de la deformada paso a paso.
 
 ## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
 - [ ] **NodalLoadsDialog y ElementLoadsDialog**:

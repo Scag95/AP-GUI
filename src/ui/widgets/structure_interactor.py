@@ -9,6 +9,7 @@ from src.analysis.manager import ProjectManager
 from src.ui.visualizers.model_renderer import ModelRenderer
 from src.ui.visualizers.load_renderer import LoadRenderer
 from src.ui.visualizers.deformation_renderer import DeformationRenderer
+from src.ui.visualizers.force_diagram_renderer import ForceDiagramRenderer
 
 class StructureInteractor(QWidget):
     nodeSelected = pyqtSignal(object)
@@ -36,6 +37,8 @@ class StructureInteractor(QWidget):
         
         self.renderer_load = LoadRenderer()
         self.renderer_deform = DeformationRenderer()
+        self.renderer_forces = ForceDiagramRenderer()
+        self.current_diagram_type = None
         
         # 4. Estado de Interacción
         self.last_clicked_point = None
@@ -46,7 +49,7 @@ class StructureInteractor(QWidget):
         self.show_node_labels = False 
         self.show_element_labels = False
         self.load_scale = 0.05 
-        self.deform_scale = 1000.0
+        self.deform_scale = 50.0
 
         # --- ATAJOS DE TECLADO ---
         # Cargas (Ctrl +/-)
@@ -103,16 +106,31 @@ class StructureInteractor(QWidget):
                 scale_factor=self.deform_scale
             )
 
+        #Render fuerzas
+            if self.current_results and self.current_diagram_type:
+                forces = self.current_results.get("element_forces",{})
+                self.renderer_forces.draw_diagrams(
+                    self.plot_widget,
+                    self.manager,
+                    forces,
+                    type=self.current_diagram_type,
+                    scale_factor = self.deform_scale*0.005
+                )
+
+
         print("[DEBUG] Viz updated (Renderers).")
 
     # --- API PÚBLICA ---
-    def show_deformation(self, displacements, scale_factor=5000.0):
-        self.current_results = {"displacements": displacements}
+    def show_deformation(self, results, scale_factor=20.0):
+        self.current_results = results
+        displacements = results.get("displacements",{})
         self.renderer_deform.draw_deformed(self.plot_widget, self.manager, displacements, scale_factor)
+        self.refresh_viz()
 
     def clear_results(self):
         self.current_results = None
         self.renderer_deform.clear(self.plot_widget)
+        self.renderer_forces.celar(self.plot_widget)
 
     # --- MÉTODOS DE ESCALA ---
     def increase_load_scale(self):
@@ -175,3 +193,7 @@ class StructureInteractor(QWidget):
         hit_node = any(isinstance(x, pg.ScatterPlotItem) for x in items)
         if not hit_node:
             self._deselect_all()
+
+    def show_force_diagrams(self,diagram_type):
+        self.current_diagram_type = diagram_type
+        self.refresh_viz()

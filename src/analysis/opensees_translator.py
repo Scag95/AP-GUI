@@ -89,12 +89,15 @@ class OpenSeesTranslator:
                 # Definimos integración Lobatto asociada a la sección del elemento
                 ops.beamIntegration('Lobatto', integ_tag, ele.section_tag, num_int_pts)
                 
-                # element forceBeamColumn $eleTag $iNode $jNode $transfTag $integrationTag <-mass $massDens>
+                # element forceBeamColumn $eleTag $iNode $jNode $transfTag $integrationTag <-mass $massDens> <-iter $maxIters $tol>
                 args = [ele.tag, ele.node_i, ele.node_j, transf_tag, integ_tag]
                 
                 if ele.mass_density > 0:
                     args.append('-mass')
                     args.append(ele.mass_density)
+
+                # Añadir iteraciones para precisión en fuerzas internas
+                args.extend(['-iter', 10, 1e-12])
                 
                 ops.element('forceBeamColumn', *args)
 
@@ -118,14 +121,14 @@ class OpenSeesTranslator:
 
     def run_gravity_analysis(self):
         """Ejecuta un análisis de gravedad básico."""
-        ops.system('BandGeneral')
-        ops.numberer('Plain')
+        ops.system('UmfPack')
+        ops.numberer('RCM')
         ops.constraints('Plain')
-        ops.integrator('LoadControl', 1.0)
+        ops.integrator('LoadControl', 0.1)
         ops.algorithm('Linear')
         ops.analysis('Static')
         
-        ok = ops.analyze(1)
+        ok = ops.analyze(10)
         
         if ok == 0:
             print("[OpenSees] Análisis de Gravedad completado con EXITO")
@@ -137,9 +140,10 @@ class OpenSeesTranslator:
     def get_analysis_results(self):
         results = {
             "displacements":{},
-            "reactions":{}
+            "reactions":{},
+            "element_forces":{}
         }
-
+        #1. Desplazamientos y reacciones en nodos.
         ops.reactions()
         for node in self.manager.get_all_nodes():
             #1. Desplazamientos [dx, dy, rz]
@@ -149,11 +153,45 @@ class OpenSeesTranslator:
             reac = ops.nodeReaction(node.tag)
             results["reactions"][node.tag] = reac
 
+        #2. Fuerza en los elementos.
+        for ele in self.manager.get_all_elements():
+            try:
+                # 1. Fuerza local 'macro' para tener referencias (y cortante si se necesita)
+                local_f = ops.eleResponse(ele.tag, 'localForce') # [Fx, Fy, Mz, ...]
+                
+                # 2. Fuerzas precisas de sección (Axial y Momento)
+                # ForceBeamColumn con 5 ptos integración (Línea 87)
+                # Extremo I = Sección 1
+                try:
+                    sec_i = ops.eleResponse(ele.tag, 'section', 1, 'force') # [P, Mz]
+                except:
+                    sec_i = [local_f[0], local_f[2]] # Fallback
+                
+                # Extremo J = Sección 5
+                try:
+                    sec_j = ops.eleResponse(ele.tag, 'section', 5, 'force') # [P, Mz]
+                except:
+                    sec_j = [local_f[3], local_f[5]] # Fallback
+
+                # Construir vector híbrido [Pi, Vi, Mi, Pj, Vj, Mj]
+                # Usamos Vi y Vj de localForce porque las secciones no saben cortante (Bernoulli)
+                hybrid_forces = [
+                    sec_i[0], local_f[1], sec_i[1],
+                    sec_j[0], local_f[4], sec_j[1]
+                ]
+                
+                results["element_forces"][ele.tag] = hybrid_forces
+            except Exception as e:
+                print(f"[Error] fuerzas elemento {ele.tag}: {e}")
+
         return results
 
     def dump_model_to_file(self, filename="model_dump.out"):
         """Vuelca el estado actual de OpenSees a un archivo de texto."""
         # ops.printModel cotillea todo a la salida estándar o archivo.
+        # En la versión de Python, ops.printModel('-file', filename) suele funcionar.
+        ops.printModel('-file', filename)
+        print(f"[OpenSees] Modelo volcado en: {filename}")
         # En la versión de Python, ops.printModel('-file', filename) suele funcionar.
         ops.printModel('-file', filename)
         print(f"[OpenSees] Modelo volcado en: {filename}")
