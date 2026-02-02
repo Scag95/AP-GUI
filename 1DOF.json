@@ -37,7 +37,28 @@
                     "nIz": 10
                 }
             ],
-            "layers": []
+            "layers": [
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.11,
+                    "zStart": -0.11,
+                    "yEnd": 0.11,
+                    "zEnd": 0.11
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.11,
+                    "zStart": -0.11,
+                    "yEnd": -0.11,
+                    "zEnd": 0.11
+                }
+            ]
         }
     ],
     "nodes": [
@@ -54,7 +75,17 @@
         {
             "tag": 2,
             "x": 0.0,
-            "y": 3.0,
+            "y": 1.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 3,
+            "x": 0.0,
+            "y": 2.0,
             "fixity": [
                 0,
                 0,
@@ -71,15 +102,25 @@
             "section_tag": 1,
             "transf_tag": 1,
             "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 2,
+            "node_i": 2,
+            "node_j": 3,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 0.0
         }
     ],
     "loads": [
         {
-            "type": "ElementLoad",
+            "type": "NodalLoad",
             "tag": 1,
-            "element_tag": 1,
-            "wx": 0.0,
-            "wy": -3000.0
+            "node_tag": 3,
+            "fx": 10000.0,
+            "fy": 0.0,
+            "mz": 0.0
         }
     ]
 }

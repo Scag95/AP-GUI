@@ -62,6 +62,10 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] **Visualización**:
         - [x] Deformada (Hermite Cúbico + Escala Dinámica).
         - [x] **Diagramas de Esfuerzos**: (M, V, P) funcionando (`ForceDiagramRenderer`) con escala de unidades.
+        - [x] Force Diagrams with Fill & Scale (Lobatto Integration).
+        - [x] Load Visualization Optimized (Arrow sizes, speed).
+        - [x] Centralized Scale Manager.
+        - [x] Section Aggregator (M+P+V auto-setup).
 
 ## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (Próximo)
 - [ ] **Módulo Pushover**:

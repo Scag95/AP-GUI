@@ -17,32 +17,38 @@ class LoadRenderer:
             plot_widget.removeItem(item)
         self.load_items.clear()
 
-    def draw_loads(self, plot_widget, manager, scale=1.0):
+    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True):
         """Dibuja todas las cargas del manager en el plot_widget."""
-        self.clear(plot_widget)
+        # Desactivamos actualizaciones para acelerar la inserción masiva de items
+        plot_widget.setUpdatesEnabled(False)
+        try:
+            self.clear(plot_widget)
 
-        loads = manager.get_all_loads()
-        valid_nodes = {n.tag: n for n in manager.get_all_nodes()}
-        valid_elements = {e.tag: e for e in manager.get_all_elements()}
+            loads = manager.get_all_loads()
+            valid_nodes = {n.tag: n for n in manager.get_all_nodes()}
+            valid_elements = {e.tag: e for e in manager.get_all_elements()}
 
-        for load in loads:
-            if isinstance(load, NodalLoad):
-                if load.node_tag in valid_nodes:
-                    node = valid_nodes[load.node_tag]
-                    self._draw_nodal_load(plot_widget, node, load, scale)
-            
-            elif isinstance(load, ElementLoad):
-                if load.element_tag in valid_elements:
-                    elem = valid_elements[load.element_tag]
-                    if elem.node_i in valid_nodes and elem.node_j in valid_nodes:
-                        ni = valid_nodes[elem.node_i]
-                        nj = valid_nodes[elem.node_j]
-                        self._draw_element_load(plot_widget, ni, nj, load, scale)
+            for load in loads:
+                if isinstance(load, NodalLoad) and show_nodes:
+                    if load.node_tag in valid_nodes:
+                        node = valid_nodes[load.node_tag]
+                        self._draw_nodal_load(plot_widget, node, load, scale)
+                
+                elif isinstance(load, ElementLoad) and show_elements:
+                    if load.element_tag in valid_elements:
+                        elem = valid_elements[load.element_tag]
+                        if elem.node_i in valid_nodes and elem.node_j in valid_nodes:
+                            ni = valid_nodes[elem.node_i]
+                            nj = valid_nodes[elem.node_j]
+                            self._draw_element_load(plot_widget, ni, nj, load, scale)
+        finally:
+            plot_widget.setUpdatesEnabled(True)
+            plot_widget.update()
 
     def _draw_nodal_load(self, plot_widget, node, load, scale):
         # Parametros graficos
-        HEAD_LEN = 2 * scale
-        OFFSET = 2.0 * scale 
+        HEAD_LEN = 1.5 * scale
+        OFFSET = 1.0 * scale 
         TAIL_WIDTH = 0.1*scale
         um = UnitManager.instance()
 
@@ -157,7 +163,7 @@ class LoadRenderer:
                 
                 arrow = pg.ArrowItem(
                     pos=(bx, by),
-                    headLen=3 * scale, tailLen=0,
+                    headLen=0.8 * scale, tailLen=0,
                     brush=color, pen=None, pxMode=False
                 )
                 arrow.setStyle(angle=angle)

@@ -113,8 +113,8 @@ class SectionDialog(QDialog):
         #4. Creamos la geometría de la sección (Concreto)
         section.add_rect_patch(RectPatch(
             material_tag = mat_conc,
-            yI= -h/2, zI= -b/2,
-            yJ=  h/2, zJ=  b/2
+            yI= round(-h/2, 6), zI= round(-b/2, 6),
+            yJ=  round(h/2, 6), zJ=  round(b/2, 6)
         ))
 
         #5. Creamos las barras de acero
@@ -125,8 +125,8 @@ class SectionDialog(QDialog):
                 material_tag = mat_steel,
                 num_bars = data['top_qty'],
                 area_bar = area_top,
-                yStart = h/2 - cover, zStart = -b/2 + cover,
-                yEnd   = h/2 - cover, zEnd   =  b/2 - cover
+                yStart = round(h/2 - cover, 6), zStart = round(-b/2 + cover, 6),
+                yEnd   = round(h/2 - cover, 6), zEnd   =  round(b/2 - cover, 6)
             ))
         # Capa INFERIOR
         if data['bot_qty'] > 0:
@@ -135,10 +135,9 @@ class SectionDialog(QDialog):
                 material_tag=mat_steel,
                 num_bars=data['bot_qty'],
                 area_bar=area_bot,
-                yStart= -h/2 + cover, zStart= -b/2 + cover,
-                yEnd  = -h/2 + cover, zEnd  =  b/2 - cover
+                yStart= round(-h/2 + cover, 6), zStart= round(-b/2 + cover, 6),
+                yEnd  = round(-h/2 + cover, 6), zEnd  =  round(b/2 - cover, 6)
             ))
-
 
 
 
@@ -215,8 +214,8 @@ class SectionDialog(QDialog):
         # 4. Crear la geometría de la sección (Concreto)
         section.add_rect_patch(RectPatch(
             material_tag = mat_conc,
-            yI= -h/2, zI= -b/2,
-            yJ=  h/2, zJ=  b/2
+            yI= round(-h/2, 6), zI= round(-b/2, 6),
+            yJ=  round(h/2, 6), zJ=  round(b/2, 6)
         ))
         # 5. Crear las barras de acero
         # Capa superior
@@ -226,8 +225,8 @@ class SectionDialog(QDialog):
                 material_tag = mat_steel,
                 num_bars = data['top_qty'],
                 area_bar = area_top,
-                yStart = h/2 - cover, zStart = -b/2 + cover,
-                yEnd   = h/2 - cover, zEnd   =  b/2 - cover
+                yStart = round(h/2 - cover, 6), zStart = round(-b/2 + cover, 6),
+                yEnd   = round(h/2 - cover, 6), zEnd   =  round(b/2 - cover, 6)
             ))
             
         # Capa INFERIOR
@@ -237,8 +236,8 @@ class SectionDialog(QDialog):
                 material_tag=mat_steel,
                 num_bars=data['bot_qty'],
                 area_bar=area_bot,
-                yStart= -h/2 + cover, zStart= -b/2 + cover,
-                yEnd  = -h/2 + cover, zEnd  =  b/2 - cover
+                yStart= round(-h/2 + cover, 6), zStart= round(-b/2 + cover, 6),
+                yEnd  = round(-h/2 + cover, 6), zEnd  =  round(b/2 - cover, 6)
             ))
             
         return section
