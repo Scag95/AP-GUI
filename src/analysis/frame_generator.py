@@ -13,8 +13,8 @@ class FrameGenerator:
         # --- Generar Nodos --- 
         for i in range(bays + 1):
             for j  in range (stories + 1):
-                x = i * bay_width
-                y = j * story_height
+                x = round(i * bay_width, 6)
+                y = round(j * story_height, 6)
 
                 #Obtener Nuevo ID desde el manager
                 tag = self.manager.get_next_node_tag()

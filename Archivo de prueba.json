@@ -5,9 +5,9 @@
             "name": "Mat_Concreto_1",
             "rho": 2500.0,
             "type": "Concrete01",
-            "fpc": 25.0,
+            "fpc": 25000000.0,
             "epsc0": 0.0021,
-            "fpcu": 25.0,
+            "fpcu": 25000000.0,
             "epsu": 0.003
         },
         {
@@ -15,24 +15,24 @@
             "name": "Mat_Acero_2",
             "rho": 7850.0,
             "type": "Steel01",
-            "Fy": 500.0,
-            "E0": 200000.0,
+            "Fy": 500000000.0,
+            "E0": 200000000000.0,
             "b": 0.01
         }
     ],
     "sections": [
         {
             "tag": 1,
-            "name": "Col_500x500",
+            "name": "Sec_0.3x0.3",
             "type": "FiberSection",
             "patches": [
                 {
                     "type": "RectPatch",
                     "material_tag": 1,
-                    "yI": -250.0,
-                    "zI": -250.0,
-                    "yJ": 250.0,
-                    "zJ": 250.0,
+                    "yI": -0.15,
+                    "zI": -0.15,
+                    "yJ": 0.15,
+                    "zJ": 0.15,
                     "nIy": 10,
                     "nIz": 10
                 }
@@ -41,61 +41,22 @@
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
-                    "num_bars": 5,
-                    "area_bar": 314.1592653589793,
-                    "yStart": 210.0,
-                    "zStart": -210.0,
-                    "yEnd": 210.0,
-                    "zEnd": 210.0
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.11,
+                    "zStart": -0.11,
+                    "yEnd": 0.11,
+                    "zEnd": 0.11
                 },
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
-                    "num_bars": 5,
-                    "area_bar": 314.1592653589793,
-                    "yStart": -210.0,
-                    "zStart": -210.0,
-                    "yEnd": -210.0,
-                    "zEnd": 210.0
-                }
-            ]
-        },
-        {
-            "tag": 2,
-            "name": "Vig_300x500",
-            "type": "FiberSection",
-            "patches": [
-                {
-                    "type": "RectPatch",
-                    "material_tag": 1,
-                    "yI": -250.0,
-                    "zI": -150.0,
-                    "yJ": 250.0,
-                    "zJ": 150.0,
-                    "nIy": 10,
-                    "nIz": 10
-                }
-            ],
-            "layers": [
-                {
-                    "type": "LayerStraight",
-                    "material_tag": 2,
-                    "num_bars": 4,
-                    "area_bar": 314.1592653589793,
-                    "yStart": 210.0,
-                    "zStart": -110.0,
-                    "yEnd": 210.0,
-                    "zEnd": 110.0
-                },
-                {
-                    "type": "LayerStraight",
-                    "material_tag": 2,
-                    "num_bars": 6,
-                    "area_bar": 314.1592653589793,
-                    "yStart": -210.0,
-                    "zStart": -110.0,
-                    "yEnd": -210.0,
-                    "zEnd": 110.0
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.11,
+                    "zStart": -0.11,
+                    "yEnd": -0.11,
+                    "zEnd": 0.11
                 }
             ]
         }
@@ -114,7 +75,7 @@
         {
             "tag": 2,
             "x": 0.0,
-            "y": 3.5,
+            "y": 3.0,
             "fixity": [
                 0,
                 0,
@@ -124,7 +85,7 @@
         {
             "tag": 3,
             "x": 0.0,
-            "y": 7.0,
+            "y": 6.0,
             "fixity": [
                 0,
                 0,
@@ -134,7 +95,7 @@
         {
             "tag": 4,
             "x": 0.0,
-            "y": 10.5,
+            "y": 9.0,
             "fixity": [
                 0,
                 0,
@@ -143,7 +104,7 @@
         },
         {
             "tag": 5,
-            "x": 6.0,
+            "x": 3.0,
             "y": 0.0,
             "fixity": [
                 1,
@@ -153,8 +114,8 @@
         },
         {
             "tag": 6,
-            "x": 6.0,
-            "y": 3.5,
+            "x": 3.0,
+            "y": 3.0,
             "fixity": [
                 0,
                 0,
@@ -163,8 +124,8 @@
         },
         {
             "tag": 7,
-            "x": 6.0,
-            "y": 7.0,
+            "x": 3.0,
+            "y": 6.0,
             "fixity": [
                 0,
                 0,
@@ -173,48 +134,8 @@
         },
         {
             "tag": 8,
-            "x": 6.0,
-            "y": 10.5,
-            "fixity": [
-                0,
-                0,
-                0
-            ]
-        },
-        {
-            "tag": 9,
-            "x": 12.0,
-            "y": 0.0,
-            "fixity": [
-                1,
-                1,
-                1
-            ]
-        },
-        {
-            "tag": 10,
-            "x": 12.0,
-            "y": 3.5,
-            "fixity": [
-                0,
-                0,
-                0
-            ]
-        },
-        {
-            "tag": 11,
-            "x": 12.0,
-            "y": 7.0,
-            "fixity": [
-                0,
-                0,
-                0
-            ]
-        },
-        {
-            "tag": 12,
-            "x": 12.0,
-            "y": 10.5,
+            "x": 3.0,
+            "y": 9.0,
             "fixity": [
                 0,
                 0,
@@ -280,8 +201,8 @@
         {
             "type": "ForceBeamColumn",
             "tag": 7,
-            "node_i": 9,
-            "node_j": 10,
+            "node_i": 2,
+            "node_j": 6,
             "section_tag": 1,
             "transf_tag": 1,
             "mass_density": 0.0
@@ -289,8 +210,8 @@
         {
             "type": "ForceBeamColumn",
             "tag": 8,
-            "node_i": 10,
-            "node_j": 11,
+            "node_i": 3,
+            "node_j": 7,
             "section_tag": 1,
             "transf_tag": 1,
             "mass_density": 0.0
@@ -298,63 +219,9 @@
         {
             "type": "ForceBeamColumn",
             "tag": 9,
-            "node_i": 11,
-            "node_j": 12,
-            "section_tag": 1,
-            "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 10,
-            "node_i": 2,
-            "node_j": 6,
-            "section_tag": 2,
-            "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 11,
-            "node_i": 6,
-            "node_j": 10,
-            "section_tag": 2,
-            "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 12,
-            "node_i": 3,
-            "node_j": 7,
-            "section_tag": 2,
-            "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 13,
-            "node_i": 7,
-            "node_j": 11,
-            "section_tag": 2,
-            "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 14,
             "node_i": 4,
             "node_j": 8,
-            "section_tag": 2,
-            "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 15,
-            "node_i": 8,
-            "node_j": 12,
-            "section_tag": 2,
+            "section_tag": 1,
             "transf_tag": 1,
             "mass_density": 0.0
         }
@@ -364,24 +231,24 @@
             "type": "NodalLoad",
             "tag": 1,
             "node_tag": 2,
-            "fx": 10.0,
-            "fy": 50.0,
+            "fx": 10000.0,
+            "fy": 0.0,
             "mz": 0.0
         },
         {
             "type": "NodalLoad",
             "tag": 2,
             "node_tag": 3,
-            "fx": 10.0,
-            "fy": 50.0,
+            "fx": 10000.0,
+            "fy": 0.0,
             "mz": 0.0
         },
         {
             "type": "NodalLoad",
             "tag": 3,
             "node_tag": 4,
-            "fx": 10.0,
-            "fy": 50.0,
+            "fx": 10000.0,
+            "fy": 0.0,
             "mz": 0.0
         }
     ]

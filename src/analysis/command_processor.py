@@ -21,29 +21,8 @@ class CommandProcessor:
         args = parts[1:]
 
         try:
-            # --- COMANDO: LABELS (ETIQUETAS) ---
-            # Sintaxis: tag nodes on / tag elements off
-            if verb == "tags" or verb == "tag":
-                if len(args) < 2:
-                    return "Uso: labels [nodes/elements] [on/off]", None
-                
-                target = args[0].lower() # nodes / elements
-                state = args[1].lower()  # on / off
-                
-                is_visible = (state == "on")
-                
-                if target in ["node", "nodes"]:
-                    # Devolvemos una ACCIÓN para que la UI la ejecute
-                    return f"Etiquetas de Nodos: {state.upper()}", {"action": "toggle_node_labels", "value": is_visible}
-                
-                elif target in ["element", "elements"]:
-                    return f"Etiquetas de Elementos: {state.upper()}", {"action": "toggle_element_labels", "value": is_visible}
-                
-                else:
-                    return "Objetivo desconocido. Usa 'nodes' o 'elements'.", None
-            
             # --- COMANDO: ANALYZE ---
-            elif verb == "analyze":
+            if verb == "analyze":
                 try:
                     translator = OpenSeesTranslator()
                     translator.build_model()
@@ -55,6 +34,84 @@ class CommandProcessor:
             # --- COMANDO: CLEAR ---
             elif verb == "clear":
                 return "Consola limpiada", {"action": "clear_console"}
+
+            # --- COMANDO: SCALE ---
+            elif verb == "scale":
+                if len(args) < 2:
+                    return "Uso: scale [load|deformation|moment|shear] [valor]", None
+                
+                s_type = args[0].lower()
+                
+                # Mapeo de alias para scale
+                if s_type in ['node', 'nodes']: s_type = 'node_size'
+                elif s_type in ['deformed', 'def']: s_type = 'deformation'
+                elif s_type in ['moments', 'm']: s_type = 'moment'
+                elif s_type in ['shear', 'v']: s_type = 'shear'
+
+                try:
+                    val = float(args[1])
+                    from src.utils.scale_manager import ScaleManager # Import local para evitar ciclos si los hubiera
+                    ScaleManager.instance().set_scale(s_type, val)
+                    return f"Escala '{s_type}' establecida a {val}", None
+                except ValueError:
+                    return "Error: El valor debe ser numérico", None
+
+            # --- COMANDO: SHOW / HIDE (Visibilidad) ---
+            elif verb == "show" or verb == "hide":
+                if not args:
+                    return "Uso: [show/hide] [loads/deformed/diagrams] [sub-arg]", None
+                
+                arg = args[0].lower()
+                is_show = (verb == "show")
+
+                # Caso Especial: DIAGRAMS [Tipo]
+                if arg in ["diagrams", "diagram", "forces"]:
+                    if len(args) > 1:
+                        dtype = args[1].upper()
+                        if dtype in ['M', 'V', 'P', 'S']:
+                            if dtype == 'S': dtype = 'V' # Alias
+                            if is_show:
+                                return f"Diagrama '{dtype}' activado", {"action": "set_diagram_type", "value": dtype}
+                    
+                    # Si no hay sub-arg, toggle general
+                    return f"Visibilidad Diagramas: {is_show}", {"action": "set_visibility", "type": "diagrams", "value": is_show}
+
+                # Caso Especial: LOADS [N/E]
+                if arg in ["loads", "load"]:
+                    if len(args) > 1:
+                        sub = args[1].lower()
+                        if sub in ['n', 'node', 'nodes']:
+                             return f"Cargas Nodos: {is_show}", {"action": "set_load_visibility", "type": "nodes", "value": is_show}
+                        elif sub in ['e', 'element', 'elements']:
+                             return f"Cargas Elementos: {is_show}", {"action": "set_load_visibility", "type": "elements", "value": is_show}
+                    
+                    # General
+                    return f"Visibilidad Cargas: {is_show}", {"action": "set_visibility", "type": "loads", "value": is_show}
+
+                # Resto de casos generales
+                target_map = {
+                    "deformed": "deformed", "deformation": "deformed",
+                    "nodes": "node_labels", "node": "node_labels",
+                    "elements": "element_labels", "element": "element_labels"
+                }
+                
+                if arg in target_map:
+                    target = target_map[arg]
+                    # Mapeo de acciones específicas
+                    if target == "node_labels":
+                        return f"Etiquetas Nodos: {is_show}", {"action": "toggle_node_labels", "value": is_show}
+                    elif target == "element_labels":
+                        return f"Etiquetas Elementos: {is_show}", {"action": "toggle_element_labels", "value": is_show}
+                    else:
+                        return f"Visibilidad de '{target}': {is_show}", {"action": "set_visibility", "type": target, "value": is_show}
+                else:
+                    return "Objetivo desconocido.", None
+
+            # --- COMANDO: REGEN ---
+            elif verb == "regen":
+                from src.utils.scale_manager import ScaleManager
+                ScaleManager.instance().autocalculate_scales()
+                return "Escalas regeneradas automáticamente.", None
 
             # --- COMANDO: UNITS ---
             elif verb == "units":

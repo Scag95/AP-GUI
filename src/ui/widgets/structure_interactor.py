@@ -6,6 +6,7 @@ from PyQt6.QtGui import QKeySequence, QShortcut
 from src.analysis.manager import ProjectManager
 
 # Importamos los nuevos renderizadores
+from src.utils.scale_manager import ScaleManager
 from src.ui.visualizers.model_renderer import ModelRenderer
 from src.ui.visualizers.load_renderer import LoadRenderer
 from src.ui.visualizers.deformation_renderer import DeformationRenderer
@@ -29,7 +30,6 @@ class StructureInteractor(QWidget):
         
         # 2. Project Manager
         self.manager = ProjectManager.instance()
-        self.manager.dataChanged.connect(self.refresh_viz)
         
         # 3. Inicializar Renderizadores
         self.renderer_model = ModelRenderer()
@@ -40,17 +40,22 @@ class StructureInteractor(QWidget):
         self.renderer_forces = ForceDiagramRenderer()
         self.current_diagram_type = None
         
+        # Conectar Señales (Una vez todo inicializado)
+        self.manager.dataChanged.connect(self._on_data_changed)
+        ScaleManager.instance().scale_changed.connect(lambda t,v: self.refresh_viz())
+        
         # 4. Estado de Interacción
         self.last_clicked_point = None
-        self.current_label = None
+        self.current_label = None 
         self.current_results = None 
 
         # View Options
         self.show_node_labels = False 
         self.show_element_labels = False
-        self.load_scale = 0.05 
-        self.deform_scale = 50.0
-
+        self.show_loads_nodes = True
+        self.show_loads_elements = True
+        self.show_deformed = True
+        self.show_diagrams = True
         # --- ATAJOS DE TECLADO ---
         # Cargas (Ctrl +/-)
         self.shortcut_inc = QShortcut(QKeySequence("Ctrl++"), self)
@@ -67,6 +72,11 @@ class StructureInteractor(QWidget):
         # Conectar eventos de la escena
         self.renderer_model.scatter_nodes.sigClicked.connect(self._on_node_clicked_wrapper)
         self.plot_widget.scene().sigMouseClicked.connect(self._on_background_clicked)
+
+    def _on_data_changed(self):
+        # Recalcular escalas automáticamente al cambiar geometría
+        ScaleManager.instance().autocalculate_scales()
+        self.refresh_viz()
 
     def set_overlay_widget(self, widget):
         self.overlay_widget = widget
@@ -91,39 +101,65 @@ class StructureInteractor(QWidget):
         self.renderer_model.draw_structure(
             self.plot_widget, 
             self.manager, 
-            show_labels=(self.show_node_labels or self.show_element_labels)
+            show_node_labels=self.show_node_labels,
+            show_element_labels=self.show_element_labels
         )
         
+        
         # Render Cargas
-        self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=self.load_scale)
+        s_load = ScaleManager.instance().get_scale('load')
+        self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load, 
+                                      show_nodes=self.show_loads_nodes, 
+                                      show_elements=self.show_loads_elements)
         
         # Render Deformada
-        if self.current_results:
+        if self.current_results and self.show_deformed:
+            s_def = ScaleManager.instance().get_scale('deformation')
             self.renderer_deform.draw_deformed(
                 self.plot_widget, 
                 self.manager, 
                 self.current_results.get("displacements"),
-                scale_factor=self.deform_scale
+                scale_factor=s_def
             )
+        else:
+            self.renderer_deform.clear(self.plot_widget)
 
-        #Render fuerzas
-            if self.current_results and self.current_diagram_type:
-                forces = self.current_results.get("element_forces",{})
-                self.renderer_forces.draw_diagrams(
-                    self.plot_widget,
-                    self.manager,
-                    forces,
-                    type=self.current_diagram_type,
-                    scale_factor = self.deform_scale*0.005
-                )
+        # Render fuerzas
+        if self.current_results and self.current_diagram_type and self.show_diagrams:
+            forces = self.current_results.get("element_forces",{})
+            self.renderer_forces.draw_diagrams(
+                self.plot_widget,
+                self.manager,
+                forces,
+                type=self.current_diagram_type
+            )
+        else:
+            self.renderer_forces.clear(self.plot_widget)
 
 
         print("[DEBUG] Viz updated (Renderers).")
 
-    # --- API PÚBLICA ---
-    def show_deformation(self, results, scale_factor=20.0):
+    def set_visibility(self, item_type, visible):
+        """ Controla visibilidad granular: 'deformed', 'diagrams' """
+        if item_type == 'deformed': self.show_deformed = visible
+        elif item_type == 'diagrams': self.show_diagrams = visible
+        elif item_type == 'loads': # Master toggle
+             self.show_loads_nodes = visible
+             self.show_loads_elements = visible
+        self.refresh_viz()
+
+    def set_load_visibility(self, load_type, visible):
+        if load_type == 'nodes': self.show_loads_nodes = visible
+        elif load_type == 'elements': self.show_loads_elements = visible
+        self.refresh_viz()
+
+    def show_deformation(self, results, scale_factor=None):
         self.current_results = results
         displacements = results.get("displacements",{})
+        
+        if scale_factor is None:
+            scale_factor = ScaleManager.instance().get_scale('deformation')
+            
         self.renderer_deform.draw_deformed(self.plot_widget, self.manager, displacements, scale_factor)
         self.refresh_viz()
 
@@ -134,22 +170,26 @@ class StructureInteractor(QWidget):
 
     # --- MÉTODOS DE ESCALA ---
     def increase_load_scale(self):
-        self.load_scale *= 1.2
-        self.refresh_viz()
+        sm = ScaleManager.instance()
+        val = sm.get_scale('load') * 1.2
+        sm.set_scale('load', val)
 
     def decrease_load_scale(self):
-        self.load_scale /= 1.2
-        self.refresh_viz()
+        sm = ScaleManager.instance()
+        val = sm.get_scale('load') / 1.2
+        sm.set_scale('load', val)
 
     def increase_deform_scale(self):
-        self.deform_scale *= 1.5
-        print(f"[DEBUG] Escala Deformada: {self.deform_scale:.2f}")
-        self.refresh_viz()
+        sm = ScaleManager.instance()
+        val = sm.get_scale('deformation') * 1.2
+        sm.set_scale('deformation', val)
+        print(f"[DEBUG] Escala Deformada: {val:.2f}")
 
     def decrease_deform_scale(self):
-        self.deform_scale /= 1.5
-        print(f"[DEBUG] Escala Deformada: {self.deform_scale:.2f}")
-        self.refresh_viz()
+        sm = ScaleManager.instance()
+        val = sm.get_scale('deformation') / 1.2
+        sm.set_scale('deformation', val)
+        print(f"[DEBUG] Escala Deformada: {val:.2f}")
 
     # --- TOGGLES DE ETIQUETAS ---
     def toggle_node_labels(self, visible):

@@ -1,5 +1,6 @@
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
+from src.utils.scale_manager import ScaleManager
 
 class ModelRenderer:
     def __init__(self):
@@ -37,7 +38,7 @@ class ModelRenderer:
         
         self.scatter_nodes.setData([], []) # Limpiar puntos
 
-    def draw_structure(self, plot_widget, manager, show_labels=False):
+    def draw_structure(self, plot_widget, manager, show_node_labels=False, show_element_labels=False):
         self.clear(plot_widget)
         
         nodes = manager.get_all_nodes()
@@ -66,7 +67,7 @@ class ModelRenderer:
                 self.element_items[el.tag] = curve
                 
                 # Etiqueta de elemento
-                if show_labels:
+                if show_element_labels:
                     mid_x = (ni.x + nj.x)/2
                     mid_y = (ni.y + nj.y)/2
                     text = pg.TextItem(text=str(el.tag), color='k', anchor=(0.5, 0.5))
@@ -85,14 +86,15 @@ class ModelRenderer:
             data_vals.append(n.tag)
             
             # Etiqueta de nodo
-            if show_labels:
+            if show_node_labels:
                 text = pg.TextItem(text=str(n.tag), color='#2196F3', anchor=(0, 1))
                 text.setPos(n.x, n.y)
                 plot_widget.addItem(text)
                 self.labels.append(text)
 
         # Actualizar Scatter
-        self.scatter_nodes.setData(x_vals, y_vals, data=data_vals)
+        node_size = ScaleManager.instance().get_scale('node_size')
+        self.scatter_nodes.setData(x_vals, y_vals, data=data_vals, size=node_size)
 
     def highlight_node(self, node_tag, color='#FFCC00'):
         # TODO: Implementar resaltado

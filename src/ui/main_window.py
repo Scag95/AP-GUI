@@ -77,6 +77,13 @@ class MainWindow(QMainWindow):
                 self.viz_widget.toggle_node_labels(value)
             elif act_type == "toggle_element_labels":
                 self.viz_widget.toggle_element_labels(value)
+            elif act_type == "set_visibility":
+                self.viz_widget.set_visibility(action.get("type"), value)
+            elif act_type == "set_diagram_type":
+                self.viz_widget.show_force_diagrams(value) # Ya existe este método, lo reusamos
+                self.viz_widget.set_visibility("diagrams", True)
+            elif act_type == "set_load_visibility":
+                self.viz_widget.set_load_visibility(action.get("type"), value)
         
 
 
