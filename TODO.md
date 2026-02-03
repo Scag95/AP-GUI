@@ -60,14 +60,17 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Método `run_analysis()` (Gravedad).
     - [x] Capturar resultados (Desplazamientos, Reaciones).
     - [x] **Visualización**:
-        - [x] Deformada (Hermite Cúbico + Escala Dinámica).
-        - [x] **Diagramas de Esfuerzos**: (M, V, P) funcionando (`ForceDiagramRenderer`) con escala de unidades.
+        - [x] Deformada (Hermite Cúbico + Escala Dinámica + Tooltips Interactivos).
+        - [x] **Diagramas de Esfuerzos**: (M, V, P) funcionando (`ForceDiagramRenderer`) con escala de unidades y etiquetas de valor.
         - [x] Force Diagrams with Fill & Scale (Lobatto Integration).
-        - [x] Load Visualization Optimized (Arrow sizes, speed).
+        - [x] Load Visualization Optimized (Arrow sizes, speed, Unit invariant).
         - [x] Centralized Scale Manager.
         - [x] Section Aggregator (M+P+V auto-setup).
 
 ## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (Próximo)
+- [ ] **Interacción Avanzada (Próximo)**:
+    - [ ] **Sistema Visual de Nodos**: Mejorar representación/interacción de nodos.
+    - [ ] **Element Properties Form**: Ver y editar propiedades de elementos seleccionados.
 - [ ] **Módulo Pushover**:
     - [ ] Traducir lógica de `test.py` a `opensees_translator.py` (`run_pushover`).
     - [ ] Configurar Recorders específicos (Drift, Base Shear).

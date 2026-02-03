@@ -1,6 +1,6 @@
 import math
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
-                             QListWidget, QPushButton,QListWidgetItem)
+                             QListWidget, QPushButton,QListWidgetItem, QMessageBox)
 from PyQt6.QtCore import Qt
 
 from src.analysis.manager import ProjectManager
@@ -12,7 +12,7 @@ class SectionDialog(QDialog):
     def __init__(self,parent=None):
         super().__init__(parent)
         self.setWindowTitle("Definir Secciones")
-        self.resize(800,600)
+        self.resize(900,600)
         
         #Centrar ventana al centro de la pantalla
         qr = self.frameGeometry()
@@ -29,8 +29,11 @@ class SectionDialog(QDialog):
 
         #Botones de control
         self.btn_add = QPushButton("Añadir sección")
+        self.btn_modify = QPushButton("Modificar sección")  # <--- NUEVO
         self.btn_delete =QPushButton("Borrar sección")
+        
         self.left_panel_layout.addWidget(self.btn_add)
+        self.left_panel_layout.addWidget(self.btn_modify) # <--- NUEVO
         self.left_panel_layout.addWidget(self.btn_delete)
 
         #Añadimos el Panel izquierdo al layout principal
@@ -53,73 +56,61 @@ class SectionDialog(QDialog):
         #conectamos los botones
         self.btn_add.clicked.connect(self.add_section)
         self.btn_delete.clicked.connect(self.delete_section)
+        self.btn_modify.clicked.connect(self.update_section) # <--- CONECTADO
 
         #conectamos la señal para actualizar los campos
         self.sections_list.itemClicked.connect(self.on_section_selected)
         #cargar secciones existentes
         self.load_sections()
 
-        # --- CONEXIÓN DE SEÑALES PARA PREVIEW (NUEVO) ---
+        # --- CONEXIÓN DE SEÑALES PARA PREVIEW ---
         # Conectamos todos los inputs relevantes al método update_preview
-        # Dimensiones
-        self.form_section.spin_h.valueChanged.connect(self.update_preview)
-        self.form_section.spin_b.valueChanged.connect(self.update_preview)
-        self.form_section.spin_cover.valueChanged.connect(self.update_preview)
-        
-        # Cantidades de acero
-        self.form_section.spin_top_qty.valueChanged.connect(self.update_preview)
-        self.form_section.spin_bot_qty.valueChanged.connect(self.update_preview)
+        input_signals = [
+            self.form_section.spin_h.valueChanged,
+            self.form_section.spin_b.valueChanged,
+            self.form_section.spin_cover.valueChanged,
+            self.form_section.spin_top_qty.valueChanged,
+            self.form_section.spin_bot_qty.valueChanged,
+            self.form_section.spin_top_diam.valueChanged,
+            self.form_section.spin_bot_diam.valueChanged,
+        ]
+        combos = [
+            self.form_section.combo_concrete.currentIndexChanged,
+            self.form_section.combo_steel.currentIndexChanged
+        ]
 
-        # Diamentro
-        self.form_section.spin_top_diam.valueChanged.connect(self.update_preview)
-        self.form_section.spin_bot_diam.valueChanged.connect(self.update_preview)
-        
-        # Materiales (Combos)
-        self.form_section.combo_concrete.currentIndexChanged.connect(self.update_preview)
-        self.form_section.combo_steel.currentIndexChanged.connect(self.update_preview)
+        for sig in input_signals: sig.connect(self.update_preview)
+        for sig in combos: sig.connect(self.update_preview)
         
         # Primera llamada para que no salga vacío al abrir
         self.update_preview()      
 
-    def add_section(self):
-
-        #1. Recolectar la información de la sección
-        data = self.form_section.get_data()
-
-        #Validamos que tengamos materiales creados
-        if data['concrete'] is None or data['steel'] is None:
-            print("Error: Debes de tener materiales")
-            return
-        
-        #2. Preramos ls variables
+    def _setup_section_geometry(self, section, data):
+        """
+        Método HELPER (Privado):
+        Configura los patches y layers de una sección dada usando 'data'.
+        Se usa tanto para Crear, Modificar y Previsualizar.
+        """
         b = data['b']
         h = data['h']
         cover = data['cover'] 
         mat_conc = data['concrete']
         mat_steel = data['steel']
-        
-        # 3. Crear la Sección
-        #Llamamos del ProjectManager el tag del material.
-        manager = ProjectManager.instance()
-        tag = manager.get_next_section_tag()
-        
-        # Si el usuario no puso nombre, generamos uno
-        name = self.form_section.textbox_name.text()
-        if not name:
-            name = f"Sec_{b}x{h}"
 
-        section = FiberSection(tag, name)
+        # Limpiamos geometría anterior (clave para modificar)
+        section.patches = []
+        section.layers = []
 
-        #4. Creamos la geometría de la sección (Concreto)
+        # 1. Creamos la geometría de la sección (Concreto)
         section.add_rect_patch(RectPatch(
             material_tag = mat_conc,
             yI= round(-h/2, 6), zI= round(-b/2, 6),
             yJ=  round(h/2, 6), zJ=  round(b/2, 6)
         ))
 
-        #5. Creamos las barras de acero
-        #Capa superior
-        if data['top_qty'] >0:
+        # 2. Creamos las barras de acero
+        # Capa superior
+        if data['top_qty'] > 0:
             area_top = (math.pi * (data['top_diam']**2))/4
             section.add_layer_straight(LayerStraight(
                 material_tag = mat_steel,
@@ -139,19 +130,73 @@ class SectionDialog(QDialog):
                 yEnd  = round(-h/2 + cover, 6), zEnd  =  round(b/2 - cover, 6)
             ))
 
+    def add_section(self):
+        # 1. Recolectar la información
+        data = self.form_section.get_data()
 
+        # Validamos materiales
+        if data['concrete'] is None or data['steel'] is None:
+            QMessageBox.warning(self, "Error", "Debes seleccionar materiales válidos.")
+            return
+        
+        # 2. Configurar Tag y Nombre
+        manager = ProjectManager.instance()
+        tag = manager.get_next_section_tag()
+        
+        name = self.form_section.textbox_name.text()
+        if not name:
+            name = f"Sec_{data['b']}x{data['h']}"
 
-        # 6. Guardar y Actualizar UI
+        section = FiberSection(tag, name)
+
+        # 3. Construir geometría (Usa el Helper)
+        self._setup_section_geometry(section, data)
+
+        # 4. Guardar y Actualizar UI
         manager.add_section(section)
-        #Acutalizar la lista en la UI
+        
         display_text = f"{tag}-{name}"
-
-        #Guardamos el ID del material en una "mochila"
         item=QListWidgetItem(display_text)
         item.setData(Qt.ItemDataRole.UserRole, tag)
         self.sections_list.addItem(item)
 
-        print(f"[DEBUG] Sección Creada: {name} | Arg: {data}")
+        print(f"[DEBUG] Sección Creada: {name}")
+
+    def update_section(self):
+        # 1. Verificar selección
+        current_row = self.sections_list.currentRow()
+        if current_row < 0: return
+
+        item = self.sections_list.item(current_row)
+        tag = item.data(Qt.ItemDataRole.UserRole)
+        
+        manager = ProjectManager.instance()
+        section = manager.get_section(tag)
+
+        if not section: return
+
+        # 2. Recolectar nuevos datos
+        data = self.form_section.get_data()
+        
+        if data['concrete'] is None or data['steel'] is None:
+             QMessageBox.warning(self, "Error", "Faltan materiales.")
+             return
+
+        # 3. Actualizar propiedades báscias
+        if data['name']:
+            section.name = data['name']
+        
+        # 4. Reconstruir geometría (Esto borra lo viejo y pone lo nuevo)
+        self._setup_section_geometry(section, data)
+
+        # 5. Refrescar Lista UI
+        display_text = f"{section.tag}-{section.name}"
+        item.setText(display_text)
+        
+        print(f"[DEBUG] Sección Modificada: {section.name}")
+        
+        # Refrescar preview
+        self.update_preview()
 
     def delete_section(self):
         current_row = self.sections_list.currentRow()
@@ -172,75 +217,33 @@ class SectionDialog(QDialog):
 
         for  section in sections:
             display_text = f"{section.tag}-{section.name}"
-            #Guardamos el ID del material en una "mochila"
             item=QListWidgetItem(display_text)
             item.setData(Qt.ItemDataRole.UserRole, section.tag)
             self.sections_list.addItem(item)
 
- 
     def update_preview(self):
-        #1. Crea una sección temporal
+        # Construye una sección TEMPORAL solo para pintar
         temp_section = self._build_section_from_form()
-
         if temp_section:
             self.preview_widget.plot_section(temp_section)
-        else:
-            pass
 
     def _build_section_from_form(self):
         """
-        Crea un objeto FiberSection TEMPORAL con los datos actuales del formulario.
-        No lo guarda en el Manager. Retorna None si faltan datos.
+        Crea un objeto FiberSection TEMPORAL para PREVIEW.
         """
         data = self.form_section.get_data()
         
-        # Validamos materiales
         if data['concrete'] is None or data['steel'] is None:
             return None
             
-        b = data['b']
-        h = data['h']
-        cover = data['cover']
-        mat_conc = data['concrete']
-        mat_steel = data['steel']
+        # Dummy tag y name para preview
+        section = FiberSection(0, "Preview")
         
-        # Nombre temporal (o real)
-        tag = 0 # Dummy tag para preview
-        name = self.form_section.textbox_name.text() or f"SecPV_{b}x{h}"
-        
-        section = FiberSection(tag, name)
-        
-        # --- Lógica de Geometría (Copiada/Movida de add_section) ---
-        # 4. Crear la geometría de la sección (Concreto)
-        section.add_rect_patch(RectPatch(
-            material_tag = mat_conc,
-            yI= round(-h/2, 6), zI= round(-b/2, 6),
-            yJ=  round(h/2, 6), zJ=  round(b/2, 6)
-        ))
-        # 5. Crear las barras de acero
-        # Capa superior
-        if data['top_qty'] > 0:
-            area_top = (math.pi * (data['top_diam']**2))/4
-            section.add_layer_straight(LayerStraight(
-                material_tag = mat_steel,
-                num_bars = data['top_qty'],
-                area_bar = area_top,
-                yStart = round(h/2 - cover, 6), zStart = round(-b/2 + cover, 6),
-                yEnd   = round(h/2 - cover, 6), zEnd   =  round(b/2 - cover, 6)
-            ))
-            
-        # Capa INFERIOR
-        if data['bot_qty'] > 0:
-            area_bot = (math.pi * (data['bot_diam']**2)) / 4
-            section.add_layer_straight(LayerStraight(
-                material_tag=mat_steel,
-                num_bars=data['bot_qty'],
-                area_bar=area_bot,
-                yStart= round(-h/2 + cover, 6), zStart= round(-b/2 + cover, 6),
-                yEnd  = round(-h/2 + cover, 6), zEnd  =  round(b/2 - cover, 6)
-            ))
+        # Reutilizamos la lógica de construcción geometry
+        self._setup_section_geometry(section, data)
             
         return section
+
     def on_section_selected(self, item):
         tag = item.data(Qt.ItemDataRole.UserRole)
         manager = ProjectManager.instance()
@@ -248,5 +251,4 @@ class SectionDialog(QDialog):
         
         if section and isinstance(section, FiberSection):
             self.form_section.set_data(section)
-            # Forzamos update de la preview
             self.update_preview()

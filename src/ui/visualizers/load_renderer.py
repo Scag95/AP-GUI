@@ -47,15 +47,16 @@ class LoadRenderer:
 
     def _draw_nodal_load(self, plot_widget, node, load, scale):
         # Parametros graficos
-        HEAD_LEN = 1.5 * scale
-        OFFSET = 1.0 * scale 
+        HEAD_LEN = 1500 * scale
+        OFFSET = 1000 * scale 
         TAIL_WIDTH = 0.1*scale
         um = UnitManager.instance()
 
 
         # FX
         if abs(load.fx) > 1e-6:
-            tail_len = abs(um.from_base(load.fx,UnitType.FORCE)) * scale
+            # GEOMETRÍA: Usar valor BASE para que el tamaño sea constante al cambiar unidades
+            tail_len = abs(load.fx) * scale
             
             # Ángulo de la flecha
             angle = 180 if load.fx > 0 else 0
@@ -74,19 +75,21 @@ class LoadRenderer:
             plot_widget.addItem(item)
             self.load_items.append(item)
             
-            # Texto
+            # Texto (VISUAL: Usar conversiones)
+            val_viz = um.from_base(load.fx, UnitType.FORCE)
             # Calculamos cola
             total_len = tail_len + HEAD_LEN
             shift_x = total_len if angle == 0 else -total_len
             
-            text = pg.TextItem(f"Fx={um.from_base(load.fx,UnitType.FORCE):.1f} {um.get_current_unit(UnitType.FORCE)}", color='g', anchor=(0.5, 1))
+            text = pg.TextItem(f"Fx={val_viz:.1f} {um.get_current_unit(UnitType.FORCE)}", color='g', anchor=(0.5, 1))
             text.setPos(node.x + shift_x, node.y)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
         # FY
         if abs(load.fy) > 1e-6:
-            tail_len = abs(abs(um.from_base(load.fy,UnitType.FORCE))) * scale
+            # GEOMETRÍA: Valor BASE
+            tail_len = abs(load.fy) * scale
             angle = -90 if load.fy < 0 else 90 # Arriba(90) o Abajo(-90)
             
             dy_offset = -OFFSET if angle == -90 else OFFSET
@@ -102,18 +105,20 @@ class LoadRenderer:
             plot_widget.addItem(item)
             self.load_items.append(item)
             
-            # Texto
+            # Texto (VISUAL)
+            val_viz = um.from_base(load.fy, UnitType.FORCE)
             total_len = tail_len + HEAD_LEN
             dy = total_len if angle == 90 else -total_len
             
-            text = pg.TextItem(f"Fy={um.from_base(load.fy,UnitType.FORCE):.1f} {um.get_current_unit(UnitType.FORCE)}", color='#FFA500')
+            text = pg.TextItem(f"Fy={val_viz:.1f} {um.get_current_unit(UnitType.FORCE)}", color='#FFA500')
             text.setPos(node.x, node.y + dy)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
     def _draw_element_load(self, plot_widget, ni, nj, load, scale):
         um = UnitManager.instance()
-
+        HEAD_LEN = 500 * scale
+        OFFSET = 1000 * scale 
         dx = nj.x - ni.x
         dy = nj.y - ni.y
         length = math.sqrt(dx*dx + dy*dy)
@@ -124,14 +129,17 @@ class LoadRenderer:
         nx, ny = -uy, ux 
 
         # Sub-funcion helper
-        def draw_block(magnitude, color, is_axial):
-            if abs(magnitude) < 1e-6: return
+        def draw_block(magnitude_base, color, is_axial):
+            # magnitude_base: Valor en N/m (base)
+            if abs(magnitude_base) < 1e-6: return
 
-            direction = 1 if magnitude < 0 else -1
-            mag_visual = abs(magnitude) * scale
+            direction = 1 if magnitude_base < 0 else -1
             
-            off_x = nx * mag_visual * direction
-            off_y = ny * mag_visual * direction
+            # Geometría: Usar base para altura del bloque
+            mag_geom = abs(magnitude_base) * scale*3
+            
+            off_x = nx * mag_geom * direction
+            off_y = ny * mag_geom * direction
             
             x1, y1 = ni.x, ni.y
             x2, y2 = nj.x, nj.y
@@ -163,7 +171,7 @@ class LoadRenderer:
                 
                 arrow = pg.ArrowItem(
                     pos=(bx, by),
-                    headLen=0.8 * scale, tailLen=0,
+                    headLen=HEAD_LEN, tailLen=0,
                     brush=color, pen=None, pxMode=False
                 )
                 arrow.setStyle(angle=angle)
@@ -175,15 +183,21 @@ class LoadRenderer:
                 plot_widget.addItem(conn)
                 self.load_items.append(conn)
             
-            # Label
+            # Label (VISUAL)
             mid_x = (p1_load[0] + p2_load[0]) / 2
             mid_y = (p1_load[1] + p2_load[1]) / 2
-            label = f"{'wx' if is_axial else 'wy'}={magnitude:.2f} {um.get_current_unit(UnitType.DISTRIBUTED_FORCE)}"
-            text = pg.TextItem(label, color=color, anchor=(0.5, 0))
-            text.setPos(mid_x, mid_y)
+            
+            text_offset = 500 * scale
+
+            label_x = mid_x + nx * text_offset * direction
+            label_y = mid_y + ny * text_offset * direction
+            val_viz = um.from_base(magnitude_base, UnitType.DISTRIBUTED_FORCE)
+            label = f"{'wx' if is_axial else 'wy'}={val_viz:.2f} {um.get_current_unit(UnitType.DISTRIBUTED_FORCE)}"
+            text = pg.TextItem(label, color=color, anchor=(0.5, 0.5)) # Anchor centrado
+            text.setPos(label_x, label_y)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
-        # Llamadas
-        draw_block(um.from_base(load.wy,UnitType.DISTRIBUTED_FORCE), self.color_nodal_load, False) # Wy usa color naranja/rojo
-        draw_block(um.from_base(load.wx,UnitType.DISTRIBUTED_FORCE), self.color_dist_load, True)   # Wx usa color morado
+        # Llamadas: PASAMOS VALORES BASE SIN CONVERTIR
+        draw_block(load.wy, self.color_nodal_load, False) 
+        draw_block(load.wx, self.color_dist_load, True)

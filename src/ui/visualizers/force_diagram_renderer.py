@@ -5,7 +5,7 @@ from src.utils.scale_manager import ScaleManager
 import math
 
 from PyQt6.QtWidgets import QGraphicsPolygonItem
-from PyQt6.QtGui import QPolygonF, QColor, QPen, QBrush
+from PyQt6.QtGui import QPolygonF, QColor, QPen, QBrush, QFont 
 from PyQt6.QtCore import QPointF
 
 class ForceDiagramRenderer:
@@ -135,7 +135,51 @@ class ForceDiagramRenderer:
         brush = QBrush(fill_color)
         item.setBrush(brush)
         
+
         item.setZValue(20)
         plot_widget.addItem(item)
         self.diagram_items.append(item)
 
+
+        # 5. Visualizar Valores (Extremos)
+        if not values: return
+        
+        # Índices clave: Inicio (0) y Fin (-1)
+        indices_to_label = [0, len(values)-1]
+        
+        # Opcional: Si quieres también el máximo absoluto
+        # max_idx = max(range(len(values)), key=lambda i: abs(values[i]))
+        # if max_idx not in indices_to_label:
+        #    indices_to_label.append(max_idx)
+        for idx in indices_to_label:
+            val_base = values[idx]
+            
+            # Si el valor es insignificante, saltar
+            if abs(val_base) < 1e-6:
+                continue
+            # Calcular valor visual y string
+            val_viz = um.from_base(val_base, u_type)
+            # unit_str = um.get_current_unit(u_type)
+            # Para extremos, quizás solo el número es más limpio para no solapar "kNm" dos veces
+            text_str = f"{val_viz:.2f}" 
+            # Calcular posición 
+            rel_pos = locs[idx]
+            base_x = ni.x + ux * (L * rel_pos)
+            base_y = ni.y + uy * (L * rel_pos)
+            
+            # Offset
+            offset_viz = val_viz * scale 
+            margin_factor = 1.15 # Un poco más de margen
+            
+            px = base_x + nx * (offset_viz * margin_factor)
+            py = base_y + ny * (offset_viz * margin_factor)
+            # Crear TextItem
+            text_item = pg.TextItem(text=text_str, color=color, anchor=(0.5, 0.5))
+            text_item.setPos(px, py)
+            
+            font = QFont()
+            font.setPixelSize(12) 
+            text_item.setFont(font)
+            text_item.setZValue(25)
+            plot_widget.addItem(text_item)
+            self.diagram_items.append(text_item)
