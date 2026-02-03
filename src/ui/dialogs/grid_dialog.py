@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout,
-                             QSpinBox, QDoubleSpinBox, QComboBox,
-                              QPushButton, QDialogButtonBox,QLabel)
+                             QSpinBox, QComboBox, QPushButton,
+                             QDialogButtonBox,QCheckBox)
 from src.analysis.manager import ProjectManager
 from src.analysis.frame_generator import FrameGenerator
 from src.ui.widgets.unit_spinbox import UnitSpinBox
@@ -43,10 +43,15 @@ class gridDialog(QDialog):
         self.bay_width_input.set_value_base(3.0)
         self.bay_width_input.setMinimum(0.1)
 
+        self.check_base_beams = QCheckBox("Generar vigas en la base (z=0)")
+        self.check_base_beams.setChecked(False) # Por defecto NO
+        
+
         form_layout.addRow("Numero de Pisos:",self.stories_input)
         form_layout.addRow("Número de Vanos:", self.bays_input)
         form_layout.addRow("Altura de Entrepisos",self.story_height_input)
         form_layout.addRow("Ancho de vano",self.bay_width_input)
+        form_layout.addRow(self.check_base_beams)
 
         #--- Secciones ---
         # Neceitamos elegir que seeción usar para vigas y columnas
@@ -83,7 +88,8 @@ class gridDialog(QDialog):
             "bay_width": self.bay_width_input.get_value_base(),
             # currentData() devuelve el TAG que guardamos (el segundo argumento en addItem)
             "col_sec_tag": self.col_sec_combo.currentData(),
-            "beam_sec_tag": self.beam_sec_combo.currentData()
+            "beam_sec_tag": self.beam_sec_combo.currentData(),
+            "add_base_beams": self.check_base_beams.isChecked() 
         }
 
 

@@ -35,8 +35,10 @@ class MaterialDialog(QDialog):
         #Botones de control
         self.btn_add = QPushButton("Añadir Material")
         self.btn_delete =QPushButton("Borrar Material")
+        self.btn_modify = QPushButton("Modificar Material")
         self.left_panel_layout.addWidget(self.btn_add)
         self.left_panel_layout.addWidget(self.btn_delete)
+        self.left_panel_layout.addWidget(self.btn_modify)
 
         #Añadimos panel izquierdo al layout principal
         self.main_layout.addLayout(self.left_panel_layout, stretch=1)
@@ -63,6 +65,7 @@ class MaterialDialog(QDialog):
         #conectamos los botones
         self.btn_add.clicked.connect(self.add_material)
         self.btn_delete.clicked.connect(self.delete_material)
+        self.btn_modify.clicked.connect(self.update_material)
 
         self.materials_list.itemClicked.connect(self.on_material_selected)
 
@@ -147,6 +150,36 @@ class MaterialDialog(QDialog):
                 if index>= 0:
                     self.combo_type.setCurrentIndex(index)
                     self.form_steel.set_data(material)
-            
+
+    def update_material(self):
+        current_row = self.materials_list.currentRow()
+        #Verificamos que tengamos un elemento selecionado
+        if current_row<0: return
+
+        manager = ProjectManager.instance()
+        item = self.materials_list.item(current_row)
+        tag_to_modify = item.data(Qt.ItemDataRole.UserRole)
+        material = manager.get_material(tag_to_modify)
+
+        if isinstance(material,Concrete01):
+            new_data = self.form_concrete.get_data()
+            material.fpc = new_data["fpc"]
+            material.epsc0 = new_data["epsc0"]
+            material.fpcu = new_data["fpcu"]
+            material.epsu = new_data["epsu"]
+            material.rho = new_data["rho"]
+                           
+        elif isinstance(material,Steel01):
+            new_data = self.form_steel.get_data()
+
+            for key, value in new_data.items():
+                if hasattr(material, key):
+                    setattr(material,key, value)
+                    
+        display_text = f"{material.tag}-{material.name}({material.__class__.__name__})"
+        item.setText(display_text)
+
+
+
 
 

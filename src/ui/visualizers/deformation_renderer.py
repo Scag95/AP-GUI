@@ -2,25 +2,55 @@ import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 import math
 import numpy as np
+from src.utils.units import UnitManager, UnitType
+from src.utils.scale_manager import ScaleManager
 
 class DeformationRenderer:
+
     def __init__(self):
         self.deformed_items = []
         self.pen_deformed = pg.mkPen(color='#00E5FF', width=2, style=Qt.PenStyle.DashLine)
+
+        # Nodos deformados: ScatterPlotItem soporta tooltips nativos via 'setTip'
+        self.node_scatter = pg.ScatterPlotItem(
+            size=15, # Un poco más grandes para facilitar el 'hit' del mouse
+            pen=pg.mkPen(None), 
+            brush=pg.mkBrush(0, 0, 0, 1), # Amarillo totalmente transparente
+            hoverable=True
+        )
+        self.node_scatter.sigHovered.connect(self._on_hover)
+
+    def _on_hover(self, item, points, ev=None):
+        if len(points) > 0:
+            # points[0] es el SpotItem
+            tooltip_text = points[0].data()
+            self.node_scatter.setToolTip(tooltip_text)
+        else:
+            self.node_scatter.setToolTip("")
 
     def clear(self, plot_widget):
         for item in self.deformed_items:
             plot_widget.removeItem(item)
         self.deformed_items.clear()
+        
+        # Limpiar puntos del scatter para evitar residuos
+        self.node_scatter.clear()
+        # Si el scatter estaba en la escena, removerlo también (aunque clear lo vacía)
+        if self.node_scatter in plot_widget.items():
+            plot_widget.removeItem(self.node_scatter)
 
-    def draw_deformed(self, plot_widget, manager, displacements, scale_factor=10.0):
+    def draw_deformed(self, plot_widget, manager, displacements, scale_factor=None):
         self.clear(plot_widget)
         if not displacements: return
-
+        um = UnitManager.instance()
+        u_len = UnitType.LENGTH 
         nodes = manager.get_all_nodes()
         elements = manager.get_all_elements()
         node_map = {n.tag: n for n in nodes}
-
+        if scale_factor is None:
+             scale_factor = ScaleManager.instance().get_scale('deformation')
+        
+        # 1. Dibujar Elementos (Curvas)
         for el in elements:
             if el.node_i in node_map and el.node_j in node_map:
                 ni = node_map[el.node_i]
@@ -38,6 +68,37 @@ class DeformationRenderer:
                 # Dibujar curva
                 curve = plot_widget.plot(xs, ys, pen=self.pen_deformed)
                 self.deformed_items.append(curve)
+
+        # 2. Dibujar Nodos Deformados (Puntos + Tooltip)
+        spots = []
+        unit_str = um.get_current_unit(u_len)
+        for n in nodes:
+             disp = displacements.get(n.tag, [0.0, 0.0, 0.0])
+             # Convertir valores
+             dx_viz = um.from_base(disp[0], u_len)
+             dy_viz = um.from_base(disp[1], u_len)
+             rz_val = disp[2] # Radiales
+             
+             # ... Posición deformada ...
+             x_def = n.x + disp[0] * scale_factor
+             y_def = n.y + disp[1] * scale_factor
+             
+             # Tooltip formateado
+             tip_text = (f"Node {n.tag}\n"
+                         f"Dx: {dx_viz:.4g} {unit_str}\n"
+                         f"Dy: {dy_viz:.4g} {unit_str}\n"
+                         f"Rz: {rz_val:.4g} rad")
+             
+             spots.append({
+                 'pos': (x_def, y_def),
+                 'data': tip_text,
+             })
+        
+        if spots:
+            self.node_scatter.setData(spots=spots)
+            plot_widget.addItem(self.node_scatter)
+            # Añadimos a la lista para que se borre en el próximo clear
+            self.deformed_items.append(self.node_scatter)
 
     def _compute_beam_curve(self, ni, nj, di, dj, scale, num_points=20):
         # 1. Geometría Original

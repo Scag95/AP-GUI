@@ -15,7 +15,7 @@ class ScaleManager(QObject):
             'moment': 0.003,
             'shear': 0.003,
             'axial': 0.003,
-            'load': 0.3,
+            'load': 0.0003,
             'reaction': 0.3,
             'node_size': 10.0
         }
@@ -62,7 +62,7 @@ class ScaleManager(QObject):
         self.set_scale('moment', base_diagram) # Ojo: Mz suele ser grande numéricamente, esto requerirá ajuste dinámico según Max Mz
         self.set_scale('shear', base_diagram)
         self.set_scale('deformation', 50.0) 
-        self.set_scale('load', L_char * 0.01)
+        self.set_scale('load', L_char * 0.00001)
         self.set_scale('node_size', 10.0) 
         
         print(f"[ScaleManager] Escalas recalculadas para L={L_char:.2f}")
