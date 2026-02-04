@@ -75,17 +75,7 @@
         {
             "tag": 2,
             "x": 0.0,
-            "y": 1.0,
-            "fixity": [
-                0,
-                0,
-                0
-            ]
-        },
-        {
-            "tag": 3,
-            "x": 0.0,
-            "y": 2.0,
+            "y": 3.0,
             "fixity": [
                 0,
                 0,
@@ -101,26 +91,8 @@
             "node_j": 2,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
-        },
-        {
-            "type": "ForceBeamColumn",
-            "tag": 2,
-            "node_i": 2,
-            "node_j": 3,
-            "section_tag": 1,
-            "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         }
     ],
-    "loads": [
-        {
-            "type": "NodalLoad",
-            "tag": 1,
-            "node_tag": 3,
-            "fx": 10000.0,
-            "fy": 0.0,
-            "mz": 0.0
-        }
-    ]
+    "loads": []
 }
