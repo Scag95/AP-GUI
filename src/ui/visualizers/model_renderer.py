@@ -38,7 +38,9 @@ class ModelRenderer:
         
         self.scatter_nodes.setData([], []) # Limpiar puntos
 
-    def draw_structure(self, plot_widget, manager, show_node_labels=False, show_element_labels=False):
+    def draw_structure(self, plot_widget, manager,
+                       show_node_labels=False, show_element_labels=False,
+                       on_element_click=None):
         self.clear(plot_widget)
         
         nodes = manager.get_all_nodes()
@@ -59,10 +61,14 @@ class ModelRenderer:
                     pen=self.pen_element,
                     clickable=True
                 )
-                # curve.setData(antialias=True) # Opcional
-                # Guardamos referencia (para clicks futuros)
-                # curve.ele_tag = el.tag 
-                
+                curve.setCurveClickable(True)
+                # Guardamos referencia 
+
+                curve.ele_tag = el.tag  
+                if on_element_click:
+                    curve.sigClicked.connect(on_element_click)
+                self.element_items[el.tag] = curve
+
                 # plot_widget.addItem(curve) # Ya no hace falta, plot() lo añade
                 self.element_items[el.tag] = curve
                 
@@ -79,12 +85,38 @@ class ModelRenderer:
         x_vals = []
         y_vals = []
         data_vals = [] # Guardaremos el tag aquí
-        
+        symbols = []
+        brushes = []
+        sizes = [] 
+
+        base_size = ScaleManager.instance().get_scale('node_size')
+
         for n in nodes:
             x_vals.append(n.x)
             y_vals.append(n.y)
             data_vals.append(n.tag)
             
+            # Lógica de Símbolos
+            fix = n.fixity
+
+            if fix == [0,0,0]: # Libre
+                symbols.append('o')
+                brushes.append(pg.mkBrush('#2196F3'))
+                sizes.append(base_size) # Tamaño normal
+            else:
+                sizes.append(base_size * 1.5)
+                if fix == [1,1,1]: # Empotrado
+                    symbols.append('s')
+                    brushes.append(pg.mkBrush('#D32F2F'))
+                elif fix == [1,1,0]: # Articulado
+                    symbols.append('t1')
+                    brushes.append(pg.mkBrush('#4CAF50'))
+                elif fix == [0, 1, 0] or fix == [1, 0, 0]: # Rodillo
+                    symbols.append('o') 
+                    brushes.append(pg.mkBrush('#FFC107'))
+                else: 
+                    symbols.append('x') 
+                    brushes.append(pg.mkBrush('k')) # Negro
             # Etiqueta de nodo
             if show_node_labels:
                 text = pg.TextItem(text=str(n.tag), color='#2196F3', anchor=(0, 1))
@@ -93,8 +125,13 @@ class ModelRenderer:
                 self.labels.append(text)
 
         # Actualizar Scatter
-        node_size = ScaleManager.instance().get_scale('node_size')
-        self.scatter_nodes.setData(x_vals, y_vals, data=data_vals, size=node_size)
+        self.scatter_nodes.setData(
+            x_vals, y_vals, 
+            data=data_vals, 
+            size=sizes,
+            symbol=symbols,
+            brush=brushes
+        )
 
     def highlight_node(self, node_tag, color='#FFCC00'):
         # TODO: Implementar resaltado

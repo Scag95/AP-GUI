@@ -40,6 +40,8 @@ class MainWindow(QMainWindow):
 
         #Conexiones Interactor -> Panel
         self.viz_widget.nodeSelected.connect(self.props_panel.show_node)
+        self.viz_widget.elementSelected.connect(self.props_panel.show_element)
+        self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
         self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
 
         # Conexiones Panel -> Manager (Refrescar gráfico)

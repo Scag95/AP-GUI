@@ -1,3 +1,5 @@
+from src.analysis.manager import ProjectManager
+from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtWidgets import (QWidget, QFormLayout, QDoubleSpinBox, 
                              QLineEdit, QLabel, QVBoxLayout,QCheckBox,QHBoxLayout,QPushButton)
 from PyQt6.QtCore import pyqtSignal
@@ -98,6 +100,91 @@ class NodeForms(QWidget):
         if self.current_node:
             self.btn_apply.setEnabled(True)
 
+class ElementForm(QWidget):
+    dataChanged = pyqtSignal()
+
+    def __init__(self,parent = None):
+        super().__init__(parent)
+        self.layout = QVBoxLayout(self)
+        form = QFormLayout()
+
+        #Campos
+        self.lbl_tag = QLabel("-")
+        self.lbl_conn = QLabel("-")
+
+        #Mass Density (Editable)
+        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho.setRange(0,1e9)
+        self.spin_rho.setDecimals(2)
+        self.spin_rho.valueChanged.connect(self._on_value_changed)
+
+        #Section (Editable - ComboBox)
+        self.combo_section = QComboBox()
+        self.combo_section.currentIndexChanged.connect(self._on_value_changed)
+        form.addRow("Tag:", self.lbl_tag)
+        form.addRow("Nodos:", self.lbl_conn)
+        form.addRow("Desnidad:", self.spin_rho)
+        form.addRow("Sección:",self.combo_section)
+
+        self.layout.addLayout(form)
+        
+        #Boton Aplicar
+        self.btn_apply = QPushButton("Aplicar Cambios")
+        self.btn_apply.clicked.connect(self.apply_changes)
+        self.btn_apply.setEnabled(False)
+        self.layout.addWidget(self.btn_apply)
+        self.layout.addStretch()
+
+        self.current_element = None
+
+    def load_element(self, element):
+        self.current_element = element
+        self.blockSignals(True)
+
+        #Propiedades Básicas
+        self.lbl_tag.setText(str(element.tag))
+        self.lbl_conn.setText(f"{element.node_i} -> {element.node_j}")
+
+        #Cargar densidad (si el atributo existe, si no 0)
+        rho = getattr(element, 'mass_density',0.0)
+        self.spin_rho.set_value_base(rho)
+
+        #cargar secciones disponibles
+        self.combo_section.clear()
+        manager = ProjectManager.instance()
+        sections = manager.section
+
+        for tag, sec in sections.items():
+            self.combo_section.addItem(f"{tag}: {sec.name}", userData = tag)
+
+        #Seleciona la sección actial
+        if hasattr(element, 'section_tag'):
+            idx = self.combo_section.findData(element.section_tag)
+            if idx>=0: self.combo_section.setCurrentIndex(idx)
+
+        self.blockSignals(False)
+        self.btn_apply.setEnabled(False)
+
+
+    def _on_value_changed(self):
+        self.btn_apply.setEnabled(True)
+
+    def apply_changes(self):
+        if not self.current_element: return
+        
+        #Guardar densidad
+        self.current_element.mass_density = self.spin_rho.get_value_base()
+
+        #Guardar sección
+        idx = self.combo_section.currentIndex()
+        if idx >= 0:
+            sec_tag = self.combo_section.itemData(idx)
+            self.current_element.section_tag = sec_tag
+
+        self.dataChanged.emit()
+        self.btn_apply.setEnabled(False)
+
+    
 
 
         
