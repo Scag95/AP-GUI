@@ -63,6 +63,6 @@ class ScaleManager(QObject):
         self.set_scale('shear', base_diagram)
         self.set_scale('deformation', 50.0) 
         self.set_scale('load', L_char * 0.00001)
-        self.set_scale('node_size', 10.0) 
+        self.set_scale('node_size', 6.0) 
         
         print(f"[ScaleManager] Escalas recalculadas para L={L_char:.2f}")

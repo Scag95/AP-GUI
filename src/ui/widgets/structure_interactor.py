@@ -15,6 +15,7 @@ from src.ui.visualizers.force_diagram_renderer import ForceDiagramRenderer
 class StructureInteractor(QWidget):
     nodeSelected = pyqtSignal(object)
     selectionCleared = pyqtSignal()
+    elementSelected = pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -46,6 +47,7 @@ class StructureInteractor(QWidget):
         
         # 4. Estado de Interacción
         self.last_clicked_point = None
+        self.last_clicked_element = None  
         self.current_label = None 
         self.current_results = None 
 
@@ -102,7 +104,8 @@ class StructureInteractor(QWidget):
             self.plot_widget, 
             self.manager, 
             show_node_labels=self.show_node_labels,
-            show_element_labels=self.show_element_labels
+            show_element_labels=self.show_element_labels,
+            on_element_click=self._on_element_clicked_wrapper
         )
         
         
@@ -218,13 +221,40 @@ class StructureInteractor(QWidget):
                 self.plot_widget.addItem(text_item)
                 self.current_label = text_item
 
+    def _on_element_clicked_wrapper(self, curve):
+        #1. Limpiar selección previa
+        self._deselect_all()
+
+        #2. Resaltar nuevo elemento
+        curve.setPen(color='r', width=4)
+        self.last_clicked_element = curve
+        
+        #Obtener el objeto real y emitir
+        ele_tag = getattr(curve.parentItem(), 'ele_tag', None)
+        
+        if ele_tag:
+            element = self.manager.get_element(ele_tag)
+            if element:
+                self.elementSelected.emit(element)
+                print(f"Element {ele_tag} selected")
+                
+
     def _deselect_all(self):
+        #1. Deseleccionar nodo 
         if self.last_clicked_point:
             self.last_clicked_point.resetBrush()
             self.last_clicked_point = None
+
+        #2. Deseleccionar elementos
+        if self.last_clicked_element:
+            self.last_clicked_element.setPen(self.renderer_model.pen_element)
+            self.last_clicked_element = None
+
+        #3. Limpiar etiquetas flotantes
         if self.current_label:
             self.plot_widget.removeItem(self.current_label)
             self.current_label = None
+
         self.selectionCleared.emit()
 
     def _on_background_clicked(self, event):
@@ -237,3 +267,4 @@ class StructureInteractor(QWidget):
     def show_force_diagrams(self,diagram_type):
         self.current_diagram_type = diagram_type
         self.refresh_viz()
+    
