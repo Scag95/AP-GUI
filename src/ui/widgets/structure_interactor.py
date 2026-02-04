@@ -247,7 +247,10 @@ class StructureInteractor(QWidget):
 
         #2. Deseleccionar elementos
         if self.last_clicked_element:
-            self.last_clicked_element.setPen(self.renderer_model.pen_element)
+            try:
+                self.last_clicked_element.setPen(self.renderer_model.pen_element)
+            except RuntimeError:
+                pass # El objeto C++ ya murió, no importa.
             self.last_clicked_element = None
 
         #3. Limpiar etiquetas flotantes

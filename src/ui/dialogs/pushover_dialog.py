@@ -53,8 +53,11 @@ class PushoverDialog(QDialog):
         self.plot_widget = pg.PlotWidget(title = "Curva de capacidad (Pushover)")
         u_force = um.get_current_unit(UnitType.FORCE)
         u_len = um.get_current_unit(UnitType.LENGTH)
-        self.plot_widget.setLabel('left', "Cortante Basal Vb", units = u_force)
-        self.plot_widget.setLabel('bottom', "Desplazamiento Techo", units = u_len)
+        self.plot_widget.setLabel('bottom', f"Desplazamiento Techo [{u_len}]")
+        self.plot_widget.setLabel('left', f"Cortante Basal Vb [{u_force}]")
+                
+        self.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
+        self.plot_widget.getAxis('left').enableAutoSIPrefix(False)
 
         self.plot_widget.showGrid(x=True, y=True)
         self.plot_widget.setBackground('w')
@@ -74,6 +77,7 @@ class PushoverDialog(QDialog):
     def run_pushover(self):
         from src.analysis.opensees_translator import OpenSeesTranslator
         um = UnitManager.instance()
+        print(f"[DEBUG] UnitManager Length Unit: {um.get_current_unit(UnitType.LENGTH)}")
         #1. Obtenner inputs
         idx = self.combo_node.currentIndex()
         if idx < 0: return
@@ -85,9 +89,17 @@ class PushoverDialog(QDialog):
 
         print(f"Lanzando Pushover: Node {control_node}, Disp {max_disp}...")
 
+
+
         try: 
             #Ejecutar lógica backend
             dx, dy = translator.run_pushover_analysis(control_node, max_disp)
+            len_unit = um.get_current_unit(UnitType.LENGTH)
+            force_unit = um.get_current_unit(UnitType.FORCE)
+            print(f"[DEBUG] Converting Results. Length Unit: {len_unit}, Force Unit: {force_unit}")
+        
+            vis_dx = [um.from_base(val, UnitType.LENGTH) for val in dx]
+            print(f"[DEBUG] Conversion Check: Base {dx[-1]:.4f} -> Vis {vis_dx[-1]:.4f}")
             vis_dx = [um.from_base(val, UnitType.LENGTH) for val in dx]
             vis_dy = [um.from_base(val, UnitType.FORCE) for val in dy]
             if dx and dy:
