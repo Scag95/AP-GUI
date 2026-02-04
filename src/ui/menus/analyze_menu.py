@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QMessageBox
 from src.analysis.opensees_translator import OpenSeesTranslator
+from src.ui.dialogs.pushover_dialog import PushoverDialog
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
@@ -15,6 +16,8 @@ class AnalyzeMenu(QMenu):
         self.action_gravity.setStatusTip("Construye el modelo y ejecuta un análisis estático lineal")
         self.action_gravity.triggered.connect(self.run_gravity)
         self.addAction(self.action_gravity)
+        # Pushover
+        self.addAction("Análisis Pushover (No Lineal)", self.show_pushover_dialog)
 
         self.addSeparator()
 
@@ -77,3 +80,7 @@ class AnalyzeMenu(QMenu):
         except Exception as e:
             QMessageBox.critical(self, "Error crítico", f"Ocurrió error inesperado:\n{str(e)}")
             print(e)
+
+    def show_pushover_dialog(self):
+        dlg = PushoverDialog(self.parent())
+        dlg.exec()

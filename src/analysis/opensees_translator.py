@@ -264,3 +264,91 @@ class OpenSeesTranslator:
         """Vuelca el estado actual de OpenSees a un archivo de texto."""
         ops.printModel('-file', filename)
         print(f"[OpenSees] Modelo volcado en: {filename}")
+
+    def run_pushover_analysis(self, control_node_tag, max_disp, n_steps = 100):
+        """
+        Ejecuta un análisis Pushover (Displacement Control).
+        Retonra una tupa (lista_desplazamiento, lista_cortanes).
+        """
+        if self.debug_file: self.debug_file.write(f"\n# --- PUSHOVER ANALYSIS (Node {control_node_tag}, Dmax = {max_disp})---\n")
+
+        #1. Construir el modelo (Geometría, materiale, secciones, elementos)
+        #Nota: Asumimos que build_model ya se llamó
+
+        self.build_model()
+
+        # 2. Análisis de Gravedad (Pre-Pushover)
+        # Recalculamos gravedad asegurando que sea estática
+        print("[Pushover] Aplicando Gravedad...")
+        
+        # Configuración de Gravedad
+        self._log_and_run('system', 'BandGeneral')
+        self._log_and_run('numberer', 'RCM')
+        self._log_and_run('constraints', 'Plain')
+        self._log_and_run('test', 'NormDispIncr', 1.0e-8, 6)
+        self._log_and_run('algorithm', 'Newton')
+        self._log_and_run('integrator', 'LoadControl', 0.1)
+        self._log_and_run('analysis', 'Static')
+        
+        # Aplicar gravedad en 10 pasos
+        ok = self._log_and_run('analyze', 10)
+        if ok != 0:
+            print("[Error] Gravedad falló en Pushover.")
+            return None, None
+            
+        print("[Pushover] Gravedad OK. Iniciando Empuje Lateral...")
+
+        #3. Mantener cargas constantesy resetear tiempo
+        self._log_and_run('loadConst', '-time', 0.0)
+
+        #4. Definir patrónde carga lateral (Pushover)
+        ts_tag_push = 2
+        pattern_tag_push = 2
+
+        self._log_and_run('timeSeries', 'Linear', ts_tag_push)
+        self._log_and_run('pattern', 'Plain', pattern_tag_push, ts_tag_push)
+
+        self._log_and_run('load', control_node_tag, 1.0,0.0,0.0)
+
+        #5. Configurar Análisis Pushover
+        incr_disp = max_disp/n_steps
+
+        self._log_and_run('integrator', 'DisplacementControl', control_node_tag,1,incr_disp)
+
+        data_x = []
+        data_y = []
+
+        current_disp = 0.0
+
+        nodes = self.manager.get_all_nodes()
+        base_nodes = [n.tag for n in nodes if n.fixity[0] == 1]
+
+        print(f"[Pushover] Nodos basales detectados para Cortante:{base_nodes}")
+
+        for i in range(n_steps):
+            ok = self._log_and_run('analyze',1)
+
+            if ok !=0:
+                print(f"[Pushover] Falló convergencia en paso{i}")
+                break
+        
+            #A) Capturamos resultados
+            disp = ops.nodeDisp(control_node_tag,1)
+
+            #B) Cortante Basal (Reacciones)
+            ops.reactions()
+            base_shear = 0.0
+            for b_node in base_nodes:
+                reacs = ops.nodeReaction(b_node)
+                base_shear += reacs[0]
+
+            data_x.append(disp)
+            data_y.append(-base_shear)
+
+            if i % 10 == 0:
+                print(f"[Pushover] Step {i}/{n_steps}: Disp= {disp:.4f}, Vb={-base_shear:.2f}")
+
+        return data_x, data_y
+
+
+        

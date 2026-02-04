@@ -67,19 +67,19 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
         - [x] Centralized Scale Manager.
         - [x] Section Aggregator (M+P+V auto-setup).
 
-## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (Próximo)
-- [ ] **Interacción Avanzada (Próximo)**:
-    - [ ] **Sistema Visual de Nodos**: Mejorar representación/interacción de nodos.
-    - [ ] **Element Properties Form**: Ver y editar propiedades de elementos seleccionados.
-- [ ] **Módulo Pushover**:
-    - [ ] Traducir lógica de `test.py` a `opensees_translator.py` (`run_pushover`).
-    - [ ] Configurar Recorders específicos (Drift, Base Shear).
-    - [ ] Extraer Cortantes de Piso (Story Shears) robustos.
+## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (COMPLETADO)
+- [x] **Interacción Avanzada**:
+    - [x] **Sistema Visual de Nodos**: Mejorar representación/interacción de nodos (Símbolos por restricción).
+    - [x] **Element Properties Form**: Ver y editar propiedades de elementos seleccionados.
+- [x] **Módulo Pushover**:
+    - [x] Traducir lógica de `test.py` a `opensees_translator.py` (`run_pushover`).
+    - [x] Configurar análisis `DisplacementControl` con Gravedad previa.
+    - [x] Extraer Cortantes de Piso (Story Shears) robustos (via Reacciones).
 - [ ] **Debugging de Elementos**:
     - [ ] Resolver discrepancias de fuerza en extremos libres (Equilibrio estricto con `-iter` vs Configuración Análisis).
     - [ ] Implementar sistema de logs para validar comandos Tcl.
-- [ ] **Visualización Pushover**:
-    - [ ] Ventana de gráficos X-Y (Curva Pushover).
+- [x] **Visualización Pushover**:
+    - [x] Ventana de gráficos X-Y (Curva Pushover) con unidades correctas.
     - [ ] Animación de la deformada paso a paso.
 
 ## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
