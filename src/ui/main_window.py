@@ -40,8 +40,6 @@ class MainWindow(QMainWindow):
 
         #Conexiones Interactor -> Panel
         self.viz_widget.nodeSelected.connect(self.props_panel.show_node)
-        self.viz_widget.elementSelected.connect(self.props_panel.show_element)
-        self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
         self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
 
         # Conexiones Panel -> Manager (Refrescar gráfico)
@@ -82,7 +80,7 @@ class MainWindow(QMainWindow):
             elif act_type == "set_visibility":
                 self.viz_widget.set_visibility(action.get("type"), value)
             elif act_type == "set_diagram_type":
-                self.viz_widget.show_force_diagrams(value) # Ya existe este método, lo reusamos
+                self.viz_widget.show_force_diagrams(value) 
                 self.viz_widget.set_visibility("diagrams", True)
             elif act_type == "set_load_visibility":
                 self.viz_widget.set_load_visibility(action.get("type"), value)

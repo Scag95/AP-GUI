@@ -3,7 +3,7 @@
         {
             "tag": 1,
             "name": "Mat_Concreto_1",
-            "rho": 2500.0,
+            "rho": 2500,
             "type": "Concrete01",
             "fpc": 25000000.0,
             "epsc0": 0.0021,
@@ -13,7 +13,7 @@
         {
             "tag": 2,
             "name": "Mat_Acero_2",
-            "rho": 7850.0,
+            "rho": 7850,
             "type": "Steel01",
             "Fy": 500000000.0,
             "E0": 200000000000.0,
@@ -151,7 +151,7 @@
             "node_j": 2,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -160,7 +160,7 @@
             "node_j": 3,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -169,7 +169,7 @@
             "node_j": 4,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -178,7 +178,7 @@
             "node_j": 6,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -187,7 +187,7 @@
             "node_j": 7,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -196,7 +196,7 @@
             "node_j": 8,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -205,7 +205,7 @@
             "node_j": 6,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -214,7 +214,7 @@
             "node_j": 7,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         },
         {
             "type": "ForceBeamColumn",
@@ -223,33 +223,8 @@
             "node_j": 8,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 0.0
+            "mass_density": 225.0
         }
     ],
-    "loads": [
-        {
-            "type": "NodalLoad",
-            "tag": 1,
-            "node_tag": 2,
-            "fx": 10000.0,
-            "fy": 0.0,
-            "mz": 0.0
-        },
-        {
-            "type": "NodalLoad",
-            "tag": 2,
-            "node_tag": 3,
-            "fx": 10000.0,
-            "fy": 0.0,
-            "mz": 0.0
-        },
-        {
-            "type": "NodalLoad",
-            "tag": 3,
-            "node_tag": 4,
-            "fx": 10000.0,
-            "fy": 0.0,
-            "mz": 0.0
-        }
-    ]
+    "loads": []
 }
