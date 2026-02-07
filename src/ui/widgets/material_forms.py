@@ -32,7 +32,7 @@ class ConcreteForm(QWidget):
         self.spin_fpcU = UnitSpinBox(UnitType.STRESS)
         self.spin_fpcU.setDecimals(0)
         self.spin_fpcU.setRange(0, 1e10)
-        self.spin_fpcU.set_value_base(25*1e6) # 25 MPa
+        self.spin_fpcU.set_value_base(5*1e6) # 5 MPa
 
         layout.addRow("Resistencia al aplastamiento [fpcU]",self.spin_fpcU)
 

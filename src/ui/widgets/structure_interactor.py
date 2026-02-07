@@ -140,8 +140,6 @@ class StructureInteractor(QWidget):
             self.renderer_forces.clear(self.plot_widget)
 
 
-        print("[DEBUG] Viz updated (Renderers).")
-
     def set_visibility(self, item_type, visible):
         """ Controla visibilidad granular: 'deformed', 'diagrams' """
         if item_type == 'deformed': self.show_deformed = visible
@@ -186,13 +184,11 @@ class StructureInteractor(QWidget):
         sm = ScaleManager.instance()
         val = sm.get_scale('deformation') * 1.2
         sm.set_scale('deformation', val)
-        print(f"[DEBUG] Escala Deformada: {val:.2f}")
 
     def decrease_deform_scale(self):
         sm = ScaleManager.instance()
         val = sm.get_scale('deformation') / 1.2
         sm.set_scale('deformation', val)
-        print(f"[DEBUG] Escala Deformada: {val:.2f}")
 
     # --- TOGGLES DE ETIQUETAS ---
     def toggle_node_labels(self, visible):
