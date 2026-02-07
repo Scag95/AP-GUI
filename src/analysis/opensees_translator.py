@@ -1,4 +1,5 @@
 import openseespy.opensees as ops
+import math
 from src.analysis.manager import ProjectManager
 from src.analysis.materials import Concrete01, Steel01
 from src.analysis.sections import FiberSection
@@ -62,7 +63,7 @@ class OpenSeesTranslator:
         # 5. Definir Transformaciones Geométricas
         # Por defecto usamos Linear con tag=1
         if self.debug_file: self.debug_file.write("\n# --- Transformations ---\n")
-        self._log_and_run('geomTransf', 'Linear', 1)
+        self._log_and_run('geomTransf', 'PDelta', 1)
         
         # 6. Definir Elementos
         self._build_elements()
@@ -210,13 +211,14 @@ class OpenSeesTranslator:
         self._log_and_run('numberer', 'RCM')
         self._log_and_run('constraints', 'Plain')
         self._log_and_run('integrator', 'LoadControl', 0.1)
-        self._log_and_run('algorithm', 'Linear')
+        self._log_and_run('algorithm', 'Newton')
         self._log_and_run('analysis', 'Static')
         
         ok = self._log_and_run('analyze', 10)
         
         if ok == 0:
             print("[OpenSees] Análisis de Gravedad completado con EXITO")
+            self._log_and_run('loadConst', '-time', 0.0)
             return True
         else:
             print(f"[OpenSees] FALLÓ el análisis de Gravedad.")
@@ -265,90 +267,255 @@ class OpenSeesTranslator:
         ops.printModel('-file', filename)
         print(f"[OpenSees] Modelo volcado en: {filename}")
 
-    def run_pushover_analysis(self, control_node_tag, max_disp, n_steps = 100):
+    def run_modal_analysis(self, n_modes):
+        #Cargamos los nodos del proyecto.
+        nodes = self.manager.get_all_nodes()
+        if self.debug_file: self.debug_file.write("\n# --- Analysis Modal ---\n")
+        lambdas = ops.eigen(n_modes)
+        self._log_and_run('eigen', n_modes)
+
+        periods = []
+        count = 0
+        for lam in lambdas:
+            omega = math.sqrt(lam)
+            T = 2*math.pi / omega
+            periods.append(T)
+            count += 1
+            print(f"[Modal] Modo {count} T = {T:.4f}s")
+
+
+        #1. Agrumaos los nodos por planta.
+        floors = {}
+        tolerance = 0.01
+
+        for node in nodes:
+            if node.fixity[0] == 1: continue
+
+            found_floor_key = None
+            for y_key in floors.keys():
+                if abs(node.y - y_key) < tolerance:
+                    found_floor_key = y_key
+                    break
+
+            if found_floor_key is not None:
+                floors[found_floor_key].append(node)
+            else:
+                floors[node.y] = [node]
+
+        #2. Ordenamos lo spiso y seleccionamos un nodo Master
+        sorted_floors = sorted(floors.keys())
+        modal_data = []     #Lista de tuplas (node_tag, phi_x, phi_y, y_coord)
+        for y in sorted_floors:
+            floor_nodes = floors[y]
+            #Seleccionamos el nodo con menos X (Izquierda)
+            master_node = min(floor_nodes, key = lambda n: n.x)
+
+            #Obtener vector propio(Mode 1)
+            phi_x = ops.nodeEigenvector(master_node.tag, 1,1)
+            phi_y = ops.nodeEigenvector(master_node.tag, 1,2)
+            
+            modal_data.append({
+                'tag':master_node.tag,
+                'y': y,
+                'phi_x': phi_x,
+                'phi_y': phi_y
+            })
+
+            print(f"[Modal] Floor Y = {y:.2f} -> Master node {master_node.tag}, disp = {phi_x:.4f}")
+
+        if modal_data:
+            roof_phi = modal_data[-1]['phi_x']
+
+            if abs(roof_phi) < 1e-9: roof_phi = 1.0
+
+            for item in modal_data:
+                item['phi_norm'] = item['phi_x']/roof_phi
+                print(f" -> norm Phi: {item['phi_norm']:.4f}")
+
+        return periods, modal_data
+
+    def _get_colums_by_floor(self):
+        columns_by_floor = {}
+        tolerance = 0.05
+
+        elements = self.manager.get_all_elements()
+
+        for ele in elements:
+            #Obtener nodos
+            ni = self.manager.get_node(ele.node_i)
+            nj = self.manager.get_node(ele.node_j)
+
+            if not ni or not nj: continue
+
+
+            dy = abs(nj.y - ni.y)
+            dx = abs(nj.x - ni.x)
+
+            if dy > tolerance and dx < tolerance: # Es vertical
+                # Identificar 'techo' de este elemento (el Y mayor)
+                y_ceil = max(ni.y, nj.y)
+                
+                # Agrupar por esa altura
+                found_key = None
+                for key in columns_by_floor.keys():
+                    if abs(key - y_ceil) < tolerance:
+                        found_key = key
+                        break
+                
+                if found_key is not None:
+                    columns_by_floor[found_key].append(ele.tag)
+                else:
+                    columns_by_floor[y_ceil] = [ele.tag]
+                    
+        return columns_by_floor
+
+    def run_pushover_analysis(self, control_node_tag, max_disp, load_pattern_type, n_steps = 100):
         """
         Ejecuta un análisis Pushover (Displacement Control).
         Retonra una tupa (lista_desplazamiento, lista_cortanes).
         """
-        if self.debug_file: self.debug_file.write(f"\n# --- PUSHOVER ANALYSIS (Node {control_node_tag}, Dmax = {max_disp})---\n")
 
-        #1. Construir el modelo (Geometría, materiale, secciones, elementos)
-        #Nota: Asumimos que build_model ya se llamó
-
-        self.build_model()
-
-        # 2. Análisis de Gravedad (Pre-Pushover)
-        # Recalculamos gravedad asegurando que sea estática
-        print("[Pushover] Aplicando Gravedad...")
+        # Limpieza preventiva por si es re-ejecución
+        try:
+            ops.remove('loadPattern', 2)  # pattern tag 2
+            ops.remove('timeSeries', 2)   # timeSeries tag 2
+        except:
+            pass # Si no existen, no pasa nada
         
-        # Configuración de Gravedad
-        self._log_and_run('system', 'BandGeneral')
-        self._log_and_run('numberer', 'RCM')
-        self._log_and_run('constraints', 'Plain')
-        self._log_and_run('test', 'NormDispIncr', 1.0e-8, 6)
-        self._log_and_run('algorithm', 'Newton')
-        self._log_and_run('integrator', 'LoadControl', 0.1)
-        self._log_and_run('analysis', 'Static')
-        
-        # Aplicar gravedad en 10 pasos
-        ok = self._log_and_run('analyze', 10)
-        if ok != 0:
-            print("[Error] Gravedad falló en Pushover.")
-            return None, None
-            
-        print("[Pushover] Gravedad OK. Iniciando Empuje Lateral...")
-
-        #3. Mantener cargas constantesy resetear tiempo
-        self._log_and_run('loadConst', '-time', 0.0)
+        self.debug_file = open("model_debug.py", "a")
+        if self.debug_file: self.debug_file.write(f"\n# --- PUSHOVER ANALYSIS (Node {control_node_tag}, Dmax = {max_disp}, Distribución {load_pattern_type})---\n")
 
         #4. Definir patrónde carga lateral (Pushover)
         ts_tag_push = 2
         pattern_tag_push = 2
+        
 
-        self._log_and_run('timeSeries', 'Linear', ts_tag_push)
-        self._log_and_run('pattern', 'Plain', pattern_tag_push, ts_tag_push)
+        
+        self._log_and_run('pattern', 'Plain', pattern_tag_push, 1)
 
-        self._log_and_run('load', control_node_tag, 1.0,0.0,0.0)
+            
+        periods, modal_data = self.run_modal_analysis(1)
+        if load_pattern_type == "Modal":
 
-        #5. Configurar Análisis Pushover
+            for item in modal_data:
+                f_val = item['phi_norm']
+                node_tag = item['tag']
+                self._log_and_run('load', node_tag, f_val, 0.0, 0.0)
+                print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
+        else:
+            for item in modal_data:
+                node_tag = item['tag']
+                self._log_and_run('load', node_tag, 1.0, 0.0, 0.0)
+
+
+
+        #5. Identificar columnas por piso (Pre-Proceso) 
+        floor_cols_map = self._get_colums_by_floor()
+        sorted_floor_y = sorted(floor_cols_map.keys())
+
+        #Estructura de resultados
+        results = {
+            "roof_disp": [],
+            "base_shear": [],
+            "steps": [],
+            "floors": {}
+        }
+
+        #Inicializar istas de cada piso
+
+        for y in sorted_floor_y:
+            results["floors"][y] = {"disp":[], "shear": []}
+
+        print(f"[Pushover] Analizando cortantes en pisos: {list(floor_cols_map.keys())}")
+
+
+        #6. Configurar Análisis Pushover
         incr_disp = max_disp/n_steps
 
         self._log_and_run('integrator', 'DisplacementControl', control_node_tag,1,incr_disp)
+        self._log_and_run('test','NormDispIncr', 1e-06, 100)
+        self._log_and_run('algorithm', 'KrylovNewton')
+        self._log_and_run('analysis', 'Static')
+        
 
-        data_x = []
-        data_y = []
-
-        current_disp = 0.0
-
+        # Detectar bases globales (reacción total)
         nodes = self.manager.get_all_nodes()
         base_nodes = [n.tag for n in nodes if n.fixity[0] == 1]
 
-        print(f"[Pushover] Nodos basales detectados para Cortante:{base_nodes}")
+        initial_story_shears = {}
+        print("[Pushover] Capturando estado inicial (Gravedad)...")
+        ops.reactions()
 
-        for i in range(n_steps):
-            ok = self._log_and_run('analyze',1)
-
-            if ok !=0:
-                print(f"[Pushover] Falló convergencia en paso{i}")
+        for y in sorted_floor_y:
+            shear_gravity = 0.0
+            cols = floor_cols_map[y]
+            for ele_tag in cols:
+                forces = ops.eleResponse(ele_tag, 'section', 5, 'force')
+                print(f"{forces[2]} : elemento {ele_tag}")
+                shear_gravity += forces[2]
+                
+            initial_story_shears[y] = shear_gravity
+                   
+        for i in range(1, n_steps + 1):
+            ok = ops.analyze(1)
+            #ok = self._log_and_run('analyze', 1)
+            
+            if ok != 0:
+                print(f"[Pushover] Convergencia perdida en paso {i}")
                 break
         
-            #A) Capturamos resultados
-            disp = ops.nodeDisp(control_node_tag,1)
+            #A) Resultados globales
+            current_roof_disp = ops.nodeDisp(control_node_tag, 1)
 
-            #B) Cortante Basal (Reacciones)
             ops.reactions()
-            base_shear = 0.0
+            current_base_shear = 0.0
             for b_node in base_nodes:
                 reacs = ops.nodeReaction(b_node)
-                base_shear += reacs[0]
+                current_base_shear += reacs[0]
 
-            data_x.append(disp)
-            data_y.append(-base_shear)
+            #Guardamos global
+            results["roof_disp"].append(current_roof_disp)
+            results["base_shear"].append(-current_base_shear)
+            results["steps"].append(i)
+
+            for y in sorted_floor_y:
+                shear_total = 0.0
+                cols = floor_cols_map[y]
+                for ele_tag in cols:
+                    forces = ops.eleResponse(ele_tag, 'section', 5, 'force')
+                    shear_total += forces[2]
+
+                shear_net = (shear_total - initial_story_shears[y])
+                ref_col_tag = cols[0]
+                col_obj = self.manager.get_element(ref_col_tag)
+                
+                # Nodos superior e inferior del piso
+                tag_top = col_obj.node_j
+                tag_bot = col_obj.node_i
+                # Calcular Deriva Relativa (Drift) = U_top - U_bot
+                u_top = ops.nodeDisp(tag_top, 1)
+                u_bot = ops.nodeDisp(tag_bot, 1)
+                drift = u_top - u_bot
+        
+                results["floors"][y]["disp"].append(drift)
+                
+                # Cortante: Suma de fuerzas en extremo J (Vj)
+                # Nota: OpenSees Vj suele ser negativo de la fuerza aplicada, verifica el signo si es necesario.
+                results["floors"][y]["shear"].append(shear_net)
+                
+                # --- DEBUG TEMPORAL ---
+                if i <= 5 and y == 3.0: 
+                    print(f"[DEBUG STEP {i}] Piso Y={y}: Drift={drift:.6f}, V_net={shear_net:.4f} (V_tot={shear_total:.4f}, V_inic={initial_story_shears[y]:.4f})")
+                    # Ver fuerzas individuales
+                    for ele_tag in cols:
+                        f = ops.eleResponse(ele_tag, 'force')
+                        print(f"   -> Ele {ele_tag}: V_top_raw={f[4]:.4f}")
+
 
             if i % 10 == 0:
-                print(f"[Pushover] Step {i}/{n_steps}: Disp= {disp:.4f}, Vb={-base_shear:.2f}")
+                print(f"[Pushover] Step {i}: D={current_roof_disp:.4f}, Vb={-current_base_shear:.2f}")
 
-        return data_x, data_y
+        return results
 
 
         

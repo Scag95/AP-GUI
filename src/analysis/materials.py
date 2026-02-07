@@ -24,6 +24,7 @@ class Concrete01(Material):
         self.epsc0 = epsc0      #Deformación unitaria
         self.fpcu = fpcu        #Resistencia al aplastamiento
         self.epsu = epsu        #Deformación última
+        self.rho = rho
 
     def get_opensees_args(self):
         return["Concrete01",self.tag, self.fpc,self.epsc0,self.fpcu,self.epsu]
@@ -36,6 +37,7 @@ class Concrete01(Material):
         data["epsc0"] = self.epsc0
         data["fpcu"] = self.fpcu
         data["epsu"] = self.epsu
+        data["rho"] = self.rho
         return data
 
     @classmethod
@@ -46,7 +48,8 @@ class Concrete01(Material):
             fpc = data["fpc"],
             epsc0 = data["epsc0"],
             fpcu = data["fpcu"],
-            epsu = data["epsu"]
+            epsu = data["epsu"],
+            rho = data.get("rho",2500.0)
         )
 
 class Steel01(Material):
@@ -56,6 +59,7 @@ class Steel01(Material):
         self.Fy = Fy
         self.E0 = E0
         self.b = b
+        self.rho = rho
 
 
     def get_opensees_args(self):
@@ -68,6 +72,7 @@ class Steel01(Material):
         data["Fy"] = self.Fy
         data["E0"] = self.E0
         data["b"] = self.b
+        data["rho"] = self.rho
         return data
 
     @classmethod
@@ -77,5 +82,6 @@ class Steel01(Material):
             name = data["name"],
             Fy = data["Fy"],
             E0 = data["E0"],
-            b = data["b"]
+            b = data["b"],
+            rho = data.get("rho",7850.0)
         )

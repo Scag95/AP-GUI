@@ -9,6 +9,7 @@ from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
 from src.ui.widgets.command_line import CommandLineWidget
 from src.analysis.command_processor import CommandProcessor
+from src.ui.menus.tools_menu import ToolsMenu
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -27,6 +28,9 @@ class MainWindow(QMainWindow):
 
         self.assign_menu = AssignMenu(self)
         bar.addMenu(self.assign_menu) 
+
+        self.tools_menu = ToolsMenu(self)
+        bar.addMenu(self.tools_menu) 
         
         self.analyze_menu = AnalyzeMenu(self)
         bar.addMenu(self.analyze_menu) 
@@ -40,8 +44,6 @@ class MainWindow(QMainWindow):
 
         #Conexiones Interactor -> Panel
         self.viz_widget.nodeSelected.connect(self.props_panel.show_node)
-        self.viz_widget.elementSelected.connect(self.props_panel.show_element)
-        self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
         self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
 
         # Conexiones Panel -> Manager (Refrescar gráfico)
@@ -82,7 +84,7 @@ class MainWindow(QMainWindow):
             elif act_type == "set_visibility":
                 self.viz_widget.set_visibility(action.get("type"), value)
             elif act_type == "set_diagram_type":
-                self.viz_widget.show_force_diagrams(value) # Ya existe este método, lo reusamos
+                self.viz_widget.show_force_diagrams(value) 
                 self.viz_widget.set_visibility("diagrams", True)
             elif act_type == "set_load_visibility":
                 self.viz_widget.set_load_visibility(action.get("type"), value)
