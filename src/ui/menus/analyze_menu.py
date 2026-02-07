@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QMessageBox
 from src.analysis.opensees_translator import OpenSeesTranslator
 from src.ui.dialogs.pushover_dialog import PushoverDialog
 from src.ui.dialogs.pushover_result_dialog import PushoverResultsDialog
+from src.ui.dialogs.moment_curvature_dialog import MomentCurvatureDialog
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
@@ -47,6 +48,10 @@ class AnalyzeMenu(QMenu):
         self.pushover_curve = QAction("Curva Pushover",self)
         self.pushover_curve.triggered.connect(lambda: self._show_curve_pushover())
         self.results_menu.addAction(self.pushover_curve)
+
+        self.section_results = QAction("Análisis de Sección (M-phi)", self)
+        self.section_results.triggered.connect(lambda: self._show_section_results())
+        self.results_menu.addAction(self.section_results)
 
         self.results_menu.addSeparator()
 
@@ -104,4 +109,8 @@ class AnalyzeMenu(QMenu):
 
     def _show_curve_pushover(self):
         dlg = PushoverResultsDialog(self.parent())
+        dlg.exec()
+
+    def _show_section_results(self):
+        dlg = MomentCurvatureDialog(self.parent())
         dlg.exec()

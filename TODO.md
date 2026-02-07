@@ -110,5 +110,22 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Crear `ModelRenderer`, `LoadRenderer`, `DeformationRenderer`, `ForceDiagramRenderer`.
     - [x] Limpiar `StructureInteractor` delegando pintado a renderizadores.
 - [x] **Visualización Avanzada (Deformada)**:
-    - [x] Implementar interpolación cúbica de Hermite para vigas curvas.
+        - [x] Implementar interpolación cúbica de Hermite para vigas curvas.
     - [x] Implementar escalado dinámico de deformada (`PgUp`/`PgDown`).
+
+## ☢️ Prioridad 7: Pushover Iterativo Secuencial (Freeze & Forward)
+El objetivo es obtener la curva de capacidad completa de todos los pisos, evitando que el fallo de un piso blando detenga el análisis de los otros.
+- [ ] **Core Algorítmico**:
+    - [ ] `detect_failed_floors(results)`: Implementar criterio híbrido (Pendiente < 1% K_ini + Deriva > 0.5%).
+    - [ ] `_freeze_floor(floor_y)`: Método en `OpenSeesTranslator` para añadir elementos `Truss` rígidos (X-Bracing) en el piso fallado.
+    - [ ] `run_adaptive_pushover()`: Bucle principal (Run -> Detect -> Freeze -> Re-Run).
+- [ ] **Gestión de Resultados**:
+    - [ ] Concatenar curvas de capacidad de las diferentes fases.
+    - [ ] Mostrar en `PushoverResultsDialog` las curvas compuestas finales.
+
+## 🧱 Prioridad 8: Materiales con Degradación (MinMax)
+- [ ] **Backend**:
+    - [ ] Envolver `Steel01` y `Concrete01` en `MinMax` Material para simular ruptura/aplastamiento real.
+    - [ ] Esto permitirá detectar caídas de fuerza "naturales" en el Pushover.
+- [ ] **UI**:
+    - [ ] Añadir campo `Rupture Strain` en `MaterialDialog`.
