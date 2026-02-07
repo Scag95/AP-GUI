@@ -9,6 +9,7 @@ from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
 from src.ui.widgets.command_line import CommandLineWidget
 from src.analysis.command_processor import CommandProcessor
+from src.ui.menus.tools_menu import ToolsMenu
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -27,6 +28,9 @@ class MainWindow(QMainWindow):
 
         self.assign_menu = AssignMenu(self)
         bar.addMenu(self.assign_menu) 
+
+        self.tools_menu = ToolsMenu(self)
+        bar.addMenu(self.tools_menu) 
         
         self.analyze_menu = AnalyzeMenu(self)
         bar.addMenu(self.analyze_menu) 

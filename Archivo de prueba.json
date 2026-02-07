@@ -226,5 +226,27 @@
             "mass_density": 225.0
         }
     ],
-    "loads": []
+    "loads": [
+        {
+            "type": "ElementLoad",
+            "tag": 1,
+            "element_tag": 7,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 2,
+            "element_tag": 8,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 3,
+            "element_tag": 9,
+            "wx": -0.0,
+            "wy": -2207.25
+        }
+    ]
 }

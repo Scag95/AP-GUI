@@ -115,6 +115,8 @@ class ProjectManager(QObject):
 
 ## Cargas (Loads) ##
     def add_load(self, load):
+        if load.tag == 0:
+            load.tag = self.next_load_tag
         self.load[load.tag] = load
         if load.tag >= self.next_load_tag:
             self.next_load_tag = load.tag + 1
