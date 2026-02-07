@@ -5,6 +5,7 @@ from src.analysis.materials import Concrete01, Steel01
 from src.analysis.sections import FiberSection
 from src.analysis.element import ForceBeamColumn
 from src.analysis.loads import NodalLoad, ElementLoad
+import os
 
 class OpenSeesTranslator:
     """
@@ -369,6 +370,31 @@ class OpenSeesTranslator:
                     
         return columns_by_floor
 
+    def _setup_pushover_recorders(self, output_dir="pushover_data"):
+        """
+        Configura los recorders para guardar fuerzas y deformaciones 
+        de todas las secciones de todos los elementos durante el Pushover.
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            
+        print(f"[OpenSees] Configurando Recorders en: {os.path.abspath(output_dir)}")
+        
+        # Limpiar recorders previos para evitar duplicados
+        ops.remove('recorders')
+        
+        for ele in self.manager.get_all_elements():
+            # Solo nos interesan elementos viga-columna con secciones
+            if isinstance(ele, ForceBeamColumn):
+                # Recorder de Fuerzas (P, M, V) en todas las secciones
+                # Genera columnas: Time, P_s1, M_s1, V_s1, P_s2...
+                ops.recorder('Element', '-file', f'{output_dir}/ele_{ele.tag}_force.out', 
+                             '-time', '-ele', ele.tag, 'section', 'force')
+                
+                # Recorder de Deformaciones (eps, kappa) en todas las secciones
+                # Genera columnas: Time, eps_s1, kap_s1, eps_s2...
+                ops.recorder('Element', '-file', f'{output_dir}/ele_{ele.tag}_deform.out', 
+                             '-time', '-ele', ele.tag, 'section', 'deformation')
     def run_pushover_analysis(self, control_node_tag, max_disp, load_pattern_type, n_steps = 100):
         """
         Ejecuta un análisis Pushover (Displacement Control).
@@ -431,6 +457,9 @@ class OpenSeesTranslator:
 
         #6. Configurar Análisis Pushover
         incr_disp = max_disp/n_steps
+
+        # --- SETUP RECORDERS FOR MOMENT-CURVATURE ---
+        self._setup_pushover_recorders()
 
         self._log_and_run('integrator', 'DisplacementControl', control_node_tag,1,incr_disp)
         self._log_and_run('test','NormDispIncr', 1e-06, 100)
