@@ -23,6 +23,10 @@ class ProjectManager(QObject):
         self.node = {}
         self.element = {}
         self.load = {}
+        
+        # Resultados de Análisis
+        self.gravity_results = None
+        self.pushover_results = None
 
         #Contador para los IDs automáticos
         self.next_material_tag = 1 
@@ -223,7 +227,12 @@ class ProjectManager(QObject):
         self.section.clear()
         self.node.clear()
         self.element.clear()
+        self.element.clear()
         self.load.clear()
+        
+        # Limpiar resultados
+        self.gravity_results = None
+        self.pushover_results = None
         # Reiniciar contadores
         self.next_material_tag = 1
         self.next_section_tag = 1
