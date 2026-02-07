@@ -46,9 +46,10 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] **Visualizar Cargas Distribuidas (`ElementLoad`)**:
     - [x] Implementar método de dibujo en `StructureInteractor` (rectángulos + flechas).
     - [x] Unificar estilo visual para Wy y Wx.
-- [ ] **Propiedades Avanzadas de Elementos**:
+- [x] **Propiedades Avanzadas de Elementos**:
     - [x] **Backend**: Añadir `mass_density` a `ForceBeamColumn` (para `-mass`).
-    - [ ] **UI**: Permitir editar densidad de masa en `ElementForm` (Pendiente integración final).
+    - [x] **UI**: Permitir editar densidad de masa en `ElementForm` (Pendiente integración final).
+    - [x] **Generación Automática**: Tool para generar cargas de peso propio (`SelfWeightDialog`) con proyección geométrica para elementos inclinados.
 
 ## 🔵 Prioridad 5: Motor de Cálculo y Resultados
 - [x] **Generación de Modelo OpenSees (`src/analysis/opensees_translator.py`)**:
@@ -75,14 +76,15 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Traducir lógica de `test.py` a `opensees_translator.py` (`run_pushover`).
     - [x] Configurar análisis `DisplacementControl` con Gravedad previa.
     - [x] Extraer Cortantes de Piso (Story Shears) robustos (via Reacciones).
-- [ ] **Módulo Pushover Fase 2 (Modal)**:
+- [x] **Módulo Pushover Fase 2 (Modal)**:
     - [x] Implementar lógica de `eigen(1)` y patrón de carga proporcional al modo.
-    - [ ] **Debug Eigen**: Resolver error `ArpackSolver` (Posible falta de masa en modelo).
-    - [ ] **Validación de Masa**: Asegurar que `rho` viaja de Material -> Sección -> Elemento -> OpenSees.
-    - [ ] Extraer Desplazamientos Modales de cada piso y normalizar.
-- [ ] **Debugging de Elementos**:
-    - [ ] Resolver discrepancias de fuerza en extremos libres (Equilibrio estricto con `-iter` vs Configuración Análisis).
-    - [ ] Implementar sistema de logs para validar comandos Tcl.
+    - [x] **Debug Eigen**: Resolver error `ArpackSolver` (Posible falta de masa en modelo).
+    - [x] **Validación de Masa**: Asegurar que `rho` viaja de Material -> Sección -> Elemento -> OpenSees.
+    - [x] Extraer Desplazamientos Modales de cada piso y normalizar.
+- [x] **Debugging de Elementos (Estabilidad)**:
+    - [x] Resolver discrepancias de fuerza en extremos libres (Equilibrio estricto con `-iter` vs Configuración Análisis).
+    - [x] Implementar sistema de logs para validar comandos Tcl (`model_debug.py` robusto).
+    - [x] Estabilización de análisis (Test NormDispIncr, KrylovNewton, Pasos pequeños).
 - [x] **Visualización Pushover**:
     - [x] Ventana de gráficos X-Y (Curva Pushover) con unidades correctas.
     - [ ] Animación de la deformada paso a paso.

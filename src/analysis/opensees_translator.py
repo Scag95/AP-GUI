@@ -63,7 +63,7 @@ class OpenSeesTranslator:
         # 5. Definir Transformaciones Geométricas
         # Por defecto usamos Linear con tag=1
         if self.debug_file: self.debug_file.write("\n# --- Transformations ---\n")
-        self._log_and_run('geomTransf', 'Linear', 1)
+        self._log_and_run('geomTransf', 'PDelta', 1)
         
         # 6. Definir Elementos
         self._build_elements()
@@ -211,13 +211,14 @@ class OpenSeesTranslator:
         self._log_and_run('numberer', 'RCM')
         self._log_and_run('constraints', 'Plain')
         self._log_and_run('integrator', 'LoadControl', 0.1)
-        self._log_and_run('algorithm', 'Linear')
+        self._log_and_run('algorithm', 'Newton')
         self._log_and_run('analysis', 'Static')
         
         ok = self._log_and_run('analyze', 10)
         
         if ok == 0:
             print("[OpenSees] Análisis de Gravedad completado con EXITO")
+            self._log_and_run('loadConst', '-time', 0.0)
             return True
         else:
             print(f"[OpenSees] FALLÓ el análisis de Gravedad.")
@@ -373,16 +374,25 @@ class OpenSeesTranslator:
         Ejecuta un análisis Pushover (Displacement Control).
         Retonra una tupa (lista_desplazamiento, lista_cortanes).
         """
+
+        # Limpieza preventiva por si es re-ejecución
+        try:
+            ops.remove('loadPattern', 2)  # pattern tag 2
+            ops.remove('timeSeries', 2)   # timeSeries tag 2
+        except:
+            pass # Si no existen, no pasa nada
+        
+        self.debug_file = open("model_debug.py", "a")
         if self.debug_file: self.debug_file.write(f"\n# --- PUSHOVER ANALYSIS (Node {control_node_tag}, Dmax = {max_disp}, Distribución {load_pattern_type})---\n")
-        self._log_and_run('loadConst', '-time', 0.0)
 
         #4. Definir patrónde carga lateral (Pushover)
         ts_tag_push = 2
         pattern_tag_push = 2
         
 
-        self._log_and_run('timeSeries', 'Linear', ts_tag_push)
-        self._log_and_run('pattern', 'Plain', pattern_tag_push, ts_tag_push)
+        
+        self._log_and_run('pattern', 'Plain', pattern_tag_push, 1)
+
             
         periods, modal_data = self.run_modal_analysis(1)
         if load_pattern_type == "Modal":
@@ -423,12 +433,32 @@ class OpenSeesTranslator:
         incr_disp = max_disp/n_steps
 
         self._log_and_run('integrator', 'DisplacementControl', control_node_tag,1,incr_disp)
+        self._log_and_run('test','NormDispIncr', 1e-06, 100)
+        self._log_and_run('algorithm', 'KrylovNewton')
+        self._log_and_run('analysis', 'Static')
+        
 
         # Detectar bases globales (reacción total)
         nodes = self.manager.get_all_nodes()
         base_nodes = [n.tag for n in nodes if n.fixity[0] == 1]
+
+        initial_story_shears = {}
+        print("[Pushover] Capturando estado inicial (Gravedad)...")
+        ops.reactions()
+
+        for y in sorted_floor_y:
+            shear_gravity = 0.0
+            cols = floor_cols_map[y]
+            for ele_tag in cols:
+                forces = ops.eleResponse(ele_tag, 'section', 5, 'force')
+                print(f"{forces[2]} : elemento {ele_tag}")
+                shear_gravity += forces[2]
+                
+            initial_story_shears[y] = shear_gravity
+                   
         for i in range(1, n_steps + 1):
-            ok = self._log_and_run('analyze', 1)
+            ok = ops.analyze(1)
+            #ok = self._log_and_run('analyze', 1)
             
             if ok != 0:
                 print(f"[Pushover] Convergencia perdida en paso {i}")
@@ -449,12 +479,13 @@ class OpenSeesTranslator:
             results["steps"].append(i)
 
             for y in sorted_floor_y:
-                story_shear = 0.0
+                shear_total = 0.0
                 cols = floor_cols_map[y]
                 for ele_tag in cols:
-                    forces = ops.eleResponse(ele_tag, 'force')
-                    story_shear += forces[4]
-            
+                    forces = ops.eleResponse(ele_tag, 'section', 5, 'force')
+                    shear_total += forces[2]
+
+                shear_net = (shear_total - initial_story_shears[y])
                 ref_col_tag = cols[0]
                 col_obj = self.manager.get_element(ref_col_tag)
                 
@@ -470,7 +501,16 @@ class OpenSeesTranslator:
                 
                 # Cortante: Suma de fuerzas en extremo J (Vj)
                 # Nota: OpenSees Vj suele ser negativo de la fuerza aplicada, verifica el signo si es necesario.
-                results["floors"][y]["shear"].append(story_shear)
+                results["floors"][y]["shear"].append(shear_net)
+                
+                # --- DEBUG TEMPORAL ---
+                if i <= 5 and y == 3.0: 
+                    print(f"[DEBUG STEP {i}] Piso Y={y}: Drift={drift:.6f}, V_net={shear_net:.4f} (V_tot={shear_total:.4f}, V_inic={initial_story_shears[y]:.4f})")
+                    # Ver fuerzas individuales
+                    for ele_tag in cols:
+                        f = ops.eleResponse(ele_tag, 'force')
+                        print(f"   -> Ele {ele_tag}: V_top_raw={f[4]:.4f}")
+
 
             if i % 10 == 0:
                 print(f"[Pushover] Step {i}: D={current_roof_disp:.4f}, Vb={-current_base_shear:.2f}")

@@ -1,6 +1,5 @@
-import pyqtgraph as pg
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
-                             QComboBox, QPushButton, QLabel, QDialogButtonBox)
+                             QComboBox, QPushButton)
 from src.analysis.manager import ProjectManager
 from src.ui.widgets.unit_spinbox import UnitSpinBox
 from src.utils.units import UnitManager
