@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QMessageBox
 from src.analysis.opensees_translator import OpenSeesTranslator
 from src.ui.dialogs.pushover_dialog import PushoverDialog
+from src.ui.dialogs.pushover_result_dialog import PushoverResultsDialog
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
@@ -16,6 +17,11 @@ class AnalyzeMenu(QMenu):
         self.action_gravity.setStatusTip("Construye el modelo y ejecuta un análisis estático lineal")
         self.action_gravity.triggered.connect(self.run_gravity)
         self.addAction(self.action_gravity)
+        # Modal Analysis
+        self.action_modal = QAction("Análisis modal", self)
+        self.action_modal.triggered.connect(self.run_modal)
+        self.addAction(self.action_modal)
+
         # Pushover
         self.addAction("Análisis Pushover (No Lineal)", self.show_pushover_dialog)
 
@@ -38,11 +44,17 @@ class AnalyzeMenu(QMenu):
         self.act_axial.triggered.connect(lambda: self._show_diagram("P"))
         self.results_menu.addAction(self.act_axial)
 
+        self.pushover_curve = QAction("Curva Pushover",self)
+        self.pushover_curve.triggered.connect(lambda: self._show_curve_pushover())
+        self.results_menu.addAction(self.pushover_curve)
+
         self.results_menu.addSeparator()
 
         self.act_clear = QAction("Ocultar Diagramas", self)
         self.act_clear.triggered.connect(lambda: self._show_diagram(None))
         self.results_menu.addAction(self.act_clear)
+
+    
 
 
     def _show_diagram(self, type_):
@@ -81,6 +93,15 @@ class AnalyzeMenu(QMenu):
             QMessageBox.critical(self, "Error crítico", f"Ocurrió error inesperado:\n{str(e)}")
             print(e)
 
+    def run_modal(self):
+        translator = OpenSeesTranslator()
+        translator.run_modal_analysis(1)
+
+
     def show_pushover_dialog(self):
         dlg = PushoverDialog(self.parent())
+        dlg.exec()
+
+    def _show_curve_pushover(self):
+        dlg = PushoverResultsDialog(self.parent())
         dlg.exec()

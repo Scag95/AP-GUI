@@ -67,14 +67,19 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
         - [x] Centralized Scale Manager.
         - [x] Section Aggregator (M+P+V auto-setup).
 
-## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (COMPLETADO)
+## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (EN PROGRESO)
 - [x] **Interacción Avanzada**:
     - [x] **Sistema Visual de Nodos**: Mejorar representación/interacción de nodos (Símbolos por restricción).
     - [x] **Element Properties Form**: Ver y editar propiedades de elementos seleccionados.
-- [x] **Módulo Pushover**:
+- [x] **Módulo Pushover Fase 1 (Puntual)**:
     - [x] Traducir lógica de `test.py` a `opensees_translator.py` (`run_pushover`).
     - [x] Configurar análisis `DisplacementControl` con Gravedad previa.
     - [x] Extraer Cortantes de Piso (Story Shears) robustos (via Reacciones).
+- [ ] **Módulo Pushover Fase 2 (Modal)**:
+    - [x] Implementar lógica de `eigen(1)` y patrón de carga proporcional al modo.
+    - [ ] **Debug Eigen**: Resolver error `ArpackSolver` (Posible falta de masa en modelo).
+    - [ ] **Validación de Masa**: Asegurar que `rho` viaja de Material -> Sección -> Elemento -> OpenSees.
+    - [ ] Extraer Desplazamientos Modales de cada piso y normalizar.
 - [ ] **Debugging de Elementos**:
     - [ ] Resolver discrepancias de fuerza en extremos libres (Equilibrio estricto con `-iter` vs Configuración Análisis).
     - [ ] Implementar sistema de logs para validar comandos Tcl.
