@@ -183,17 +183,28 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     -   Updated `PushoverResultsDialog` to color-code analysis cycles (Cycle 1 vs Cycle 2 vs Cycle 3).
     -   Centralized Pushover Results in `ProjectManager` for persistence (View via Menu).
 
+### Session 18 (2026-02-13) - Moment Curvature & Plotting Refinement
+1. **Moment-Curvature Analysis**:
+   - Refactored `MomentCurvatureDialog` to handle variable integration points and fiber sections robustly.
+   - Fixed mapping of force/deformation components.
+   - Dynamic integration point detection from Element properties.
+2. **Pushover Improvements**:
+   - Improved Floor Nomenclature in Results Dialog (e.g., "Piso 1 (Y=3.00m)").
+   - Fixed `PushoverSolver` logic to read forces from the *last* integration point (Top) dynamically, ensuring stability regardless of discretization.
+   - **Attempted Feature (Reverted)**: Step-by-step deformation animation. Reverted due to renderer data format mismatch (`IndexError`).
+
 ## Pending Tasks (Priority Order)
-### 1. Advanced Failure Logic
+### 1. Deformation Animation (Video)
+-   **Objective**: Visualize the structure's deformation step-by-step during Pushover via a Slider.
+-   **Implementation**:
+    -   Capture full node displacement history in `PushoverSolver`.
+    -   Add Slider in `PushoverResultsDialog`.
+    -   Update `StructureInteractor` to render arbitrary deformation states without re-scaling.
+
+### 2. Advanced Failure Logic
 -   **Refinement**: Tune detection parameters (Sensitivity, Drift Limits) on more complex models.
 -   **Material Degradation**: Implement `MinMax` wrapper to `Steel01/Concrete01` to simulate true rupture (force drop).
 
-### 2. Moment-Curvature Analysis
--   **Objective**: Visualize section behavior.
--   **Frontend**: 
-    -   Add Tab/Window to plot `Moment vs Curvature` for specific elements.
-    -   Extract data from `eleResponse(tag, 'section', i, 'force')` and `('deformation')`.
-
 ## Technical Context for Next Session
--   **Current State**: Full Adaptive Pushover implemented. Can detect mechanisms and continue analysis.
--   **Next Steps**: Focus on material degradation (MinMax) and Section Analysis tools.
+-   **Current State**: Pushover and Moment-Curvature analysis are stable. Deformation video feature was reverted and needs clean re-implementation.
+-   **Next Steps**: Focus on implementing the "Deformation Video" feature correctly (passing full node data including rotation if needed).

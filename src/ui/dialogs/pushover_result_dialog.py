@@ -32,9 +32,19 @@ class PushoverResultsDialog(QDialog):
         
         # Añadir pisos disponibles (ordenados)
         sorted_floors = sorted(self.results["floors"].keys())
-        for y in sorted_floors:
-             self.combo_curve.addItem(f"Piso Y={y:.2f} (Story Shear vs Drift)", userData=y)
+        
+        # Mapa de alturas -> Nombres de Piso
+        self.floor_map = {}
+        
+        for i, y in enumerate(sorted_floors):
+             floor_num = i + 1
+             name = f"Piso {floor_num}"
+             self.floor_map[y] = name
              
+             label = f"{name} (Y={y:.2f})"
+             userData = y
+             self.combo_curve.addItem(label, userData=userData)
+
         self.combo_curve.currentIndexChanged.connect(self.update_plot)
         form_layout.addRow("Curva a visualizar:", self.combo_curve)
         layout.addLayout(form_layout)
@@ -50,10 +60,10 @@ class PushoverResultsDialog(QDialog):
         self.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
         self.plot_widget.getAxis('left').enableAutoSIPrefix(False)
 
-        self.plot_widget.showGrid(x=True, y=True)
+        self.plot_widget.showGrid(x=True, y=True, alpha = 0.3)
         self.plot_widget.setBackground('w')
 
-        self.plot_widget.showGrid(x=True, y=True)
+        self.plot_widget.showGrid(x=True, y=True, alpha = 0.3)
         self.plot_widget.setBackground('w')
 
         # No creamos self.curve_item fijo, lo haremos dinámico
@@ -91,9 +101,13 @@ class PushoverResultsDialog(QDialog):
                 floor_data = self.results["floors"][data_key]
                 dx = floor_data["disp"]
                 dy = floor_data["shear"]
-                title = f"Story Capacity Curve (Y={data_key:.2f})"
-                xlabel = f"Desplazamiento Piso [{u_len}]"
-                ylabel = f"Cortante de Piso [{u_force}]"
+                
+                # Usar nombre bonito (Piso N)
+                floor_name = self.floor_map.get(data_key, f"Y={data_key:.2f}")
+                
+                title = f"Curva de Capacidad - {floor_name}"
+                xlabel = f"Deriva de Entrepiso [{u_len}]" 
+                ylabel = f"Cortante de Entrepiso V [{u_force}]"
         
         if not dx or not dy: return
 

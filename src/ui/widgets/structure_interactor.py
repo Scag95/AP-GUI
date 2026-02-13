@@ -41,7 +41,7 @@ class StructureInteractor(QWidget):
         self.renderer_forces = ForceDiagramRenderer()
         self.current_diagram_type = None
         
-        # Conectar Señales (Una vez todo inicializado)
+        # Conectar Señales
         self.manager.dataChanged.connect(self._on_data_changed)
         ScaleManager.instance().scale_changed.connect(lambda t,v: self.refresh_viz())
         
@@ -58,14 +58,13 @@ class StructureInteractor(QWidget):
         self.show_loads_elements = True
         self.show_deformed = True
         self.show_diagrams = True
+
         # --- ATAJOS DE TECLADO ---
-        # Cargas (Ctrl +/-)
         self.shortcut_inc = QShortcut(QKeySequence("Ctrl++"), self)
         self.shortcut_inc.activated.connect(self.increase_load_scale)
         self.shortcut_dec = QShortcut(QKeySequence("Ctrl+-"), self)
         self.shortcut_dec.activated.connect(self.decrease_load_scale)
 
-        # Deformada (PgUp / PgDown)
         self.shortcut_inc_def = QShortcut(QKeySequence("PgUp"), self)
         self.shortcut_inc_def.activated.connect(self.increase_deform_scale)
         self.shortcut_dec_def = QShortcut(QKeySequence("PgDown"), self)
@@ -76,7 +75,6 @@ class StructureInteractor(QWidget):
         self.plot_widget.scene().sigMouseClicked.connect(self._on_background_clicked)
 
     def _on_data_changed(self):
-        # Recalcular escalas automáticamente al cambiar geometría
         ScaleManager.instance().autocalculate_scales()
         self.refresh_viz()
 
@@ -108,7 +106,6 @@ class StructureInteractor(QWidget):
             on_element_click=self._on_element_clicked_wrapper
         )
         
-        
         # Render Cargas
         s_load = ScaleManager.instance().get_scale('load')
         self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load, 
@@ -139,9 +136,7 @@ class StructureInteractor(QWidget):
         else:
             self.renderer_forces.clear(self.plot_widget)
 
-
     def set_visibility(self, item_type, visible):
-        """ Controla visibilidad granular: 'deformed', 'diagrams' """
         if item_type == 'deformed': self.show_deformed = visible
         elif item_type == 'diagrams': self.show_diagrams = visible
         elif item_type == 'loads': # Master toggle
@@ -156,20 +151,16 @@ class StructureInteractor(QWidget):
 
     def show_deformation(self, results, scale_factor=None):
         self.current_results = results
-        displacements = results.get("displacements",{})
-        
-        if scale_factor is None:
-            scale_factor = ScaleManager.instance().get_scale('deformation')
-            
-        self.renderer_deform.draw_deformed(self.plot_widget, self.manager, displacements, scale_factor)
-        self.refresh_viz()
+        self.refresh_viz() # Se encarga de llamar al renderer si show_deformed es True
+
+        self.refresh_viz() # Se encarga de llamar al renderer si show_deformed es True
 
     def clear_results(self):
         self.current_results = None
         self.renderer_deform.clear(self.plot_widget)
-        self.renderer_forces.celar(self.plot_widget)
+        self.renderer_forces.clear(self.plot_widget)
 
-    # --- MÉTODOS DE ESCALA ---
+    # ... (Resto de métodos de escala e interacción sin cambios) ...
     def increase_load_scale(self):
         sm = ScaleManager.instance()
         val = sm.get_scale('load') * 1.2
@@ -190,7 +181,6 @@ class StructureInteractor(QWidget):
         val = sm.get_scale('deformation') / 1.2
         sm.set_scale('deformation', val)
 
-    # --- TOGGLES DE ETIQUETAS ---
     def toggle_node_labels(self, visible):
         self.show_node_labels = visible
         self.refresh_viz()
@@ -199,7 +189,6 @@ class StructureInteractor(QWidget):
         self.show_element_labels = visible
         self.refresh_viz()
 
-    # --- INTERACCIÓN (Selección) ---
     def _on_node_clicked_wrapper(self, plot_item, points):
         self._deselect_all()
         if points:
@@ -211,49 +200,35 @@ class StructureInteractor(QWidget):
                 self.last_clicked_point = p
                 self.nodeSelected.emit(node)
                 print(f"Node {node.tag} selected")
-                
                 text_item = pg.TextItem(text=f"ID: {node.tag}", color='k', anchor=(0,0))
                 text_item.setPos(node.x, node.y)
                 self.plot_widget.addItem(text_item)
                 self.current_label = text_item
 
     def _on_element_clicked_wrapper(self, curve):
-        #1. Limpiar selección previa
         self._deselect_all()
-
-        #2. Resaltar nuevo elemento
         curve.setPen(color='r', width=4)
         self.last_clicked_element = curve
-        
-        #Obtener el objeto real y emitir
         ele_tag = getattr(curve.parentItem(), 'ele_tag', None)
-        
         if ele_tag:
             element = self.manager.get_element(ele_tag)
             if element:
                 self.elementSelected.emit(element)
                 print(f"Element {ele_tag} selected")
-                
 
     def _deselect_all(self):
-        #1. Deseleccionar nodo 
         if self.last_clicked_point:
             self.last_clicked_point.resetBrush()
             self.last_clicked_point = None
-
-        #2. Deseleccionar elementos
         if self.last_clicked_element:
             try:
                 self.last_clicked_element.setPen(self.renderer_model.pen_element)
             except RuntimeError:
-                pass # El objeto C++ ya murió, no importa.
+                pass 
             self.last_clicked_element = None
-
-        #3. Limpiar etiquetas flotantes
         if self.current_label:
             self.plot_widget.removeItem(self.current_label)
             self.current_label = None
-
         self.selectionCleared.emit()
 
     def _on_background_clicked(self, event):
@@ -266,4 +241,3 @@ class StructureInteractor(QWidget):
     def show_force_diagrams(self,diagram_type):
         self.current_diagram_type = diagram_type
         self.refresh_viz()
-    

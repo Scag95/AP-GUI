@@ -17,19 +17,15 @@ class Element:
         return cls(data["tag"], data["node_i"], data["node_j"])
 
 class ForceBeamColumn(Element):
-    def __init__(self, tag, node_i, node_j, section_tag, transf_tag, mass_density=0.0):
+    def __init__(self, tag, node_i, node_j, section_tag, transf_tag, integration_points, mass_density= 0.0):
         super().__init__(tag, node_i, node_j)
-        self.num_int_points = 5
+        self.integration_points = integration_points
         self.section_tag = section_tag
         self.transf_tag = transf_tag
         self.mass_density = mass_density 
         
     def get_opensees_command(self):
-
-        cmd = f"element forceBeamColumn {self.tag} {self.node_i} {self.node_j} {self.transf_tag} \"Lobatto\" {self.section_tag} {self.num_int_points}"
-        if self.mass_density > 0:
-            cmd += f"-mass {self.mass_density}"
-        return cmd
+        f"element forceBeamColumn {self.tag} {self.node_i} {self.node_j} {self.transf_tag} \"Lobatto\" {self.section_tag} {self.integration_points} \"-mass\" {self.mass_density}"
 
     def to_dict(self):
         # 1. Obtenemos el dict básico del padre
@@ -40,6 +36,7 @@ class ForceBeamColumn(Element):
         data["section_tag"] = self.section_tag
         data["transf_tag"] = self.transf_tag
         data["mass_density"] = self.mass_density
+        data["integration_points"] = self.integration_points
         return data
 
     @classmethod
@@ -51,5 +48,7 @@ class ForceBeamColumn(Element):
             node_j=data["node_j"],
             section_tag=data["section_tag"],
             transf_tag=data["transf_tag"],
-            mass_density=data.get("mass_density",0.0)
+            mass_density=data["mass_density"],
+            integration_points=data["integration_points"]
+
         )

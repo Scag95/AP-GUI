@@ -54,7 +54,7 @@ class ModelBuilder:
         
         # 5. Definir Transformaciones Geométricas
         if self.debug_file: self.debug_file.write("\n# --- Transformations ---\n")
-        self.log_command('geomTransf', 'PDelta', 1)
+        self.log_command('geomTransf', 'Linear', 1)
         
         # 6. Definir Elementos
         self._build_elements()
@@ -127,23 +127,30 @@ class ModelBuilder:
         transf_tag = 1 # Usamos la transformación definida en build_model
         
         created_integrations = {}
+        next_integ_id = 1
         
         for ele in self.manager.get_all_elements():
             if isinstance(ele, ForceBeamColumn):
-                if ele.section_tag in created_integrations:
-                    integ_tag = created_integrations[ele.section_tag]
-                else:
-                    integ_tag = ele.section_tag 
-                    num_int_pts = 5
-                    self.log_command('beamIntegration', 'Lobatto', integ_tag, ele.section_tag, num_int_pts)
-                    created_integrations[ele.section_tag] = integ_tag
+                # Usamos TUPLA para diferenciar (Sección 1 con 5 ptos) vs (Sección 1 con 7 ptos)
+                integ_key = (ele.section_tag, ele.integration_points)
                 
+                if integ_key in created_integrations:
+                    integ_tag = created_integrations[integ_key]
+                else:
+                    integ_tag = next_integ_id
+                    next_integ_id += 1
+                    
+                    # Creamos la integración
+                    # beamIntegration 'Lobatto' tag sectionTag numIntPoints
+                    self.log_command('beamIntegration', 'Lobatto', integ_tag, ele.section_tag, ele.integration_points)
+                    created_integrations[integ_key] = integ_tag
+                
+                # CREAMOS EL ELEMENTO USANDO SOLO EL TAG DE INTEGRACIÓN
                 args = [ele.tag, ele.node_i, ele.node_j, transf_tag, integ_tag]
                 
                 if ele.mass_density > 0:
                     args.append('-mass')
                     args.append(ele.mass_density)
-
                 args.extend(['-iter', 10, 1e-12])
                 
                 self.log_command('element', 'forceBeamColumn', *args)

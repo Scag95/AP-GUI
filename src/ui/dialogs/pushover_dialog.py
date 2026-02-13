@@ -31,7 +31,7 @@ class PushoverDialog(QDialog):
 
         #2. Tipo de fuerzas
         self.combo_load_pattern_type = QComboBox()
-        self.combo_load_pattern_type.addItems(["Modal","Unitario"])
+        self.combo_load_pattern_type.addItems(["Modal","Uniforme"])
 
 
         #2. Desplazamiento Máximo
@@ -47,7 +47,7 @@ class PushoverDialog(QDialog):
         layout.addLayout(form_layout)
 
         # 3. Checkbox Adaptativo
-        self.chk_adaptive = QCheckBox("Análisis Adaptativo Secuencial (Freeze & Forward)")
+        self.chk_adaptive = QCheckBox("Análisis Adaptativo Secuencial (Freeze Forward)")
         self.chk_adaptive.setToolTip("Congela pisos que fallen (mecanismo) y continúa el análisis para evaluar pisos superiores.")
         form_layout.addRow("Estrategia:", self.chk_adaptive)
 
@@ -92,7 +92,7 @@ class PushoverDialog(QDialog):
             #Ejecutar lógica backend
             results = None
             if self.chk_adaptive.isChecked():
-                print("[UI] Ejecutando Pushover Adaptativo (Freeze&Forward)...")
+                print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
                 results = translator.run_adaptive_pushover(control_node, max_disp, load_pattern_type)
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")

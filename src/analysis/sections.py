@@ -2,7 +2,7 @@ from src.analysis.materials import Material
 
 #---------Clases Auxiliares -------  
 class RectPatch:
-    def __init__(self, material_tag,yI,zI,yJ,zJ,nIy=10,nIz=10):
+    def __init__(self, material_tag,yI,zI,yJ,zJ,nIy,nIz):
         self.material_tag = material_tag
         self.yI = yI
         self.zI = zI

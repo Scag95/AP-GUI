@@ -9,6 +9,20 @@ class PushoverSolver:
         self.builder = builder
         self.manager = ProjectManager.instance()
 
+    def _get_element_force(self, ele_tag):
+        """Helper para obtener el cortante en Top (última sección) de manera dinámica."""
+        element = self.manager.get_element(ele_tag)
+        if not element: return 0.0
+        
+        # Obtener último punto (Top)
+        n_points = getattr(element, 'integration_points', 5)
+        
+        # Leer fuerza en la sección n_points
+        forces = ops.eleResponse(ele_tag, 'section', n_points, 'force')
+        if forces and len(forces) >= 3:
+            return forces[2] # Cortante local (Vy?)
+        return 0.0
+
     def run_modal_analysis(self, n_modes):
         #Cargamos los nodos del proyecto.
         nodes = self.manager.get_all_nodes()
@@ -32,17 +46,18 @@ class PushoverSolver:
 
         for node in nodes:
             if node.fixity[0] == 1: continue
-
+            
             found_floor_key = None
             for y_key in floors.keys():
                 if abs(node.y - y_key) < tolerance:
                     found_floor_key = y_key
                     break
-
+                
             if found_floor_key is not None:
                 floors[found_floor_key].append(node)
             else:
                 floors[node.y] = [node]
+
 
         #2. Ordenamos lo spiso y seleccionamos un nodo Master
         sorted_floors = sorted(floors.keys())
@@ -232,7 +247,10 @@ class PushoverSolver:
         floor_cols_map = self._get_colums_by_floor()
         sorted_floor_y = sorted(floor_cols_map.keys())
 
-        #Estructura de resultados
+        #6. Configurar Análisis Pushover
+        incr_disp = max_disp/n_steps
+
+        # Estructura de resultados
         results = {
             "roof_disp": [],
             "base_shear": [],
@@ -250,7 +268,7 @@ class PushoverSolver:
 
         #6. Configurar Análisis Pushover
         incr_disp = max_disp/n_steps
-
+        
         # --- SETUP RECORDERS FOR MOMENT-CURVATURE ---
         if setup_recorders:
             self._setup_pushover_recorders()
@@ -260,7 +278,6 @@ class PushoverSolver:
         self.builder.log_command('algorithm', 'KrylovNewton')
         self.builder.log_command('analysis', 'Static')
         
-
         # Detectar bases globales (reacción total)
         nodes = self.manager.get_all_nodes()
         base_nodes = [n.tag for n in nodes if n.fixity[0] == 1]
@@ -273,18 +290,12 @@ class PushoverSolver:
         else:
             print("[Pushover] Capturando estado inicial (Gravedad)...")
             ops.reactions()
-    
             for y in sorted_floor_y:
                 shear_gravity = 0.0
                 cols = floor_cols_map[y]
                 for ele_tag in cols:
-                    forces = ops.eleResponse(ele_tag, 'section', 5, 'force') # Asumiendo seccion 5 es base
-                    # NOTA: Esto debería ser robusto. Depende del localForce. 
-                    # Si es section, 5 es el último punto (Top). 
-                    # La reacción abajo sería section 1.
-                    # Si eleResponse falla, usaremos 0
-                    if forces:
-                        shear_gravity += forces[2]
+                    # USAMOS HELPER DINÁMICO
+                    shear_gravity += self._get_element_force(ele_tag)
                     
                 initial_story_shears[y] = shear_gravity
                    
@@ -314,9 +325,8 @@ class PushoverSolver:
                 shear_total = 0.0
                 cols = floor_cols_map[y]
                 for ele_tag in cols:
-                    forces = ops.eleResponse(ele_tag, 'section', 5, 'force')
-                    if forces:
-                        shear_total += forces[2]
+                     # USAMOS HELPER DINÁMICO
+                    shear_total += self._get_element_force(ele_tag)
 
                 shear_net = (shear_total - initial_story_shears[y])
                 
@@ -336,19 +346,16 @@ class PushoverSolver:
                 results["floors"][y]["shear"].append(shear_net)
                 results["floors"][y]["H"] = h_floor
                 
-            if i % 10 == 0:
-                print(f"[Pushover] Step {i}: D={current_roof_disp:.4f}, Vb={-current_base_shear:.2f}")
-
         return results
-
+    
     def _merge_results(self, consolidated, new_res,cycle_idx):
         """Helper para unir los resultados"""
         consolidated["roof_disp"].extend(new_res["roof_disp"])
-        consolidated["base_shear"].extend(new_res["base_shear"])    
+        consolidated["base_shear"].extend(new_res["base_shear"]) 
 
         count = len(new_res["roof_disp"])
         consolidated["cycle_id"].extend([cycle_idx] * count)
-
+        
         last_step = consolidated["steps"][-1] if consolidated["steps"] else 0
         new_steps = [s + last_step for s in new_res["steps"]]
         consolidated["steps"].extend(new_steps)
@@ -359,27 +366,27 @@ class PushoverSolver:
 
             consolidated["floors"][y]["disp"].extend(data["disp"])
             consolidated["floors"][y]["shear"].extend(data["shear"])
-
-
+    
     def run_adaptative_pushover(self,control_node_tag, max_disp, load_pattern_type):
-        MAX_ROUNDS = 10
+        MAX_ROUNDS = 5
         base_steps = 100
 
 
         #Desplazamiento por ronda
 
-        disp_per_round = max_disp/MAX_ROUNDS
-
+        disp_per_round = max_disp/1
         consolidated = {
             "roof_disp":[],
             "base_shear":[],
+            "steps":[],
+            "cycle_id":[], 
             "steps":[],
             "cycle_id":[], 
             "floors":{}
         }
 
         current_pattern = 200 #ID seguro para patterns incrementales
-
+        
         # Historial de pisos ya congelado para no repetor freeze
         frozen_floors = set()
 
@@ -394,8 +401,8 @@ class PushoverSolver:
              for y in processed_ys:
                 shear = 0.0
                 for tag in floor_cols_map[y]:
-                    f = ops.eleResponse(tag, 'section', 5, 'force')
-                    if f: shear += f[2]
+                     # USAMOS HELPER DINÁMICO
+                    shear += self._get_element_force(tag)
                 gravity_base_shears[y] = shear
         except:
              pass 
@@ -449,10 +456,11 @@ class PushoverSolver:
                         has_new_freeze = True 
                     else: 
                         print(f"[adaptive] Ignorando fallo en piso base Y = {y_fail}")
-
+            if any(y == sorted(results["floors"].keys())[-1] for y in new_failures):
+                print("[Adaptive] La última planta ha fallado. Deteniendo análisis para evitar singularidad.")
+                break
             #preaprar sigunete ronda
             current_pattern += 1
 
         print("[Adaptive] Análisis Finalizado.")
         return consolidated
-
