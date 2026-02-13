@@ -88,6 +88,7 @@
 - [x] **Visualización Pushover**:
     - [x] Ventana de gráficos X-Y (Curva Pushover) con unidades correctas.
     - [x] Visualización de ciclos de análisis con colores diferenciados (`cycle_id`).
+    - [x] Nomenclatura mejorada (Piso 1, Piso 2...) en gráficos.
 
 ## ☢️ Prioridad 7: Pushover Iterativo Secuencial (Freeze & Forward)
 El objetivo es obtener la curva de capacidad completa de todos los pisos, evitando que el fallo de un piso blando detenga el análisis de los otros.
@@ -99,15 +100,28 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
     - [x] `freeze_floor(floor_y)`: Implementado en `ModelBuilder` mediante Truss rígidos dinámicos.
     - [x] `run_adaptive_pushover()`: Bucle principal (Run -> Detect -> Freeze -> Re-Run) implementado y debuggeado.
     - [x] **Continuidad de Cargas**: Solucionado el problema de reseteo de gráficas (Gravity Base Shear) y vector de cargas modal fijo (`fixed_load_vector`).
-    - [x] **Persistencia de Recorders**: Solucionado historial completo de datos en múltiples rondas.
+    - [x] **Dynamic Solver**: Lectura correcta de fuerzas usando el último punto de integración (Top).
 - [x] **Gestión de Resultados**:
     - [x] Concatenar curvas de capacidad de las diferentes fases con ID de ciclo.
     - [x] Mostrar en `PushoverResultsDialog` las curvas compuestas finales coloreadas por fase.
 
-## 🧱 Prioridad 8: Materiales con Degradación (MinMax)
+## 🧱 Prioridad 8: Análisis Sección (Moment-Curvature)
+- [x] **Backend**:
+    - [x] Implementar recorders para 'section force' y 'section deformation'.
+    - [x] Extraer dinámicamente columnas de datos basadas en `integration_points`.
+- [x] **UI**:
+    - [x] `MomentCurvatureDialog` con selección de Elemento y Puntos de Integración.
+    - [x] Gráficos interactivos M-Phi con pyqtgraph.
+
+## 🟣 Prioridad 9: Visualización Cinemática (Video)
+- [ ] **Pushover Deformada Paso a Paso**:
+    - [ ] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`).
+    - [ ] Implementar Slider en `PushoverResultsDialog`.
+    - [ ] Conectar con `StructureInteractor` para visualizar estados arbitrarios sin re-escalar.
+
+## 🧱 Prioridad 10: Materiales con Degradación (MinMax)
 - [ ] **Backend**:
     - [ ] Envolver `Steel01` y `Concrete01` en `MinMax` Material para simular ruptura/aplastamiento real.
     - [ ] Esto permitirá detectar caídas de fuerza "naturales" en el Pushover.
 - [ ] **UI**:
     - [ ] Añadir campo `Rupture Strain` en `MaterialDialog`.
-
