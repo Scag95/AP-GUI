@@ -93,6 +93,8 @@ class SectionDialog(QDialog):
         """
         b = data['b']
         h = data['h']
+        nIy = data['nIy']
+        nIz = data['nIz']
         cover = data['cover'] 
         mat_conc = data['concrete']
         mat_steel = data['steel']
@@ -105,7 +107,8 @@ class SectionDialog(QDialog):
         section.add_rect_patch(RectPatch(
             material_tag = mat_conc,
             yI= round(-h/2, 6), zI= round(-b/2, 6),
-            yJ=  round(h/2, 6), zJ=  round(b/2, 6)
+            yJ=  round(h/2, 6), zJ=  round(b/2, 6),
+            nIy=nIy, nIz=nIz
         ))
 
         # 2. Creamos las barras de acero

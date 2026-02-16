@@ -85,7 +85,20 @@ class SectionForm(QWidget):
         
         layout.addRow(group_bot)
 
+        # --- Discretización ---
+        group_subdivision = QGroupBox("Discretización")
+        form_subdivision = QFormLayout()
+        group_subdivision.setLayout(form_subdivision)
 
+        self.spin_nIy = QSpinBox()
+        self.spin_nIy.setValue(10)
+        form_subdivision.addRow("Número de subdivisión en Y", self.spin_nIy)
+
+
+        self.spin_nIz = QSpinBox()
+        self.spin_nIz.setValue(10)
+        form_subdivision.addRow("Número de subdivisión en Z", self.spin_nIz)
+        layout.addRow(group_subdivision)
 
     def populate_materials(self):
         self.combo_concrete.clear()
@@ -114,7 +127,9 @@ class SectionForm(QWidget):
             "bot_qty": self.spin_bot_qty.value(),
             "bot_diam": self.spin_bot_diam.get_value_base(),
             "top_qty": self.spin_top_qty.value(),
-            "top_diam": self.spin_top_diam.get_value_base()
+            "top_diam": self.spin_top_diam.get_value_base(),
+            "nIy": self.spin_nIy.value(),
+            "nIz": self.spin_nIz.value()
         }
 
     def set_data(self, section):

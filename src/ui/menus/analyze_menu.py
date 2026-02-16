@@ -108,7 +108,14 @@ class AnalyzeMenu(QMenu):
         dlg.exec()
 
     def _show_curve_pushover(self):
-        dlg = PushoverResultsDialog(self.parent())
+        from src.analysis.manager import ProjectManager
+        results = ProjectManager.instance().pushover_results
+        
+        if not results:
+             QMessageBox.warning(self, "No hay resultados", "Debe ejecutar primero un Análisis Pushover desde el menú Analizar.")
+             return
+
+        dlg = PushoverResultsDialog(results, self.parent())
         dlg.exec()
 
     def _show_section_results(self):

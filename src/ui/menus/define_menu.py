@@ -52,7 +52,9 @@ class DefineMenu(QMenu):
                     bay_width=data["bay_width"],
                     beam_sec_tag=data["beam_sec_tag"],
                     col_sec_tag=data["col_sec_tag"],
+                    integration_points=data["integration_points"],
                     add_base_beams=data["add_base_beams"]
+
                 )
                 QMessageBox.information(self, "Exito","Portico generado correctamente")
                 parent_window = self.parent()
