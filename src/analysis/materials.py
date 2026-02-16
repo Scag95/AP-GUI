@@ -85,3 +85,29 @@ class Steel01(Material):
             b = data["b"],
             rho = data.get("rho",7850.0)
         )
+
+class Elastic(Material):
+    def __init__(self, tag, name, E, rho=0.0):
+        super().__init__(tag, name, rho)
+        self.E = E
+
+    @classmethod
+    def create_internal(cls,tag,E):
+        return cls(tag, "InternalElastic", E, 0.0)
+        
+    def get_opensees_args(self):
+        return["Elastic",self.tag, self.E]
+
+    def to_dict(self):
+        data=super().to_dict()
+
+        data["type"] = "Elastic"
+        data["E"] = self.E
+        return data
+
+    @classmethod
+    def from_dict(cls,data):
+        return cls(
+            tag = data["tag"],
+            E = data["E"]
+        )

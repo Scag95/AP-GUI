@@ -45,7 +45,12 @@ class gridDialog(QDialog):
 
         self.check_base_beams = QCheckBox("Generar vigas en la base (z=0)")
         self.check_base_beams.setChecked(False) # Por defecto NO
-        
+
+        # -- Añadir puntos de integración en el elemento" --
+        self.integration_points = QSpinBox()
+        self.integration_points.setValue(5)
+        self.integration_points.setMaximum(10)
+        self.integration_points.setMinimum(3)      
 
         form_layout.addRow("Numero de Pisos:",self.stories_input)
         form_layout.addRow("Número de Vanos:", self.bays_input)
@@ -59,7 +64,8 @@ class gridDialog(QDialog):
         self.beam_sec_combo = QComboBox()
 
         self.populate_sections()
-
+        
+        form_layout.addRow("Puntos de integración", self.integration_points)
         form_layout.addRow("Seccion Columnas:",self.col_sec_combo)
         form_layout.addRow("Sección Vigas:", self.beam_sec_combo)
 
@@ -89,7 +95,8 @@ class gridDialog(QDialog):
             # currentData() devuelve el TAG que guardamos (el segundo argumento en addItem)
             "col_sec_tag": self.col_sec_combo.currentData(),
             "beam_sec_tag": self.beam_sec_combo.currentData(),
-            "add_base_beams": self.check_base_beams.isChecked() 
+            "add_base_beams": self.check_base_beams.isChecked(), 
+            "integration_points":self.integration_points.value()
         }
 
 

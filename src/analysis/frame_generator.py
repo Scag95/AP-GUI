@@ -7,7 +7,7 @@ class FrameGenerator:
         self.manager = ProjectManager.instance()
 
     def generate_2d_frame (self,stories, bays, story_height, bay_width,
-                           beam_sec_tag,col_sec_tag, add_base_beams = False, transf_tag=1):
+                           beam_sec_tag,col_sec_tag, integration_points, add_base_beams = False, transf_tag=1):
         grid_nodes = {}
         #1. Guardamos los node en una matríz temporar para facilitar la conexíon
         # grid_node[i][j] guardará el objeto Node en la posición (i,j)
@@ -34,7 +34,7 @@ class FrameGenerator:
                 node_bottom = grid_nodes[(i,j)]
                 node_top = grid_nodes [(i,j+1)]
                 ele_tag = self.manager.get_next_element_tag()
-                col = ForceBeamColumn(ele_tag, node_bottom.tag, node_top.tag, col_sec_tag, transf_tag)
+                col = ForceBeamColumn(ele_tag, node_bottom.tag, node_top.tag, col_sec_tag, transf_tag,integration_points, mass_density=0.0)
                 
                 # Asignar Densidad de Masa desde la Sección
                 col_section = self.manager.get_section(col_sec_tag)
@@ -53,7 +53,7 @@ class FrameGenerator:
                 
                 ele_tag = self.manager.get_next_element_tag()
 
-                beam = ForceBeamColumn(ele_tag, node_left.tag, node_right.tag, beam_sec_tag, transf_tag)
+                beam = ForceBeamColumn(ele_tag, node_left.tag, node_right.tag, beam_sec_tag, transf_tag, integration_points, mass_density=0.0)
 
                 # Asignar Densidad de Masa
                 beam_section = self.manager.get_section(beam_sec_tag)

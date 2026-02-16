@@ -24,33 +24,40 @@ class LoadRenderer:
         try:
             self.clear(plot_widget)
 
-            loads = manager.get_all_loads()
-            valid_nodes = {n.tag: n for n in manager.get_all_nodes()}
-            valid_elements = {e.tag: e for e in manager.get_all_elements()}
+            # Pre-calc scales/constants
+            um = UnitManager.instance()
+            force_unit_str = um.get_current_unit(UnitType.FORCE)
+            dist_unit_str = um.get_current_unit(UnitType.DISTRIBUTED_FORCE)
+            
+            # Use faster lookups
+            all_loads = manager.get_all_loads()
+            nodes_map = {n.tag: n for n in manager.get_all_nodes()}
+            elements_map = {e.tag: e for e in manager.get_all_elements()} # only needed if ElementLoads exist
 
-            for load in loads:
+            for load in all_loads:
                 if isinstance(load, NodalLoad) and show_nodes:
-                    if load.node_tag in valid_nodes:
-                        node = valid_nodes[load.node_tag]
-                        self._draw_nodal_load(plot_widget, node, load, scale)
+                    node = nodes_map.get(load.node_tag)
+                    if node:
+                        self._draw_nodal_load(plot_widget, node, load, scale, um, force_unit_str)
                 
                 elif isinstance(load, ElementLoad) and show_elements:
-                    if load.element_tag in valid_elements:
-                        elem = valid_elements[load.element_tag]
-                        if elem.node_i in valid_nodes and elem.node_j in valid_nodes:
-                            ni = valid_nodes[elem.node_i]
-                            nj = valid_nodes[elem.node_j]
-                            self._draw_element_load(plot_widget, ni, nj, load, scale)
+                    elem = elements_map.get(load.element_tag)
+                    if elem:
+                        ni = nodes_map.get(elem.node_i)
+                        nj = nodes_map.get(elem.node_j)
+                        if ni and nj:
+                            self._draw_element_load(plot_widget, ni, nj, load, scale, um, dist_unit_str)
         finally:
             plot_widget.setUpdatesEnabled(True)
             plot_widget.update()
 
-    def _draw_nodal_load(self, plot_widget, node, load, scale):
+    def _draw_nodal_load(self, plot_widget, node, load, scale, um, unit_str):
         # Parametros graficos
         HEAD_LEN = 1500 * scale
         OFFSET = 1000 * scale 
         TAIL_WIDTH = 0.1*scale
-        um = UnitManager.instance()
+        # um passed as arg
+
 
 
         # FX
@@ -81,7 +88,7 @@ class LoadRenderer:
             total_len = tail_len + HEAD_LEN
             shift_x = total_len if angle == 0 else -total_len
             
-            text = pg.TextItem(f"Fx={val_viz:.1f} {um.get_current_unit(UnitType.FORCE)}", color='g', anchor=(0.5, 1))
+            text = pg.TextItem(f"Fx={val_viz:.1f} {unit_str}", color='g', anchor=(0.5, 1))
             text.setPos(node.x + shift_x, node.y)
             plot_widget.addItem(text)
             self.load_items.append(text)
@@ -110,13 +117,13 @@ class LoadRenderer:
             total_len = tail_len + HEAD_LEN
             dy = total_len if angle == 90 else -total_len
             
-            text = pg.TextItem(f"Fy={val_viz:.1f} {um.get_current_unit(UnitType.FORCE)}", color='#FFA500')
+            text = pg.TextItem(f"Fy={val_viz:.1f} {unit_str}", color='#FFA500')
             text.setPos(node.x, node.y + dy)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
-    def _draw_element_load(self, plot_widget, ni, nj, load, scale):
-        um = UnitManager.instance()
+    def _draw_element_load(self, plot_widget, ni, nj, load, scale, um, unit_str):
+        # um passed as arg
         HEAD_LEN = 500 * scale
         OFFSET = 1000 * scale 
         dx = nj.x - ni.x
@@ -192,7 +199,7 @@ class LoadRenderer:
             label_x = mid_x + nx * text_offset * direction
             label_y = mid_y + ny * text_offset * direction
             val_viz = um.from_base(magnitude_base, UnitType.DISTRIBUTED_FORCE)
-            label = f"{'wx' if is_axial else 'wy'}={val_viz:.2f} {um.get_current_unit(UnitType.DISTRIBUTED_FORCE)}"
+            label = f"{'wx' if is_axial else 'wy'}={val_viz:.2f} {unit_str}"
             text = pg.TextItem(label, color=color, anchor=(0.5, 0.5)) # Anchor centrado
             text.setPos(label_x, label_y)
             plot_widget.addItem(text)

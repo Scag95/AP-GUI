@@ -46,7 +46,7 @@ class ForceDiagramRenderer:
             if type == 'M':
                 color = '#FF5252' # Rojo (Momentos)
                 u_type = UnitType.MOMENT
-                values = [s['M'] for s in sections_data]
+                values = [-1*s['M'] for s in sections_data]
             elif type == 'V':
                 color = '#4CAF50' # Verde (Cortante)
                 u_type = UnitType.FORCE

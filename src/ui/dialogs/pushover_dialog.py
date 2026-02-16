@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
-                             QComboBox, QPushButton)
+                             QComboBox, QPushButton, QCheckBox)
 from src.analysis.manager import ProjectManager
 from src.ui.widgets.unit_spinbox import UnitSpinBox
 from src.utils.units import UnitManager
@@ -31,7 +31,7 @@ class PushoverDialog(QDialog):
 
         #2. Tipo de fuerzas
         self.combo_load_pattern_type = QComboBox()
-        self.combo_load_pattern_type.addItems(["Modal","Unitario"])
+        self.combo_load_pattern_type.addItems(["Modal","Uniforme"])
 
 
         #2. Desplazamiento Máximo
@@ -45,6 +45,11 @@ class PushoverDialog(QDialog):
         form_layout.addRow("Modo de aplicación de fuerza", self.combo_load_pattern_type)
         
         layout.addLayout(form_layout)
+
+        # 3. Checkbox Adaptativo
+        self.chk_adaptive = QCheckBox("Análisis Adaptativo Secuencial (Freeze Forward)")
+        self.chk_adaptive.setToolTip("Congela pisos que fallen (mecanismo) y continúa el análisis para evaluar pisos superiores.")
+        form_layout.addRow("Estrategia:", self.chk_adaptive)
 
         # --- BOTONES ---
         # Run Button
@@ -85,8 +90,18 @@ class PushoverDialog(QDialog):
 
         try: 
             #Ejecutar lógica backend
-            results = translator.run_pushover_analysis(control_node, max_disp, load_pattern_type)
+            results = None
+            if self.chk_adaptive.isChecked():
+                print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
+                results = translator.run_adaptive_pushover(control_node, max_disp, load_pattern_type)
+            else:
+                print("[UI] Ejecutando Pushover Monotónico Normal...")
+                results = translator.run_pushover_analysis(control_node, max_disp, load_pattern_type)
+
             if results:
+                # Guardar resultados en el Manager para persistencia
+                self.manager.pushover_results = results
+                
                 # Pasamos el diccionario crudo al dialog de resultados
                 # Dejamos que ResultsDialog gestione las unidades internamente
                 from src.ui.dialogs.pushover_result_dialog import PushoverResultsDialog

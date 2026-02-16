@@ -1,7 +1,6 @@
 # Lista de Tareas AP-GUI
 
 ## 🔴 Prioridad 1: Arquitectura de Datos (Centralización)
-El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central.
 - [x] **Crear `src/analysis/manager.py`**:
     - [x] Definir clase `ProjectManager` (Patrón Singleton).
     - [x] Implementar listas para materiales y secciones.
@@ -9,8 +8,9 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] **Implementar listas para nodos y elementos**:
         - [x] Actualizar `ProjectManager` con diccionarios para `nodes` y `elements`.
         - [x] Crear herramienta de generación automática de pórticos (Grid Wizard).
-- [x] **Refactorizar `MaterialDialog`**:
-    - [x] Que al dar a "Añadir", llame a `ProjectManager` en lugar de guardarlo localmente.
+    - [x] **Persistencia de Resultados**:
+        - [x] Centralizar almacenamiento de `gravity_results` y `pushover_results` en `ProjectManager`.
+        - [x] Permitir acceso a resultados desde menús sin re-ejecutar análisis.
 
 ## 🟡 Prioridad 2: Definición de Secciones
 - [x] **Backend (`src/analysis/sections.py`)**:
@@ -68,7 +68,7 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
         - [x] Centralized Scale Manager.
         - [x] Section Aggregator (M+P+V auto-setup).
 
-## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover (EN PROGRESO)
+## 🔴🔴 Prioridad 6: Análisis No Lineal y Pushover
 - [x] **Interacción Avanzada**:
     - [x] **Sistema Visual de Nodos**: Mejorar representación/interacción de nodos (Símbolos por restricción).
     - [x] **Element Properties Form**: Ver y editar propiedades de elementos seleccionados.
@@ -87,43 +87,40 @@ El objetivo es sacar los datos de las ventanas y guardarlos en un gestor central
     - [x] Estabilización de análisis (Test NormDispIncr, KrylovNewton, Pasos pequeños).
 - [x] **Visualización Pushover**:
     - [x] Ventana de gráficos X-Y (Curva Pushover) con unidades correctas.
-    - [ ] Animación de la deformada paso a paso.
-
-## 🟣 Mejoras de Visualización y UX (Futuro Inmediato)
-- [ ] **NodalLoadsDialog y ElementLoadsDialog**:
-    - [x] CheckBox para filtrar lista: "Mostrar solo nodos/elementos con carga".
-    - [x] CheckBox para mostrar/ocultar IDs en el visor (Show Tags) directamente desde el diálogo.
-- [x] **View Options (Comandos de Visualización)**:
-    - [x] Toggle Visibility: Mostrar u ocultar etiquetas (Tags) de Nodos y Elementos (Comando: `tag`).
-    - [x] Load Scaling: Input para escalar visualmente el tamaño de las cargas (Atajos: `Ctrl++`/`Ctrl+-`).
-
-## 🎓 Deuda Técnica / Mejoras
-- [x] **Sistema de Unidades (Core & Materials/Sections)**:
-    - [x] Backend: `UnitManager` (Singleton) y `UnitType` (Length, Force, Stress, Density).
-    - [x] UI: `UnitSpinBox` para conversión automática (Visual <-> Base).
-    - [x] Integración: `MaterialForm` (MPa -> Pa) y `SectionForm` (mm -> m).
-    - [x] **Mejora Visual SectionPreview**: Barras a escala real y ejes dinámicos.
-    - [x] Integración en Cargas (`NodalLoads`, `ElementLoads`) y Grids.
-- [ ] Añadir validaciones en los inputs (que valores no sean negativos, etc.).
-- [ ] Implementar edición de elementos existentes (Forms para Elementos).
-- [x] **Refactorización de Visualización (Patrón Renderer)**:
-    - [x] Crear `ModelRenderer`, `LoadRenderer`, `DeformationRenderer`, `ForceDiagramRenderer`.
-    - [x] Limpiar `StructureInteractor` delegando pintado a renderizadores.
-- [x] **Visualización Avanzada (Deformada)**:
-        - [x] Implementar interpolación cúbica de Hermite para vigas curvas.
-    - [x] Implementar escalado dinámico de deformada (`PgUp`/`PgDown`).
+    - [x] Visualización de ciclos de análisis con colores diferenciados (`cycle_id`).
+    - [x] Nomenclatura mejorada (Piso 1, Piso 2...) en gráficos.
 
 ## ☢️ Prioridad 7: Pushover Iterativo Secuencial (Freeze & Forward)
 El objetivo es obtener la curva de capacidad completa de todos los pisos, evitando que el fallo de un piso blando detenga el análisis de los otros.
-- [ ] **Core Algorítmico**:
-    - [ ] `detect_failed_floors(results)`: Implementar criterio híbrido (Pendiente < 1% K_ini + Deriva > 0.5%).
-    - [ ] `_freeze_floor(floor_y)`: Método en `OpenSeesTranslator` para añadir elementos `Truss` rígidos (X-Bracing) en el piso fallado.
-    - [ ] `run_adaptive_pushover()`: Bucle principal (Run -> Detect -> Freeze -> Re-Run).
-- [ ] **Gestión de Resultados**:
-    - [ ] Concatenar curvas de capacidad de las diferentes fases.
-    - [ ] Mostrar en `PushoverResultsDialog` las curvas compuestas finales.
+- [x] **Refactorización de Arquitectura**:
+    - [x] Separar lógica en `ModelBuilder`, `GravitySolver`, `PushoverSolver`.
+    - [x] Convertir `OpenSeesTranslator` en patrón Facade.
+- [x] **Core Algorítmico (`PushoverSolver`)**:
+    - [x] `detect_failed_floors(results)`: Implementado criterio híbrido Drift + Rigidez Tangente con parámetros ajustables.
+    - [x] `freeze_floor(floor_y)`: Implementado en `ModelBuilder` mediante Truss rígidos dinámicos.
+    - [x] `run_adaptive_pushover()`: Bucle principal (Run -> Detect -> Freeze -> Re-Run) implementado y debuggeado.
+    - [x] **Continuidad de Cargas**: Solucionado el problema de reseteo de gráficas (Gravity Base Shear) y vector de cargas modal fijo (`fixed_load_vector`).
+    - [x] **Dynamic Solver**: Lectura correcta de fuerzas usando el último punto de integración (Top).
+- [x] **Gestión de Resultados**:
+    - [x] Concatenar curvas de capacidad de las diferentes fases con ID de ciclo.
+    - [x] Mostrar en `PushoverResultsDialog` las curvas compuestas finales coloreadas por fase.
 
-## 🧱 Prioridad 8: Materiales con Degradación (MinMax)
+## 🧱 Prioridad 8: Análisis Sección (Moment-Curvature)
+- [x] **Backend**:
+    - [x] Implementar recorders para 'section force' y 'section deformation'.
+    - [x] Extraer dinámicamente columnas de datos basadas en `integration_points` y detección automática de componentes.
+- [x] **UI**:
+    - [x] `MomentCurvatureDialog` con selección de Elemento y Puntos de Integración (Multi-Selección).
+    - [x] Gráficos interactivos M-Phi con pyqtgraph, corrección de unidades y ejes dinámicos.
+    - [x] Solución de escalas automáticas (Fix: `enableAutoSIPrefix(False)`).
+
+## 🟣 Prioridad 9: Visualización Cinemática (Video)
+- [ ] **Pushover Deformada Paso a Paso**:
+    - [ ] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`).
+    - [ ] Implementar Slider en `PushoverResultsDialog`.
+    - [ ] Conectar con `StructureInteractor` para visualizar estados arbitrarios sin re-escalar.
+
+## 🧱 Prioridad 10: Materiales con Degradación (MinMax)
 - [ ] **Backend**:
     - [ ] Envolver `Steel01` y `Concrete01` en `MinMax` Material para simular ruptura/aplastamiento real.
     - [ ] Esto permitirá detectar caídas de fuerza "naturales" en el Pushover.
