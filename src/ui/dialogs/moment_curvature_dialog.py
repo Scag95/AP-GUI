@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QComboBox, QFrame)
+                             QComboBox, QFrame, QListWidget, QListWidgetItem, QAbstractItemView)
+from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 import os
 import glob
@@ -34,44 +35,48 @@ class MomentCurvatureDialog(QDialog):
         controls_frame = QFrame()
         controls_frame.setFixedWidth(250)
         controls_layout = QVBoxLayout(controls_frame)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setContentsMargins(10, 10, 10, 10)
+        controls_layout.setSpacing(10)
 
-        # Element Selector
+        # 1. Element Selector
         controls_layout.addWidget(QLabel("Seleccionar Elemento:"))
         self.element_combo = QComboBox()
         self.element_combo.currentIndexChanged.connect(self._on_element_changed)
         controls_layout.addWidget(self.element_combo)
-        
-        # Section (Integration Point) Selector
-        controls_layout.addWidget(QLabel("Punto de Integración:"))
-        self.section_combo = QComboBox()
-        self.section_combo.currentIndexChanged.connect(self.update_plot)
-        controls_layout.addWidget(self.section_combo)
 
-        # Variable Selector (Y Axis)
-        controls_layout.addWidget(QLabel("Variable Eje Y:"))
+        # 2. Variable Selector (Y Axis)
+        controls_layout.addWidget(QLabel("<b>2. Variable Eje Y:</b>"))
         self.y_axis_combo = QComboBox()
         self.y_axis_combo.addItems(["Momento (Mz)", "Fuerza Axial (P)", "Cortante (Vy)"])
         self.y_axis_combo.currentIndexChanged.connect(self.update_plot)
         controls_layout.addWidget(self.y_axis_combo)
 
+        # 3. Section Selector (Multi-select List)
+        controls_layout.addWidget(QLabel("<b>3. Secciones a Graficar:</b>"))
+        self.section_list = QListWidget()
+        self.section_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection) # Solo check boxes
+        self.section_list.itemChanged.connect(self.update_plot)
+        controls_layout.addWidget(self.section_list)
+
         # Info Box
         self.info_label = QLabel("Seleccione un elemento para ver sus resultados.")
         self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet("color: gray; font-size: 11px;")
+        self.info_label.setStyleSheet("color: #555; font-size: 11px; margin-top: 10px;")
         controls_layout.addWidget(self.info_label)
 
-        controls_layout.addStretch()
         main_layout.addWidget(controls_frame)
 
         # --- Right Panel: Plot ---
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setLabel('bottom', "Curvatura (rad/m)", units='1/m')
-        self.plot_widget.setLabel('left', "Momento (Nm)", units='N*m')
-        self.plot_widget.showGrid(x=True, y=True)
+        self.plot_widget.setLabel('bottom', "Curvatura (rad/m)")
+        self.plot_widget.setLabel('left', "Momento (Nm)")
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
         
-        # Legend
-        self.legend = self.plot_widget.addLegend()
+        # Desactivar auto-escalado SI permanentemente
+        self.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
+        self.plot_widget.getAxis('left').enableAutoSIPrefix(False)
+        self.plot_widget.addLegend(offsett=(30,30))
+
 
         main_layout.addWidget(self.plot_widget, 1)
 
@@ -119,15 +124,11 @@ class MomentCurvatureDialog(QDialog):
         ele_tag = self.element_combo.currentData()
         if ele_tag is None: return
         
-        ele_tag = self.element_combo.currentData()
-        if ele_tag is None: return
-        
         manager = ProjectManager.instance()
         element = manager.get_element(ele_tag)
 
         if element is None:
             self.info_label.setText(f"Error: Elemento {ele_tag} no encontrado en proyecto.")
-            self.section_combo.clear()
             self.plot_widget.clear()
             return
 
@@ -135,19 +136,32 @@ class MomentCurvatureDialog(QDialog):
         self.load_element_data(ele_tag)
         
         # Configurar puntos de integración
-        num_points = getattr(element, 'integration_points', 5)
+        num_points = getattr(element, 'integration_points')
 
-        self.section_combo.blockSignals(True)
-        self.section_combo.clear()
+        self.section_list.blockSignals(True)
+        self.section_list.clear()
 
         for i in range(1, num_points + 1):
-            self.section_combo.addItem(f"Sección {i} (Lobatto)", i)
+            item_text = f"Sección {i}"
+            if i == 1: item_text += " (Inicio/Base)"
+            elif i == num_points: item_text += " (Fin/Tope)"
+            
+            item = QListWidgetItem(item_text)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)   
+            item.setData(Qt.ItemDataRole.UserRole, i) #Guarda inidice real (1-based)
 
-        self.section_combo.blockSignals(False)
+            #Por defecto SOLO activar la Sección 1
+            if i == 1:
+                item.setCheckState(Qt.CheckState.Checked)
+            else:
+                item.setCheckState(Qt.CheckState.Unchecked)
+            
+            self.section_list.addItem(item)
+        
+        self.section_list.blockSignals(False)
+        self.update_plot()
 
-        if self.section_combo.count() > 0:
-            self.section_combo.setCurrentIndex(0)
-            self.update_plot()
+        
 
 
     def load_element_data(self, tag):
@@ -187,10 +201,7 @@ class MomentCurvatureDialog(QDialog):
             # Obtener puntos reales del elemento para calcular componentes
             manager = ProjectManager.instance()
             element = manager.get_element(tag)
-            integration_points = getattr(element, 'integration_points', 5)
-
-            # Evitar división por cero
-            if integration_points <= 0: integration_points = 5
+            integration_points = getattr(element, 'integration_points')
 
             comps_f = vals_f // integration_points
             comps_d = vals_d // integration_points
@@ -198,9 +209,8 @@ class MomentCurvatureDialog(QDialog):
 
             self.info_label.setText(
                 f"Datos cargados para Elemento {tag}.\n"
-                f"Puntos Integración: {integration_points}\n"
-                f"Comp. Fuerza: {comps_f} (P, M, V?)\n"
-                f"Comp. Deform: {comps_d} (eps, kap, gam?)"
+                f"Columnas Datos: {vals_f}\n"
+                f"Secciones Detectadas: {integration_points}"
             )
             
             self.current_data = {
@@ -220,97 +230,112 @@ class MomentCurvatureDialog(QDialog):
         if not hasattr(self, 'current_data'): 
             return
 
+        self.plot_widget.clear()
+
         # 0. Preparar conversion de unidades
         u_man = UnitManager.instance()
-
-        sec_idx_combo = self.section_combo.currentData()
-        if sec_idx_combo is None: sec_idx_combo = 1 
-        sec_idx = sec_idx_combo - 1 
-
         forces = self.current_data["forces"]
         deforms = self.current_data["deforms"]
-        
-        # Recuperar componentes detectados (default a 3 si falla carga)
-        n_comps_f = self.current_data.get("comps_f", 3)
-        n_comps_d = self.current_data.get("comps_d", 3)
+        n_comps_f = self.current_data["comps_f"]
+        n_comps_d = self.current_data["comps_d"]
 
         # 1. Determinar Índice de columna para fuerza (Y Axis)
         y_type = self.y_axis_combo.currentIndex()
-
         if y_type == 0: # Momento (Mz)
             comp_offset_f = 1
             unit_type = UnitType.MOMENT
             label_base = "Momento"
-            unit_label_y = u_man.get_current_unit(UnitType.MOMENT)
         elif y_type == 1: # Axial (P)
             comp_offset_f = 0
             unit_type = UnitType.FORCE
             label_base = "Axial"
-            unit_label_y = u_man.get_current_unit(UnitType.FORCE)
         else: # Cortante (Vy)
             comp_offset_f = 2
             unit_type = UnitType.FORCE
             label_base = "Cortante"
-            unit_label_y = u_man.get_current_unit(UnitType.FORCE)
-
+        unit_label_y = u_man.get_current_unit(unit_type)
         y_axis_text = f"{label_base} ({unit_label_y})"
 
-        # CALCULO DINÁMICO DE COLUMNAS
-        col_F = 1 + (sec_idx * n_comps_f) + comp_offset_f
+
         
-        # 2. Determina indice de columna para deformación (Curvatura siempre es el segundo comp?)
-        # Asumimos orden: eps, kappa (curvatura), gamma ??
-        # Usualmente kappa es el segundo componente (offset 1)
+        # 2. Determina indice de columna para deformación
         comp_offset_d = 1
-        col_C = 1 + (sec_idx * n_comps_d) + comp_offset_d
-
         len_factor = u_man.to_base(1.0, UnitType.LENGTH) 
+
         unit_label_x = f"rad/{u_man.get_current_unit(UnitType.LENGTH)}" 
-
-        if col_F >= len(forces[0]) or col_C >= len(deforms[0]):
-            self.plot_widget.clear()
-            self.plot_widget.setTitle(f"Error: Indices fuera de rango (F={col_F}, C={col_C})")
-            return
-
-        y_values = []
-        x_values = []
-
-        for row_f, row_d in zip(forces, deforms):
-            # Valor crudo
-            raw_y = row_f[col_F]
-            raw_x = row_d[col_C]
-
-            # Absoluto (Opcional, a veces es mejor ver el signo)
-            abs_y = abs(raw_y)
-            abs_x = abs(raw_x)
-
-            # Conversión de unidades
-            vis_y = u_man.from_base(abs_y, unit_type)
-            vis_x = abs_x * len_factor
-
-            y_values.append(vis_y)
-            x_values.append(vis_x)
-
-        # Asegurar origen
-        if not x_values or x_values[0] != 0:
-            x_values.insert(0, 0.0)
-            y_values.insert(0, 0.0)
-
-        # Graficar
-        self.plot_widget.clear()
-        pen = pg.mkPen(color='b', width=2)
-        self.plot_widget.plot(x_values, y_values, pen=pen, name="Respuesta")
 
         self.plot_widget.setLabel('bottom', f"Curvatura ({unit_label_x})")
         self.plot_widget.setLabel('left', y_axis_text)
-        self.plot_widget.setTitle(f"Sección {sec_idx_combo} - Elemento {self.element_combo.currentText()}")
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
-        self.plot_widget.getAxis('left').enableAutoSIPrefix(False)
-        
-        if x_values:
-            max_x = max(x_values)
-            max_y = max(y_values)
-            # Dar un margen del 10%
-            self.plot_widget.setXRange(0, max_x * 1.1 if max_x > 0 else 1)
-            self.plot_widget.setYRange(0, max_y * 1.1 if max_y > 0 else 1)
+
+        # 3. Iterrar sobre secciones marcadas y graficar
+        plotted_something = False
+        all_x_max = 0
+        all_y_max = 0
+
+        #Obtener items de la lista
+        count = self.section_list.count()
+
+        for i in range(count):
+            item = self.section_list.item(i)
+            if item.checkState() != Qt.CheckState.Checked:
+                continue
+            
+            sec_num = item.data(Qt.ItemDataRole.UserRole)
+
+            # CALCULO DINÁMICO DE COLUMNAS
+            col_F = 1 + ((sec_num - 1) * n_comps_f) + comp_offset_f
+            col_C = 1 + ((sec_num - 1) * n_comps_d) + comp_offset_d
+
+            if col_F >= len(forces[0]) or col_C >= len(deforms[0]):
+                self.plot_widget.setTitle(f"Error: Indices fuera de rango para la Sección {sec_num}")
+                continue
+
+            y_values = []
+            x_values = []
+
+            for row_f, row_d in zip(forces, deforms):
+                # Valor crudo
+                raw_y = row_f[col_F]
+                raw_x = row_d[col_C]
+
+                # Absoluto (Opcional, a veces es mejor ver el signo)
+                abs_y = abs(raw_y)
+                abs_x = abs(raw_x)
+
+                # Conversión de unidades
+                vis_y = u_man.from_base(abs_y, unit_type)
+                vis_x = abs_x * len_factor
+
+                y_values.append(vis_y)
+                x_values.append(vis_x)
+
+                # Asegurar origen
+                if not x_values or x_values[0] != 0:
+                    x_values.insert(0, 0.0)
+                    y_values.insert(0, 0.0)
+
+            # Graficar
+            color = pg.intColor(i, hues=count, alpha=200)
+
+            name_legend = f"Sección {sec_num}"
+
+            self.plot_widget.plot(x_values, y_values, pen = pg.mkPen(color, width=2), name=name_legend)
+            self.plot_widget.showGrid(x=True, y=True, alpha=0.15)
+            plotted_something = True
+
+            if x_values: 
+                local_max_x = max([abs(x) for x in x_values])
+                local_max_y = max([abs(y) for y in y_values])
+                all_x_max = max(all_x_max, local_max_x)
+                all_y_max = max(all_y_max, local_max_y)
+            
+        if plotted_something:
+            self.plot_widget.setTitle(f"Elemento {self.element_combo.currentText()}")
+            # Configurar rango usando EL MAXIMO GLOBAL DETECTADO
+            margin = 1.1
+            if all_x_max > 0:
+                self.plot_widget.setXRange(0, all_x_max * margin)
+            if all_y_max > 0:
+                self.plot_widget.setYRange(0, all_y_max * margin)
+        else:
+            self.plot_widget.setTitle("Seleccione al menos una sección")
