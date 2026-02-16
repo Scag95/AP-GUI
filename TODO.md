@@ -108,10 +108,11 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 ## 🧱 Prioridad 8: Análisis Sección (Moment-Curvature)
 - [x] **Backend**:
     - [x] Implementar recorders para 'section force' y 'section deformation'.
-    - [x] Extraer dinámicamente columnas de datos basadas en `integration_points`.
+    - [x] Extraer dinámicamente columnas de datos basadas en `integration_points` y detección automática de componentes.
 - [x] **UI**:
-    - [x] `MomentCurvatureDialog` con selección de Elemento y Puntos de Integración.
-    - [x] Gráficos interactivos M-Phi con pyqtgraph.
+    - [x] `MomentCurvatureDialog` con selección de Elemento y Puntos de Integración (Multi-Selección).
+    - [x] Gráficos interactivos M-Phi con pyqtgraph, corrección de unidades y ejes dinámicos.
+    - [x] Solución de escalas automáticas (Fix: `enableAutoSIPrefix(False)`).
 
 ## 🟣 Prioridad 9: Visualización Cinemática (Video)
 - [ ] **Pushover Deformada Paso a Paso**:

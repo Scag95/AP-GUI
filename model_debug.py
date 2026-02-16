@@ -47,15 +47,3 @@ algorithm('Newton')
 analysis('Static')
 analyze(10)
 loadConst('-time', 0.0)
-
-# --- PUSHOVER ANALYSIS (Node 2, Dmax = 0.3, Distribución Modal)---
-timeSeries('Linear', 2)
-pattern('Plain', 2, 2)
-
-# --- Analysis Modal ---
-eigen(1)
-load(2, 1.0, 0.0, 0.0)
-integrator('DisplacementControl', 2, 1, 0.003)
-test('NormDispIncr', 1e-06, 100)
-algorithm('KrylovNewton')
-analysis('Static')

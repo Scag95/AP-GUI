@@ -192,6 +192,15 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
    - Improved Floor Nomenclature in Results Dialog (e.g., "Piso 1 (Y=3.00m)").
    - Fixed `PushoverSolver` logic to read forces from the *last* integration point (Top) dynamically, ensuring stability regardless of discretization.
    - **Attempted Feature (Reverted)**: Step-by-step deformation animation. Reverted due to renderer data format mismatch (`IndexError`).
+### Session 19 (2026-02-16) - Moment-Curvature Refinement (COMPLETED)
+1. **Critical Plotting Fixes**:
+   - Fixed `MomentCurvatureDialog` reading incorrect columns (Time vs Curvature) due to operator precedence error.
+   - Implemented robust multi-section plotting with distinct colors.
+   - Solved `pyqtgraph` auto-scaling issue where small values (rad/m) were interpreted as milli/micro units, causing x1000 scaling errors on refill.
+   - Disabled `enableAutoSIPrefix(False)` permanently in `init_ui` to respect base units.
+2. **Unit Handling**:
+   - Ensured dynamic label updates for Plot Axes based on current user units (e.g., kNm, Ton-m).
+   - Validated data reading logic against OpenSees `ForceBeamColumn` output format (P, M, V / eps, kappa).
 
 ## Pending Tasks (Priority Order)
 ### 1. Deformation Animation (Video)
@@ -206,5 +215,5 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 -   **Material Degradation**: Implement `MinMax` wrapper to `Steel01/Concrete01` to simulate true rupture (force drop).
 
 ## Technical Context for Next Session
--   **Current State**: Pushover and Moment-Curvature analysis are stable. Deformation video feature was reverted and needs clean re-implementation.
--   **Next Steps**: Focus on implementing the "Deformation Video" feature correctly (passing full node data including rotation if needed).
+-   **Current State**: Moment-Curvature plotting is fully functional, robust to unit changes, and visualizes multiple sections correctly.
+-   **Next Steps**: Proceed to Priority 9: Visualización Cinemática (Video) - Implementing step-by-step deformation history slider.
