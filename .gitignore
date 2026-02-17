@@ -9,3 +9,4 @@ env/
 venv/
 .agent/
 .idea/
+pushover_data/
