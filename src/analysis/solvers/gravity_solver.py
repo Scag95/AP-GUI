@@ -46,17 +46,18 @@ class GravitySolver:
         for ele in self.manager.get_all_elements():
             try:
                 sections_data = []
-                num_int_pts = 5
+                num_int_pts = getattr(ele,'integration_points')
 
                 for i in range(1, num_int_pts+1):
                     sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
-                    # Validation needed in case aggregation adds more components
-                    # But usually first 3 match logical P, M, V
+                    loc = ops.sectionLocation(ele.tag, i) #Leemos la ubicación del punto de integración.
+                    
                     sections_data.append({
                         "i": i,
                         "P": sec_forces[0],
                         "M": sec_forces[1], # M usually 2nd
-                        "V": sec_forces[2]  # V usually 3rd
+                        "V": sec_forces[2],  # V usually 3rd
+                        "loc": loc
                     })
 
                 results["element_forces"][ele.tag] = sections_data

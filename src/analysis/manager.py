@@ -33,7 +33,11 @@ class ProjectManager(QObject):
         self.next_section_tag = 1
         self.next_node_tag = 1
         self.next_element_tag = 1
-        self.next_load_tag = 1        
+        self.next_load_tag = 1
+
+        #Caché de Topología (Pisos)
+        self._topology_dirty = True
+        self._floors_cache = {}        
 
 
  ## Materiales ##   
@@ -79,7 +83,7 @@ class ProjectManager(QObject):
 ## Nodos ## 
     def add_node(self, node):
         self.node[node.tag] = node
-
+        self.mark_topology_dirty()
         if node.tag >= self.next_node_tag:
             self.next_node_tag = node.tag + 1
 
@@ -87,6 +91,7 @@ class ProjectManager(QObject):
         return self.node.get(tag)
 
     def delete_node(self,tag):
+        self.mark_topology_dirty()
         if tag in self.node:
             del self.node[tag]
     
@@ -100,6 +105,7 @@ class ProjectManager(QObject):
 ## Elementos ## 
     def add_element(self, element):
         self.element[element.tag] = element
+        self.mark_topology_dirty()
 
         if element.tag >= self.next_element_tag:
             self.next_element_tag = element.tag + 1
@@ -108,6 +114,7 @@ class ProjectManager(QObject):
         return self.element.get(tag)
 
     def delete_element(self,tag):
+        self.mark_topology_dirty()
         if tag in self.element:
             del self.element[tag]
    
@@ -116,6 +123,77 @@ class ProjectManager(QObject):
 
     def get_all_elements(self):
         return list(self.element.values())
+
+## Pisos ##
+    def get_floor_data(self):
+        if not self._topology_dirty:
+            return self._floors_cache
+
+        floors = {}
+        tolerance = 1e-3   # 1 mm de tolerancia
+        
+        #Agrupar nodos
+        for node in self.get_all_nodes():
+            y = node.y
+
+            #buscar si el piso ya existe en nuestra tolerancia
+            floor_y = None
+            for key in floors.keys():
+                if abs(key - y) < tolerance:
+                    floor_y = key
+                    break
+            
+            #Si no existe lo inicializamos
+            if floor_y is None:
+                floor_y = y
+                floors[floor_y] = {"nodes": [], "columns": [], "beams": []}
+
+            floors[floor_y]["nodes"].append(node)
+
+        #Agrupar elementos
+
+        for ele in self.get_all_elements():
+            ni = self.get_node(ele.node_i)
+            nj = self.get_node(ele.node_j)
+
+            if not ni or not nj: continue
+
+            #Diferencia principal (Vertical u Horizontal)
+            dx = abs(nj.x - ni.x)
+            dy = abs(nj.y - ni.y)
+            
+            is_column = dy > tolerance and dx < tolerance
+            is_beam = dx > tolerance and dy < tolerance
+
+            if is_column:
+                #La columna pertence al piso de su nodo más alto.
+                y_ceil = max(ni.y, nj.y)
+
+                #Buscar el piso correspondiente
+                for key in floors.keys():
+                    if abs(key - y_ceil) < tolerance:
+                        floors[key]["columns"].append(ele)
+                        break
+
+                    elif is_beam:
+                        y_beam = ni.y
+
+                        for key in floors.keys():
+                            if abs(key-y_beam) < tolerance:
+                                floors[key]["beams"].append(ele)
+                                break
+
+            #Gurdamos en caché el diccionario ordenado
+            self._floors_cache = dict(sorted(floors.items()))
+            self._topology_dirty = False
+
+        return self._floors_cache
+
+        def mark_topology_dirty(self):
+            """Avisa al manager que las coordenadas o elementos han cambiado"""
+            self._topology_dirty = True
+
+
 
 ## Cargas (Loads) ##
     def add_load(self, load):
@@ -211,7 +289,8 @@ class ProjectManager(QObject):
                 else:
                     continue
                 self.add_load(load)
-            
+            self.mark_topology_dirty()
+
             print(f"Projecto cargado: {len(self.node)} nodos, {len(self.element)} elementos")
             self.dataChanged.emit()
             return True

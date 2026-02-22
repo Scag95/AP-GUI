@@ -8,9 +8,11 @@ model('basic', '-ndm', 2, '-ndf', 3)
 node(1, 0.0, 0.0)
 fix(1, 1, 1, 1)
 node(2, 0.0, 3.0)
-node(3, 3.0, 0.0)
-fix(3, 1, 1, 1)
-node(4, 3.0, 3.0)
+node(3, 0.0, 6.0)
+node(4, 3.0, 0.0)
+fix(4, 1, 1, 1)
+node(5, 3.0, 3.0)
+node(6, 3.0, 6.0)
 
 # --- Materials ---
 uniaxialMaterial('Concrete01', 1, 25000000.0, 0.0021, 5000000.0, 0.003)
@@ -29,14 +31,23 @@ section('Aggregator', 1, 20001, 'Vy', '-section', 10001)
 geomTransf('Linear', 1)
 
 # --- Elements ---
-beamIntegration('Lobatto', 1, 1, 6)
+beamIntegration('Lobatto', 1, 1, 7)
 element('forceBeamColumn', 1, 1, 2, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
-element('forceBeamColumn', 2, 3, 4, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
-element('forceBeamColumn', 3, 2, 4, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
+element('forceBeamColumn', 2, 2, 3, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
+element('forceBeamColumn', 3, 4, 5, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
+element('forceBeamColumn', 4, 5, 6, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
+element('forceBeamColumn', 5, 2, 5, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
+element('forceBeamColumn', 6, 3, 6, 1, 1, '-mass', 225.0, '-iter', 10, 1e-12)
 
 # --- Patterns ---
 timeSeries('Linear', 1)
 pattern('Plain', 1, 1)
+eleLoad('-ele', 1, '-type', '-beamUniform', -0.0, -2207.25)
+eleLoad('-ele', 2, '-type', '-beamUniform', -0.0, -2207.25)
+eleLoad('-ele', 3, '-type', '-beamUniform', -0.0, -2207.25)
+eleLoad('-ele', 4, '-type', '-beamUniform', -0.0, -2207.25)
+eleLoad('-ele', 5, '-type', '-beamUniform', -2207.25, -0.0)
+eleLoad('-ele', 6, '-type', '-beamUniform', -2207.25, -0.0)
 
 # --- Gravity Analysis ---
 system('UmfPack')
