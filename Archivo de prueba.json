@@ -135,5 +135,14 @@
             "integration_points": 6
         }
     ],
-    "loads": []
+    "loads": [
+        {
+            "type": "NodalLoad",
+            "tag": 1,
+            "node_tag": 2,
+            "fx": 10000.0,
+            "fy": 0.0,
+            "mz": 0.0
+        }
+    ]
 }

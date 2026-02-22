@@ -21,8 +21,6 @@ class ForceDiagramRenderer:
     def draw_diagrams(self, plot_widget, manager, element_forces, type='M'):
         self.clear(plot_widget)
 
-        lobatto_locs = [0.0, 0.17267, 0.5, 0.82733, 1.0]
-
         # 1. Obtener escala del singleton
         scale_key = 'moment'
         if type == 'V': scale_key = 'shear'
@@ -33,9 +31,8 @@ class ForceDiagramRenderer:
             if ele.tag not in element_forces: continue
 
             sections_data = element_forces[ele.tag]
+            lobatto_locs = [s['loc'] for s in sections_data]
             
-
-
             #Extraer la seire de valores a dibujar
 
             values = []
@@ -85,19 +82,18 @@ class ForceDiagramRenderer:
         polygon_x = [ni.x]
         polygon_y = [ni.y]
         # Recorremos los puntos de integración
-        # Asumimos que len(values) == len(locs) == 5
+        # Asumimos que len(values) == len(locs)
         count = min(len(values), len(locs))
         
         for k in range(count):
             val_base = values[k]
-            rel_pos = locs[k] # 0.0 a 1.0
             
             # Conversión unitaria
             val_viz = um.from_base(val_base, u_type)
             
             # Calcular posición en el eje de la viga
-            base_x = ni.x + ux * (L * rel_pos)
-            base_y = ni.y + uy * (L * rel_pos)
+            base_x = ni.x + ux * locs[k]
+            base_y = ni.y + uy * locs[k]
             
             offset = val_viz * scale 
             
@@ -163,9 +159,8 @@ class ForceDiagramRenderer:
             # Para extremos, quizás solo el número es más limpio para no solapar "kNm" dos veces
             text_str = f"{val_viz:.2f}" 
             # Calcular posición 
-            rel_pos = locs[idx]
-            base_x = ni.x + ux * (L * rel_pos)
-            base_y = ni.y + uy * (L * rel_pos)
+            base_x = ni.x + ux * locs[idx]
+            base_y = ni.y + uy * locs[idx]
             
             # Offset
             offset_viz = val_viz * scale 

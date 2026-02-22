@@ -153,7 +153,6 @@ class StructureInteractor(QWidget):
         self.current_results = results
         self.refresh_viz() # Se encarga de llamar al renderer si show_deformed es True
 
-        self.refresh_viz() # Se encarga de llamar al renderer si show_deformed es True
 
     def clear_results(self):
         self.current_results = None
