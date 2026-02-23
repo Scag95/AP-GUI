@@ -104,6 +104,10 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 - [x] **Gestión de Resultados**:
     - [x] Concatenar curvas de capacidad de las diferentes fases con ID de ciclo.
     - [x] Mostrar en `PushoverResultsDialog` las curvas compuestas finales coloreadas por fase.
+- [x] **Cálculo de Masas y Topología (Session 20)**:
+    - [x] Implementar caché de topología (`get_floor_data`) en `ProjectManager` para agrupar nodos/elementos por piso con invalidación (`mark_topology_dirty`).
+    - [x] Implementar `get_floor_masses` en `ProjectManager` (100% vigas, 50% columnas superior/inferior, exclusión de bases fijas).
+    - [x] Integrar matriz de masas concentradas en la lógica de `PushoverSolver` para asegurar correcta inercia sísmica ($F_i = M_i \cdot \phi_i$).
 
 ## 🧱 Prioridad 8: Análisis Sección (Moment-Curvature)
 - [x] **Backend**:
@@ -114,7 +118,13 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
     - [x] Gráficos interactivos M-Phi con pyqtgraph, corrección de unidades y ejes dinámicos.
     - [x] Solución de escalas automáticas (Fix: `enableAutoSIPrefix(False)`).
 
-## 🟣 Prioridad 9: Visualización Cinemática (Video)
+## 🧹 Prioridad 9: Refactorización (Clean Architecture)
+- [ ] **Descomponer PushoverSolver (God Class)**:
+    - [ ] Extraer lógica del patrón de cargas y análisis modal (`LoadPatternGenerator`).
+    - [ ] Extraer lógica de detección de fallos y mecanismos (`FailureDetector`).
+    - [ ] Dejar a la clase el único propósito de orquestar el flujo OpenSees.
+
+## 🟣 Prioridad 10: Visualización Cinemática (Video)
 - [ ] **Pushover Deformada Paso a Paso**:
     - [ ] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`).
     - [ ] Implementar Slider en `PushoverResultsDialog`.

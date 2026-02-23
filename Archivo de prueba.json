@@ -137,12 +137,25 @@
     ],
     "loads": [
         {
-            "type": "NodalLoad",
-            "tag": 1,
-            "node_tag": 2,
-            "fx": 10000.0,
-            "fy": 0.0,
-            "mz": 0.0
+            "type": "ElementLoad",
+            "tag": 2,
+            "element_tag": 1,
+            "wx": -2207.25,
+            "wy": -0.0
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 3,
+            "element_tag": 2,
+            "wx": -2207.25,
+            "wy": -0.0
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 4,
+            "element_tag": 3,
+            "wx": -0.0,
+            "wy": -2207.25
         }
     ]
 }

@@ -15,7 +15,7 @@ class PushoverSolver:
         if not element: return 0.0
         
         # Obtener último punto (Top)
-        n_points = getattr(element, 'integration_points', 5)
+        n_points = getattr(element, 'integration_points')
         
         # Leer fuerza en la sección n_points
         forces = ops.eleResponse(ele_tag, 'section', n_points, 'force')
@@ -26,6 +26,7 @@ class PushoverSolver:
     def run_modal_analysis(self, n_modes):
         #Cargamos los nodos del proyecto.
         nodes = self.manager.get_all_nodes()
+        floor_masses = self.manager.get_floor_masses()
         if self.builder.debug_file: self.builder.debug_file.write("\n# --- Analysis Modal ---\n")
         lambdas = ops.eigen(n_modes)
         self.builder.log_command('eigen', n_modes)
@@ -59,7 +60,7 @@ class PushoverSolver:
                 floors[node.y] = [node]
 
 
-        #2. Ordenamos lo spiso y seleccionamos un nodo Master
+        #2. Ordenamos los piso y seleccionamos un nodo Master
         sorted_floors = sorted(floors.keys())
         modal_data = []     #Lista de tuplas (node_tag, phi_x, phi_y, y_coord)
         for y in sorted_floors:
@@ -81,48 +82,32 @@ class PushoverSolver:
             print(f"[Modal] Floor Y = {y:.2f} -> Master node {master_node.tag}, disp = {phi_x:.4f}")
 
         if modal_data:
-            roof_phi = modal_data[-1]['phi_x']
-
-            if abs(roof_phi) < 1e-9: roof_phi = 1.0
 
             for item in modal_data:
-                item['phi_norm'] = item['phi_x']/roof_phi
-                print(f" -> norm Phi: {item['phi_norm']:.4f}")
+                item['mass'] = floor_masses.get(item['y'])
+                #Calculamos la fuerzas de cada piso
+                item['f_i'] = item['mass'] * item['phi_x']
+            
+            #Tomamos la fuerza de la ultima planta
+            roof_f = modal_data[-1]['f_i']
+            if abs(roof_f) <  1e-9: print("División por 0. Revisar run_modal_analisys")
 
-        return periods, modal_data
+
+            #Calculamos el vector de fuerzas normalizado
+            for item in modal_data:
+                item['f_norm'] = item['f_i']/roof_f
+                print(f"Phi_x: {item['phi_x']:.4f}, Masa: {item['mass']:.2f}, Fi: {item['f_norm']:.2f}")
+
+            return periods, modal_data
     
     def _get_colums_by_floor(self):
         columns_by_floor = {}
-        tolerance = 0.05
+        floor_data = self.manager.get_floor_data()
 
-        elements = self.manager.get_all_elements()
-
-        for ele in elements:
-            #Obtener nodos
-            ni = self.manager.get_node(ele.node_i)
-            nj = self.manager.get_node(ele.node_j)
-
-            if not ni or not nj: continue
-
-
-            dy = abs(nj.y - ni.y)
-            dx = abs(nj.x - ni.x)
-
-            if dy > tolerance and dx < tolerance: # Es vertical
-                # Identificar 'techo' de este elemento (el Y mayor)
-                y_ceil = max(ni.y, nj.y)
-                
-                # Agrupar por esa altura
-                found_key = None
-                for key in columns_by_floor.keys():
-                    if abs(key - y_ceil) < tolerance:
-                        found_key = key
-                        break
-                
-                if found_key is not None:
-                    columns_by_floor[found_key].append(ele.tag)
-                else:
-                    columns_by_floor[y_ceil] = [ele.tag]
+        for y, data in floor_data.items():
+            if data["columns"]:
+                # Aquí asignamos la lista al diccionario bajo la clave 'y'
+                columns_by_floor[y] = [col.tag for col in data["columns"]]     
                     
         return columns_by_floor
 
@@ -234,7 +219,7 @@ class PushoverSolver:
             
             if load_pattern_type == "Modal":
                 for item in modal_data:
-                    f_val = item['phi_norm']
+                    f_val = item['f_norm']
                     node_tag = item['tag']
                     self.builder.log_command('load', node_tag, f_val, 0.0, 0.0)
                     print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
@@ -416,7 +401,7 @@ class PushoverSolver:
         for item in modal_data:
             node_tag = item['tag']
             if load_pattern_type == "Modal":
-                initial_load_vector[node_tag] = item['phi_norm']
+                initial_load_vector[node_tag] = item['f_norm']
             else:
                 initial_load_vector[node_tag] = 1.0
         
