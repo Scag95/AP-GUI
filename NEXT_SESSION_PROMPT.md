@@ -202,18 +202,44 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
    - Ensured dynamic label updates for Plot Axes based on current user units (e.g., kNm, Ton-m).
    - Validated data reading logic against OpenSees `ForceBeamColumn` output format (P, M, V / eps, kappa).
 
+### Session 20 (2026-02-22) - Topology Caching & Mass Matrix (COMPLETED)
+1. **Topology Caching**:
+    - Implemented robust `_floors_cache` in `ProjectManager` relying on `y` coordinates and a 1mm tolerance.
+    - Added `mark_topology_dirty()` invalidation logic triggered across CRUD and UI Property forms (`NodeForms`, `ElementForm`).
+2. **Mass Matrix Distribution**:
+    - Architected `get_floor_masses()` in `ProjectManager` to compute dynamic lumped masses.
+    - Beams distribute 100% mass to their current floor.
+    - Columns distribute 50% to upper floor and 50% to lower floor.
+    - Implemented absolute fixity detection (Base nodes) to accurately discard non-reactive terrestrial mass (y=0).
+
+### Session 21 (2026-02-23) - Mass Matrix Integration & Debugging (COMPLETED)
+1. **Pushover Solver Integration**:
+    - Replaced hardcoded forces with actual inertial forces `F_i = M_i * phi_i` using `floor_masses` in `run_modal_analysis`.
+    - Adapted Uniform load pattern to apply forces proportional strictly to mass.
+    - Updated `run_adaptive_pushover` to use the pre-calculated `F_i` vector gracefully.
+2. **Debugging and Optimization**:
+    - Fixed a critical logical bug where `ProjectManager.mark_topology_dirty()` was out of class scope due to an indentation error.
+    - Refactored `_get_colums_by_floor` to leverage `Manager` topology cache directly, preventing code duplication.
+
 ## Pending Tasks (Priority Order)
-### 1. Deformation Animation (Video)
+### 1. Refactor PushoverSolver (Clean Architecture)
+-   **Objective**: Dismantle the `PushoverSolver` God-Class before adding new features.
+-   **Implementation**:
+    -   Extract Modal Analysis and Load Pattern generation into designated classes or helpers (`LoadPatternGenerator`).
+    -   Separate step execution from failure detection logic (`FailureDetector`).
+    -   Prepare architecture to easily append complete displacement history tracking for the upcoming Animation task.
+
+### 2. Deformation Animation (Video)
 -   **Objective**: Visualize the structure's deformation step-by-step during Pushover via a Slider.
 -   **Implementation**:
-    -   Capture full node displacement history in `PushoverSolver`.
+    -   Capture full node displacement history in the refactored solver.
     -   Add Slider in `PushoverResultsDialog`.
     -   Update `StructureInteractor` to render arbitrary deformation states without re-scaling.
 
-### 2. Advanced Failure Logic
+### 3. Advanced Failure Logic
 -   **Refinement**: Tune detection parameters (Sensitivity, Drift Limits) on more complex models.
 -   **Material Degradation**: Implement `MinMax` wrapper to `Steel01/Concrete01` to simulate true rupture (force drop).
 
 ## Technical Context for Next Session
--   **Current State**: Moment-Curvature plotting is fully functional, robust to unit changes, and visualizes multiple sections correctly.
--   **Next Steps**: Proceed to Priority 9: Visualización Cinemática (Video) - Implementing step-by-step deformation history slider.
+-   **Current State**: Mass matrices and inertial force loading are fully operational. However, `PushoverSolver` is currently carrying too many responsibilities (God Class).
+-   **Next Steps**: First, refactor `pushover_solver.py` into smaller, cohesive classes (Single Responsibility Principle). Then, proceed with capturing the cinematic deformation history.

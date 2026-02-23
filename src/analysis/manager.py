@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
+import math
 
 class ProjectManager(QObject):
     _instance = None
@@ -189,11 +190,67 @@ class ProjectManager(QObject):
 
         return self._floors_cache
 
-        def mark_topology_dirty(self):
-            """Avisa al manager que las coordenadas o elementos han cambiado"""
-            self._topology_dirty = True
+    def mark_topology_dirty(self):
+        """Avisa al manager que las coordenadas o elementos han cambiado"""
+        self._topology_dirty = True
 
+## Masas ##
+    def get_floor_masses(self):
+        """Calcula las masas concentradas horizontal para cada planta"""
+        floor_masses = {}
+        floor_data = self.get_floor_data()
 
+        #1. Obtener la lista ordenadas de alturas Y
+        sorted_ys = list(floor_data.keys())
+
+        #2. Iterrar por cada piso para rellenar las masas
+        for i, y_floor in enumerate(sorted_ys):
+            total_mass_x = 0.0
+            elements_dict = floor_data[y_floor]
+
+            # Masa de las vigas
+            for beam in elements_dict.get("beams",[]):
+                ni = self.get_node(beam.node_i)
+                nj = self.get_node(beam.node_j)
+                if not ni or not nj: continue
+
+                L = ((nj.x - ni.x)**2 + (nj.y - ni.y)**2)**0.5
+                rho = getattr(beam, 'mass_density')
+                total_mass_x += (L * rho)
+
+            #Masa de las columnas
+            for col in elements_dict.get("columns", []):
+                ni = self.get_node(col.node_i)
+                nj = self.get_node(col.node_j)
+                if not ni or not nj: continue
+
+                l_col = abs(nj.y - ni.y)
+                rho_col = getattr(col, 'mass_density')
+                mass_col = l_col * rho_col
+
+                #mitad para el piso actual
+                total_mass_x += (mass_col/2.0)
+
+                if i > 0:
+                    y_prev = sorted_ys[i-1]
+
+                    is_base = False
+                    for node in floor_data[y_prev]["nodes"]:
+                        if node.fixity[0] == 1 or node.fixity[1] == 1:
+                            is_base = True
+                            break
+                    
+                    if not is_base:
+                        if y_prev not in floor_masses: 
+                            floor_masses[y_prev] = 0.0
+                        floor_masses[y_prev] += (mass_col/2.0)
+
+            #Guardamos la masa calcula hasta ahora para este y_floor
+            if y_floor not in floor_masses:
+                floor_masses[y_floor] = 0.0
+            floor_masses[y_floor] += total_mass_x
+            
+        return floor_masses
 
 ## Cargas (Loads) ##
     def add_load(self, load):
