@@ -221,25 +221,28 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     - Fixed a critical logical bug where `ProjectManager.mark_topology_dirty()` was out of class scope due to an indentation error.
     - Refactored `_get_colums_by_floor` to leverage `Manager` topology cache directly, preventing code duplication.
 
+### Session 22 (2026-02-24) - Refactoring PushoverSolver (COMPLETED)
+1. **Clean Architecture (God Class Dismantled)**:
+    - Extracted `detect_failed_floors` into a dedicated `FailureDetector`.
+    - Extracted `run_modal_analysis` and load distribution logic into `LoadPushoverGenerator`.
+    - `PushoverSolver` is now strictly an Orchestrator.
+2. **Loop Optimization**:
+    - Pre-computed static geometric data (node tags, sections maps, heights) into a `floor_meta` dictionary cache *before* the simulation loops.
+    - Completely removed slow Python loops involving the `ProjectManager` inside `run_pushover()`. Calling `ops.eleResponse` directly.
+
 ## Pending Tasks (Priority Order)
-### 1. Refactor PushoverSolver (Clean Architecture)
--   **Objective**: Dismantle the `PushoverSolver` God-Class before adding new features.
--   **Implementation**:
-    -   Extract Modal Analysis and Load Pattern generation into designated classes or helpers (`LoadPatternGenerator`).
-    -   Separate step execution from failure detection logic (`FailureDetector`).
-    -   Prepare architecture to easily append complete displacement history tracking for the upcoming Animation task.
 
-### 2. Deformation Animation (Video)
+### 1. Deformation Animation (Video) - [PRIORITY]
 -   **Objective**: Visualize the structure's deformation step-by-step during Pushover via a Slider.
--   **Implementation**:
-    -   Capture full node displacement history in the refactored solver.
-    -   Add Slider in `PushoverResultsDialog`.
-    -   Update `StructureInteractor` to render arbitrary deformation states without re-scaling.
+-   **Implementation Plan**:
+    1.  **Backend**: Capture full node displacement history in the refactored `PushoverSolver.run_pushover`. Store as `{'tag': [dx, dy, rz]}`.
+    2.  **UI**: Add a `QSlider` in `PushoverResultsDialog`. Emit a `step_visualization_requested(dict)` signal.
+    3.  **Visualization**: Connect signal to `StructureInteractor.draw_kinematic_step()`. Use Hermite interpolation. *Crucial:* Disable `ScaleManager` auto-scaling mid-animation so the building doesn't "jump" around.
 
-### 3. Advanced Failure Logic
+### 2. Advanced Failure Logic & Material Degradation
 -   **Refinement**: Tune detection parameters (Sensitivity, Drift Limits) on more complex models.
--   **Material Degradation**: Implement `MinMax` wrapper to `Steel01/Concrete01` to simulate true rupture (force drop).
+-   **Material Degradation**: Implement `MinMax` wrapper to `Steel01/Concrete01` to simulate true rupture (force drop), preventing infinite stiffness on failure.
 
 ## Technical Context for Next Session
--   **Current State**: Mass matrices and inertial force loading are fully operational. However, `PushoverSolver` is currently carrying too many responsibilities (God Class).
--   **Next Steps**: First, refactor `pushover_solver.py` into smaller, cohesive classes (Single Responsibility Principle). Then, proceed with capturing the cinematic deformation history.
+-   **Current State**: The `PushoverSolver` is clean and fast. Everything is ready to record the steps.
+-   **Next Steps**: First thing next session, we implement the dictionary history capturing loop inside `run_pushover` and pass it to the new QSlider in the Results Dialog.

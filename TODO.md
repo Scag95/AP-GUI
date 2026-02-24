@@ -119,16 +119,18 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
     - [x] Solución de escalas automáticas (Fix: `enableAutoSIPrefix(False)`).
 
 ## 🧹 Prioridad 9: Refactorización (Clean Architecture)
-- [ ] **Descomponer PushoverSolver (God Class)**:
-    - [ ] Extraer lógica del patrón de cargas y análisis modal (`LoadPatternGenerator`).
-    - [ ] Extraer lógica de detección de fallos y mecanismos (`FailureDetector`).
-    - [ ] Dejar a la clase el único propósito de orquestar el flujo OpenSees.
+- [x] **Descomponer PushoverSolver (God Class)**:
+    - [x] Extraer lógica del patrón de cargas y análisis modal (`LoadPushoverGenerator`).
+    - [x] Extraer lógica de detección de fallos y mecanismos (`FailureDetector`).
+    - [x] Extraer cálculos topológicos redundantes (Optimizando llamadas repetitivas al Manager por un caché `floor_meta` super rápido).
+    - [x] Dejar a la clase el único propósito de orquestar el flujo OpenSees.
 
 ## 🟣 Prioridad 10: Visualización Cinemática (Video)
 - [ ] **Pushover Deformada Paso a Paso**:
-    - [ ] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`).
-    - [ ] Implementar Slider en `PushoverResultsDialog`.
-    - [ ] Conectar con `StructureInteractor` para visualizar estados arbitrarios sin re-escalar.
+    - [ ] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`). Para ello, pre-computaremos los diccionarios y leeremos `ops.nodeDisp` para `Dx, Dy, Rz`.
+    - [ ] Implementar Slider en `PushoverResultsDialog` manejando un rango desde el paso `0` al paso final, emitiendo una señal `step_visualization_requested`.
+    - [ ] Conectar la señal con `StructureInteractor` (`draw_kinematic_step`) para visualizar el snapshot. 
+    - [ ] Bloquear escalas automáticas/ScaleManager durante la visualización dinámica para no tener saltos de dibujo abruptos.
 
 ## 🧱 Prioridad 10: Materiales con Degradación (MinMax)
 - [ ] **Backend**:
