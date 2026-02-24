@@ -1,12 +1,11 @@
 __pycache__/
 *.py[cod]
 *.so
-
 .ipynb_checkpoints/
-
 .venv/
 env/
 venv/
 .agent/
 .idea/
 pushover_data/
+.vscode/

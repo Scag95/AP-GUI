@@ -8,19 +8,38 @@ class PushoverSolver:
     def __init__(self, builder):
         self.builder = builder
         self.manager = ProjectManager.instance()
+        self._element_top_section_cache = {}
 
-    def _get_element_force(self, ele_tag):
-        """Helper para obtener el cortante en Top (última sección) de manera dinámica."""
+    def _get_element_force(self, ele_tag, absolute=False):
+        """Retorna Vy local en el extremo geometrico superior del elemento."""
         element = self.manager.get_element(ele_tag)
-        if not element: return 0.0
-        
-        # Obtener último punto (Top)
-        n_points = getattr(element, 'integration_points')
-        
-        # Leer fuerza en la sección n_points
-        forces = ops.eleResponse(ele_tag, 'section', n_points, 'force')
+        if not element or not isinstance(element, ForceBeamColumn):
+            return 0.0
+
+        section_idx = self._element_top_section_cache.get(ele_tag)
+        if section_idx is None:
+            n_points = int(getattr(element, 'integration_points', 0) or 0)
+            if n_points < 1:
+                return 0.0
+
+            node_i = self.manager.get_node(element.node_i)
+            node_j = self.manager.get_node(element.node_j)
+            if node_i is None or node_j is None:
+                return 0.0
+
+            # Lobatto: section 1 ~ nodo i, section n_points ~ nodo j.
+            section_idx = n_points if node_j.y >= node_i.y else 1
+            self._element_top_section_cache[ele_tag] = section_idx
+
+        try:
+            forces = ops.eleResponse(ele_tag, 'section', section_idx, 'force')
+        except Exception as exc:
+            print(f"[Pushover] Warning: no se pudo leer force para ele {ele_tag}: {exc}")
+            return 0.0
+
         if forces and len(forces) >= 3:
-            return forces[2] # Cortante local (Vy?)
+            vy_local = float(forces[2])
+            return abs(vy_local) if absolute else vy_local
         return 0.0
 
     def run_modal_analysis(self, n_modes):
@@ -134,60 +153,6 @@ class PushoverSolver:
                 # Recorder de Deformaciones (eps, kappa) en todas las secciones
                 ops.recorder('Element', '-file', f'{output_dir}/ele_{ele.tag}_deform.out', 
                              '-time', '-ele', ele.tag, 'section', 'deformation')
-
-    def detect_failed_floors(self, results):
-        """
-        Analiza las curvas V-D de cada piso para detectar mecanismos.
-        Criterio: Pendiente tangente < 1% Rigidez Inicial + Deriva > 0.5%
-        """
-        failed_floors = []
-        
-        for y, data in results["floors"].items():
-            disps = data["disp"] # Drift absoluto (m)
-            shears = data["shear"]
-            h_floor = data.get("H") # Altura del piso (default 3m)
-            
-            if len(disps) < 5: continue
-            
-            # 1. Calcular Rigidez Inicial (K_ini)
-            # Promedio de los primeros 3 pasos (o pasos iniciales)
-            dq = disps[2] - disps[0]
-            if abs(dq) > 1e-9:
-                k_ini = (shears[2] - shears[0]) / dq
-            else:
-                k_ini = 1.0e9 # Muy rígido
-            
-            # 2. Analizar últimos pasos (Pendiente Tangente)
-            # Usamos regresión lineal simple de los últimos 3 puntos
-            d_last = disps[-3:]
-            v_last = shears[-3:]
-            current_drift = d_last[-1]
-            
-            # Pendiente local (K_tan)
-            try:
-                k_tan = (v_last[-1] - v_last[0]) / (d_last[-1] - d_last[0])
-            except ZeroDivisionError:
-                k_tan = 0.0 # Vertical
-            
-            # 3. Evaluar Criterios
-            # A) Deriva Relativa Significativa (> 0.5%)
-            drift_ratio = abs(current_drift) / h_floor
-            is_significant_drift = drift_ratio > 0.005 # 0.5%
-            
-            # B) Pendiente plana (o negativa) -> Mecanismo
-            # Si K_tan cae por debajo del 1% de K_ini
-            sensitivity = 0.001 
-            is_flat = k_tan < (sensitivity * k_ini)
-            
-            # C) Safety Net (Deriva excesiva > 5%)
-            is_huge_drift = drift_ratio > 0.08
-
-            if (is_significant_drift and is_flat) or is_huge_drift:
-                print(f"[Adaptive] Piso Y={y:.2f} DETECTADO FALLO (Drift Ratio={drift_ratio*100:.2f}%, K_tan/K_ini={k_tan/k_ini:.4f})")
-                failed_floors.append(y)
-                
-        return failed_floors
-
 
     def run_pushover(self, control_node_tag, max_disp, load_pattern_type, n_steps = 100, pattern_tag = 2,
                      initial_shears_override=None, fixed_load_vector=None, setup_recorders=True):
