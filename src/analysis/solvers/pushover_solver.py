@@ -15,41 +15,7 @@ class PushoverSolver:
         self.failure_detector = FailureDetector()
         self.load_pushover = LoadPushoverGenerator(self.builder)
         
-
-    def _get_element_force(self, ele_tag, absolute=False):
-        """Retorna Vy local en el extremo geometrico superior del elemento."""
-        element = self.manager.get_element(ele_tag)
-        if not element or not isinstance(element, ForceBeamColumn):
-            return 0.0
-
-        section_idx = self._element_top_section_cache.get(ele_tag)
-        if section_idx is None:
-            n_points = int(getattr(element, 'integration_points', 0) or 0)
-            if n_points < 1:
-                return 0.0
-
-            node_i = self.manager.get_node(element.node_i)
-            node_j = self.manager.get_node(element.node_j)
-            if node_i is None or node_j is None:
-                return 0.0
-
-            # Lobatto: section 1 ~ nodo i, section n_points ~ nodo j.
-            section_idx = n_points if node_j.y >= node_i.y else 1
-            self._element_top_section_cache[ele_tag] = section_idx
-
-        try:
-            forces = ops.eleResponse(ele_tag, 'section', section_idx, 'force')
-        except Exception as exc:
-            print(f"[Pushover] Warning: no se pudo leer force para ele {ele_tag}: {exc}")
-            return 0.0
-
-        if forces and len(forces) >= 3:
-            vy_local = float(forces[2])
-            return abs(vy_local) if absolute else vy_local
-        return 0.0
-
-
-    
+  
     def _get_colums_by_floor(self):
         columns_by_floor = {}
         floor_data = self.manager.get_floor_data()
@@ -107,7 +73,7 @@ class PushoverSolver:
             # Usar vector pre-calculado (consistente para Adaptive)
             for node_tag, f_val in fixed_load_vector.items():
                 self.builder.log_command('load', node_tag, f_val, 0.0, 0.0)
-                print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val} (Fixed)")
+                print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
         else:
             # Calcular en el momento (Standard)
             periods, modal_data = self.load_pushover.run_modal_analysis(1)
@@ -126,9 +92,6 @@ class PushoverSolver:
         #5. Identificar columnas por piso (Pre-Proceso) 
         floor_cols_map = self._get_colums_by_floor()
         sorted_floor_y = sorted(floor_cols_map.keys())
-
-        #6. Configurar Análisis Pushover
-        incr_disp = max_disp/n_steps
 
         # Estructura de resultados
         results = {
