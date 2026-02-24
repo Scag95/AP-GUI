@@ -3,12 +3,18 @@ import os
 import math
 from src.analysis.manager import ProjectManager
 from src.analysis.element import ForceBeamColumn
+from src.analysis.solvers.failure_detector import FailureDetector
+from src.analysis.solvers.load_generator import LoadPushoverGenerator
+
 
 class PushoverSolver:
     def __init__(self, builder):
         self.builder = builder
         self.manager = ProjectManager.instance()
         self._element_top_section_cache = {}
+        self.failure_detector = FailureDetector()
+        self.load_pushover = LoadPushoverGenerator(self.builder)
+        
 
     def _get_element_force(self, ele_tag, absolute=False):
         """Retorna Vy local en el extremo geometrico superior del elemento."""
@@ -42,82 +48,7 @@ class PushoverSolver:
             return abs(vy_local) if absolute else vy_local
         return 0.0
 
-    def run_modal_analysis(self, n_modes):
-        #Cargamos los nodos del proyecto.
-        nodes = self.manager.get_all_nodes()
-        floor_masses = self.manager.get_floor_masses()
-        if self.builder.debug_file: self.builder.debug_file.write("\n# --- Analysis Modal ---\n")
-        lambdas = ops.eigen(n_modes)
-        self.builder.log_command('eigen', n_modes)
 
-        periods = []
-        count = 0
-        for lam in lambdas:
-            omega = math.sqrt(lam)
-            T = 2*math.pi / omega
-            periods.append(T)
-            count += 1
-            print(f"[Modal] Modo {count} T = {T:.4f}s")
-
-
-        #1. Agrumaos los nodos por planta.
-        floors = {}
-        tolerance = 0.01
-
-        for node in nodes:
-            if node.fixity[0] == 1: continue
-            
-            found_floor_key = None
-            for y_key in floors.keys():
-                if abs(node.y - y_key) < tolerance:
-                    found_floor_key = y_key
-                    break
-                
-            if found_floor_key is not None:
-                floors[found_floor_key].append(node)
-            else:
-                floors[node.y] = [node]
-
-
-        #2. Ordenamos los piso y seleccionamos un nodo Master
-        sorted_floors = sorted(floors.keys())
-        modal_data = []     #Lista de tuplas (node_tag, phi_x, phi_y, y_coord)
-        for y in sorted_floors:
-            floor_nodes = floors[y]
-            #Seleccionamos el nodo con menos X (Izquierda)
-            master_node = min(floor_nodes, key = lambda n: n.x)
-
-            #Obtener vector propio(Mode 1)
-            phi_x = ops.nodeEigenvector(master_node.tag, 1,1)
-            phi_y = ops.nodeEigenvector(master_node.tag, 1,2)
-            
-            modal_data.append({
-                'tag':master_node.tag,
-                'y': y,
-                'phi_x': phi_x,
-                'phi_y': phi_y
-            })
-
-            print(f"[Modal] Floor Y = {y:.2f} -> Master node {master_node.tag}, disp = {phi_x:.4f}")
-
-        if modal_data:
-
-            for item in modal_data:
-                item['mass'] = floor_masses.get(item['y'])
-                #Calculamos la fuerzas de cada piso
-                item['f_i'] = item['mass'] * item['phi_x']
-            
-            #Tomamos la fuerza de la ultima planta
-            roof_f = modal_data[-1]['f_i']
-            if abs(roof_f) <  1e-9: print("División por 0. Revisar run_modal_analisys")
-
-
-            #Calculamos el vector de fuerzas normalizado
-            for item in modal_data:
-                item['f_norm'] = item['f_i']/roof_f
-                print(f"Phi_x: {item['phi_x']:.4f}, Masa: {item['mass']:.2f}, Fi: {item['f_norm']:.2f}")
-
-            return periods, modal_data
     
     def _get_colums_by_floor(self):
         columns_by_floor = {}
@@ -164,15 +95,14 @@ class PushoverSolver:
         
         if self.builder.debug_file: self.builder.debug_file.write(f"\n# --- PUSHOVER ANALYSIS (Node {control_node_tag}, Dmax = {max_disp}, Distribución {load_pattern_type})---\n")
 
-        #4. Definir patrónde carga lateral (Pushover)
+        #4. Definir patrón de carga lateral (Pushover)
         ts_tag_push = pattern_tag
         pattern_tag_push = pattern_tag
         
         # Crear TimeSeries lineal única para este patrón
         self.builder.log_command('timeSeries', 'Linear', ts_tag_push)
         self.builder.log_command('pattern', 'Plain', pattern_tag_push, ts_tag_push)
-
-            
+  
         if fixed_load_vector:
             # Usar vector pre-calculado (consistente para Adaptive)
             for node_tag, f_val in fixed_load_vector.items():
@@ -180,7 +110,7 @@ class PushoverSolver:
                 print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val} (Fixed)")
         else:
             # Calcular en el momento (Standard)
-            periods, modal_data = self.run_modal_analysis(1)
+            periods, modal_data = self.load_pushover.run_modal_analysis(1)
             
             if load_pattern_type == "Modal":
                 for item in modal_data:
@@ -232,6 +162,35 @@ class PushoverSolver:
         nodes = self.manager.get_all_nodes()
         base_nodes = [n.tag for n in nodes if n.fixity[0] == 1]
 
+        floor_meta = {}
+        for y in sorted_floor_y:
+            cols = floor_cols_map[y]
+            if not cols:
+                continue
+
+            ref_col_tag = cols[0]
+            col_obj = self.manager.get_element(ref_col_tag)
+            node_i = self.manager.get_node(col_obj.node_i)
+            node_j = self.manager.get_node(col_obj.node_j)
+            h_floor = abs(node_j.y - node_i.y)
+
+            #Caché de section_idx para cada columna del piso
+
+            col_section_map = {}
+            for ele_tag in cols:
+                element = self.manager.get_element(ele_tag)
+                n_points = int(getattr(element, 'integration_points', 0) or 0)
+
+                section_idx = n_points if node_j.y >= node_i.y else 1
+                col_section_map[ele_tag] = section_idx
+            
+            floor_meta[y] = {
+                "cols": cols,
+                "node_bot_tag": col_obj.node_i,
+                "node_top_tag": col_obj.node_j,
+                "h_floor": h_floor,
+                "cols_section_map": col_section_map
+            }
 
         initial_story_shears = {}
         
@@ -242,10 +201,11 @@ class PushoverSolver:
             ops.reactions()
             for y in sorted_floor_y:
                 shear_gravity = 0.0
-                cols = floor_cols_map[y]
-                for ele_tag in cols:
-                    # USAMOS HELPER DINÁMICO
-                    shear_gravity += self._get_element_force(ele_tag)
+                
+                for ele_tag, sec_idx in floor_meta[y]["cols_section_map"].items():
+                    forces = ops.eleResponse(ele_tag, 'section', sec_idx, 'force')
+                    if forces and len(forces) >= 3:
+                        shear_gravity += float(forces[2])
                     
                 initial_story_shears[y] = shear_gravity
                    
@@ -272,29 +232,25 @@ class PushoverSolver:
             results["steps"].append(i)
 
             for y in sorted_floor_y:
+                meta = floor_meta[y]
                 shear_total = 0.0
-                cols = floor_cols_map[y]
-                for ele_tag in cols:
-                     # USAMOS HELPER DINÁMICO
-                    shear_total += self._get_element_force(ele_tag)
+                
+                # 1. Fuerza local usando caché de seccion
+                for ele_tag, sec_idx in meta["cols_section_map"].items():
+                    forces = ops.eleResponse(ele_tag, 'section', sec_idx, 'force')
+                    if forces and len(forces) >= 3:
+                        shear_total += float(forces[2])
 
                 shear_net = (shear_total - initial_story_shears[y])
                 
-                # Deriva Relativa
-                ref_col_tag = cols[0]
-                col_obj = self.manager.get_element(ref_col_tag)
-                u_top = ops.nodeDisp(col_obj.node_j, 1) # Assumes node_j is top
-                u_bot = ops.nodeDisp(col_obj.node_i, 1)
+                # 2. Deriva Relativa directa con Tags de la caché
+                u_top = ops.nodeDisp(meta["node_top_tag"], 1)
+                u_bot = ops.nodeDisp(meta["node_bot_tag"], 1)
                 drift = u_top - u_bot
-                
-                # Obtener altura real (H)
-                node_j = self.manager.get_node(col_obj.node_j)
-                node_i = self.manager.get_node(col_obj.node_i)
-                h_floor = abs(node_j.y - node_i.y)
         
                 results["floors"][y]["disp"].append(drift)
                 results["floors"][y]["shear"].append(shear_net)
-                results["floors"][y]["H"] = h_floor
+                results["floors"][y]["H"] = meta["h_floor"]
                 
         return results
     
@@ -361,7 +317,7 @@ class PushoverSolver:
         initial_load_vector = {}
         print("[Adaptive] Calculando forma modal inicial...")
         # Ejecutamos modal una vez para obtener distribución
-        periods, modal_data = self.run_modal_analysis(1)
+        periods, modal_data = self.load_pushover.run_modal_analysis(1)
         
         for item in modal_data:
             node_tag = item['tag']
@@ -391,7 +347,7 @@ class PushoverSolver:
             #unir resultados
             self._merge_results(consolidated, results, i)
 
-            new_failures = self.detect_failed_floors(results)
+            new_failures = self.failure_detector.analyze(results)
             has_new_freeze = False
             for y_fail in new_failures:
                 if y_fail not in frozen_floors:

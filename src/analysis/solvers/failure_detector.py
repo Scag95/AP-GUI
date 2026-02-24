@@ -1,4 +1,4 @@
-class FailureDectector:
+class FailureDetector:
     """
     Clase responsable exclusivamente de analizar las curvas de respuesta (Pushover)
     para detectar la formación de mecanismos (fallo) en los diferentes pisos.
