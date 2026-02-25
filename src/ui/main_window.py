@@ -1,5 +1,6 @@
-from PyQt6.QtWidgets import QMainWindow, QDockWidget
+from PyQt6.QtWidgets import QMainWindow, QDockWidget, QMdiArea, QMdiSubWindow
 from PyQt6.QtCore import Qt 
+from PyQt6.QtGui import QAction
 from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
 from src.ui.menus.assign_menu import AssignMenu
@@ -38,14 +39,19 @@ class MainWindow(QMainWindow):
         bar.addMenu(self.analyze_menu) 
         
         self.view_menu = bar.addMenu("Ver")
+        
+        self.act_new_view = QAction("Nueva Vista 3D", self)
+        self.act_new_view.triggered.connect(lambda: self.add_new_viewport())
+        self.view_menu.addAction(self.act_new_view)
+        self.view_menu.addSeparator()
 
         # --- ANIMATION TOOLBAR ---
         self.anim_toolbar = AnimationToolbar(self)
         self.addToolBar(self.anim_toolbar)
         self.anim_toolbar.hide() # Oculta por defecto hasta que haya un resultado de Pushover
 
-        self.viz_widget = StructureInteractor()
-        self.setCentralWidget(self.viz_widget)
+        self.mdi_area = QMdiArea()
+        self.setCentralWidget(self.mdi_area)
 
         #Panel de propiedades
         self.props_panel = PropertiesPanel(self)
@@ -56,10 +62,8 @@ class MainWindow(QMainWindow):
         view_props_action.setText("Panel de Propiedades")
         self.view_menu.addAction(view_props_action)
 
-        #Conexiones Interactor -> Panel
-        self.viz_widget.nodeSelected.connect(self.props_panel.show_node)
-        self.viz_widget.elementSelected.connect(self.props_panel.show_element)
-        self.viz_widget.selectionCleared.connect(self.props_panel.clear_selection)
+        # Primer Viewport Inicial
+        self.add_new_viewport("Vista General")
 
         # Conexiones Panel -> Manager (Refrescar gráfico)
         self.props_panel.dataChanged.connect(self.refresh_project)
@@ -106,24 +110,62 @@ class MainWindow(QMainWindow):
     def refresh_project(self):
         ProjectManager.instance().dataChanged.emit()
 
-    def show_deformation(self, results, scale_factor=None):
-        self.current_results = results
-        self.scales_dock.show() 
-        self.scales_dock.raise_() # Asegura que quede por encima de otros docks
-        self.refresh_viz() 
+    @property
+    def _viewports(self):
+        return [sub.widget() for sub in self.mdi_area.subWindowList() if isinstance(sub.widget(), StructureInteractor)]
+
+    @property
+    def viz_widget(self):
+        """Devuelve el interactor activo para retrocompatibilidad con los menus"""
+        active_sub = self.mdi_area.activeSubWindow()
+        if active_sub and isinstance(active_sub.widget(), StructureInteractor):
+            return active_sub.widget()
+        vps = self._viewports
+        return vps[-1] if vps else None
+
+    def add_new_viewport(self, title=None):
+        vps_count = len(self._viewports)
+        if not title:
+            title = f"Vista 3D - {vps_count + 1}"
+        interactor = StructureInteractor()
+        sub_window = QMdiSubWindow()
+        sub_window.setWidget(interactor)
+        sub_window.setWindowTitle(title)
+        
+        # Conexiones Interactor -> Panel
+        interactor.nodeSelected.connect(self.props_panel.show_node)
+        interactor.elementSelected.connect(self.props_panel.show_element)
+        interactor.selectionCleared.connect(self.props_panel.clear_selection)
+        
+        self.mdi_area.addSubWindow(sub_window)
+        sub_window.show()
+        
+        # Si ya hay un result de gravedad guardado, pasarlo
+        if ProjectManager.instance().gravity_results:
+             interactor.show_deformation(ProjectManager.instance().gravity_results)
+             
+        self.mdi_area.tileSubWindows()
+        return interactor
+
+    def broadcast_results(self, results):
+        """Envía resultados a todas las ventanas abiertas y lanza panel de escalas"""
+        self.scales_dock.show()
+        self.scales_dock.raise_()
+        for viz in self._viewports:
+            viz.show_deformation(results)
 
     def toggle_animation_toolbar(self, show=True):
         if show:
-            # Intentar cargar antes de mostrar
             if self.anim_toolbar.load_pushover_results():
                 self.anim_toolbar.show()
-                # Opcional: Asegurar que el interactor esté en modo showing_deformed
-                self.viz_widget.set_visibility("deformed", True)
+                for viz in self._viewports:
+                    viz.set_visibility("deformed", True)
             else:
                 print("[UI] No hay resultados de Pushover para animar.")
         else:
             self.anim_toolbar.hide()
-            self.viz_widget.renderer_deform.clear(self.viz_widget.plot_widget)
+            for viz in self._viewports:
+                viz.renderer_deform.clear(viz.plot_widget)
 
     def execute_command(self, cmd):
         # 1. Procesar lógica
@@ -137,17 +179,19 @@ class MainWindow(QMainWindow):
         if action:
             act_type = action.get("action")
             value = action.get("value")
+            viz = self.viz_widget
+            if not viz: return
             if act_type == "toggle_node_labels":
-                self.viz_widget.toggle_node_labels(value)
+                viz.toggle_node_labels(value)
             elif act_type == "toggle_element_labels":
-                self.viz_widget.toggle_element_labels(value)
+                viz.toggle_element_labels(value)
             elif act_type == "set_visibility":
-                self.viz_widget.set_visibility(action.get("type"), value)
+                viz.set_visibility(action.get("type"), value)
             elif act_type == "set_diagram_type":
-                self.viz_widget.show_force_diagrams(value) 
-                self.viz_widget.set_visibility("diagrams", True)
+                viz.show_force_diagrams(value) 
+                viz.set_visibility("diagrams", True)
             elif act_type == "set_load_visibility":
-                self.viz_widget.set_load_visibility(action.get("type"), value)
+                viz.set_load_visibility(action.get("type"), value)
         
 
 

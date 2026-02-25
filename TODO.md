@@ -126,11 +126,11 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
     - [x] Dejar a la clase el único propósito de orquestar el flujo OpenSees.
 
 ## 🟣 Prioridad 10: Visualización Cinemática (Video)
-- [ ] **Pushover Deformada Paso a Paso**:
-    - [ ] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`). Para ello, pre-computaremos los diccionarios y leeremos `ops.nodeDisp` para `Dx, Dy, Rz`.
-    - [ ] Implementar Slider en `PushoverResultsDialog` manejando un rango desde el paso `0` al paso final, emitiendo una señal `step_visualization_requested`.
-    - [ ] Conectar la señal con `StructureInteractor` (`draw_kinematic_step`) para visualizar el snapshot. 
-    - [ ] Bloquear escalas automáticas/ScaleManager durante la visualización dinámica para no tener saltos de dibujo abruptos.
+- [x] **Pushover Deformada Paso a Paso**:
+    - [x] Capturar historial de desplazamientos de todos los nodos en cada paso (`PushoverSolver`). Para ello, pre-computaremos los diccionarios y leeremos `ops.nodeDisp` para `Dx, Dy, Rz`.
+    - [x] Implementar Slider en `PushoverResultsDialog` manejando un rango desde el paso `0` al paso final, emitiendo una señal `step_visualization_requested`.
+    - [x] Conectar la señal con `StructureInteractor` (`draw_kinematic_step`) para visualizar el snapshot. 
+    - [x] Bloquear escalas automáticas/ScaleManager durante la visualización dinámica para no tener saltos de dibujo abruptos.
 
 ## 🧱 Prioridad 10: Materiales con Degradación (MinMax)
 - [ ] **Backend**:

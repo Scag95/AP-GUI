@@ -64,6 +64,12 @@ class MomentCurvatureDialog(QDialog):
         self.info_label.setStyleSheet("color: #555; font-size: 11px; margin-top: 10px;")
         controls_layout.addWidget(self.info_label)
 
+        # Etiqueta de información del paso actual (Multi-linea, debajo de la lista)
+        self.lbl_plot_info = QLabel("")
+        self.lbl_plot_info.setWordWrap(True)
+        self.lbl_plot_info.setStyleSheet("color: white; font-size: 11px; margin-top: 10px;")
+        controls_layout.addWidget(self.lbl_plot_info)
+
         main_layout.addWidget(controls_frame)
 
         # --- Right Panel: Plot ---
@@ -301,10 +307,14 @@ class MomentCurvatureDialog(QDialog):
         self.plot_widget.setLabel('bottom', f"Curvatura ({unit_label_x})")
         self.plot_widget.setLabel('left', y_axis_text)
 
-        # 3. Iterrar sobre secciones marcadas y graficar
+        # Iterar sobre secciones marcadas y graficar
         plotted_something = False
         all_x_max = 0
         all_y_max = 0
+        
+        # Acumulador para texto multi-línea
+        limit = self.current_step_val
+        info_lines = [f"<b>Paso: {limit if limit is not None else 'Todos'}</b>"]
 
         #Obtener items de la lista
         count = self.section_list.count()
@@ -371,6 +381,14 @@ class MomentCurvatureDialog(QDialog):
                 local_max_y = max([abs(y) for y in y_values])
                 all_x_max = max(all_x_max, local_max_x)
                 all_y_max = max(all_y_max, local_max_y)
+
+            # Acumular información de la curva en el texto (con su color)
+            if x_plot and y_plot:
+                c_hex = color.name()
+                info_lines.append(f"<span style='color:{c_hex};'>&#9632;</span> <b>Sección {sec_num}</b><br>Curvatura: {x_plot[-1]:.6f} {unit_label_x} | Momento: {y_plot[-1]:.2f} {y_axis_text}")
+                
+        # Escribir el bloque de texto
+        self.lbl_plot_info.setText("<br><br>".join(info_lines))
             
         if plotted_something:
             self.plot_widget.setTitle(f"Elemento {self.element_combo.currentText()}")

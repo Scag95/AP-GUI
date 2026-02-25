@@ -71,9 +71,10 @@ class AnalyzeMenu(QMenu):
             self.parent().viz_widget.set_visibility("deformed", visible)
 
     def _clear_results(self):
-        if self.parent() and hasattr(self.parent(), "viz_widget"):
-            self.parent().viz_widget.show_force_diagrams(None)
-            self.parent().viz_widget.set_visibility("deformed", False)
+        if self.parent() and hasattr(self.parent(), "_viewports"):
+            for viz in self.parent()._viewports:
+                viz.show_force_diagrams(None)
+                viz.set_visibility("deformed", False)
 
     def _show_diagram(self, type_):
         if self.parent() and hasattr(self.parent(), "viz_widget"):
@@ -103,9 +104,9 @@ class AnalyzeMenu(QMenu):
                 print(f"Nodos con desplazamiento: {len(results['displacements'])}")
                 
                 # Visualizar en el Graph Widget
-                if self.parent() and hasattr(self.parent(), "viz_widget"):
+                if self.parent() and hasattr(self.parent(), "broadcast_results"):
                     # Pasamos el objeto results COMPLETO
-                    self.parent().viz_widget.show_deformation(results)
+                    self.parent().broadcast_results(results)
 
                 QMessageBox.information(self, "Análisis Completado", "El análisis finalizó correctamente.")
             else:
