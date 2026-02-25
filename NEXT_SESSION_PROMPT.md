@@ -230,19 +230,31 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     - Pre-computed static geometric data (node tags, sections maps, heights) into a `floor_meta` dictionary cache *before* the simulation loops.
     - Completely removed slow Python loops involving the `ProjectManager` inside `run_pushover()`. Calling `ops.eleResponse` directly.
 
+### Session 23 (2026-02-25) - MDI Architecture & Kinematic Visualization (COMPLETED)
+1. **MDI Viewport Architecture**:
+    - Refactored `MainWindow` to use `QMdiArea` supporting multiple simultaneous 3D viewports.
+    - Implemented intelligent command routing to active viewports (SAP2000 style).
+2. **Kinematic Pushover Visualization**:
+    - Captured full displacement node history in `PushoverSolver`.
+    - Implemented global `AnimationToolbar` with a synchronized playback slider perfectly aligned with model deformations and charts.
+    - Refactored `PushoverResultsDialog` to use `QListWidget` with checkboxes for multi-curve parallel toggling.
+    - Added interactive multi-line floating labels to Moment-Curvature and Pushover plots with exact coordinate tracking.
+3. **Property Panel Tuning**:
+    - Tied `NodeForms` updates securely to internal signals, eliminating false dirty topologies causing crashes.
+    - Patched edge case bugs involving slider syncs with configuration dialogs.
+
 ## Pending Tasks (Priority Order)
 
-### 1. Deformation Animation (Video) - [PRIORITY]
--   **Objective**: Visualize the structure's deformation step-by-step during Pushover via a Slider.
+### 1. Address OpenSees Convergence & Stabilization - [PRIORITY]
+-   **Objective**: Solve the premature loss of convergence around load steps prior to yielding (error flag -3) during standard monotonic pushover.
 -   **Implementation Plan**:
-    1.  **Backend**: Capture full node displacement history in the refactored `PushoverSolver.run_pushover`. Store as `{'tag': [dx, dy, rz]}`.
-    2.  **UI**: Add a `QSlider` in `PushoverResultsDialog`. Emit a `step_visualization_requested(dict)` signal.
-    3.  **Visualization**: Connect signal to `StructureInteractor.draw_kinematic_step()`. Use Hermite interpolation. *Crucial:* Disable `ScaleManager` auto-scaling mid-animation so the building doesn't "jump" around.
+    1.  Investigate if `Steel01` material's infinite strength without rupture limits is causing numerical instability in the displacement control iterator.
+    2.  Check static initialization variables and algorithm robustness against large dU steps.
 
-### 2. Advanced Failure Logic & Material Degradation
--   **Refinement**: Tune detection parameters (Sensitivity, Drift Limits) on more complex models.
--   **Material Degradation**: Implement `MinMax` wrapper to `Steel01/Concrete01` to simulate true rupture (force drop), preventing infinite stiffness on failure.
+### 2. Implement Material Degradation (MinMax Wrapper)
+-   **Objective**: Enclose `Steel01` and `Concrete01` inside a `MinMax` material wrapper to simulate realistic structural failure (crushing/rupture force drop).
+-   **Implementation Plan**: Add `Rupture Strain` field in `MaterialDialog` and translate into OpenSees `uniaxialMaterial MinMax` commands.
 
 ## Technical Context for Next Session
--   **Current State**: The `PushoverSolver` is clean and fast. Everything is ready to record the steps.
--   **Next Steps**: First thing next session, we implement the dictionary history capturing loop inside `run_pushover` and pass it to the new QSlider in the Results Dialog.
+-   **Current State**: The UI is robust and feature-complete for visualizations (MDI, Kinematic animations, live force plotting with auto-sync overlays). The `PushoverSolver` engine handles all iteration successfully.
+-   **Next Steps**: First thing next session, focus entirely on the OpenSees core mechanics to ensure stable failure mechanisms and realistic yielding curves rather than infinite stiffness, fixing the convergence loss.

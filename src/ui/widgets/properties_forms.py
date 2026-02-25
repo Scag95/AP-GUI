@@ -94,7 +94,6 @@ class NodeForms(QWidget):
         ]
             self.current_node.fixity = new_fixity
             self.dataChanged.emit()
-            self.mark_topology_dirty()
 
     def _on_value_changed(self):
         """Habilita el botón de aplicar cuando hay cambios pendientes."""

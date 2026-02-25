@@ -58,18 +58,21 @@ class AnimationToolbar(QToolBar):
             node_disps = self.manager.pushover_results.get("node_displacements", [])
             if 0 <= value < len(node_disps):
                 step_data = node_disps[value]
-                # Enviar directo al viz_widget de MainWindow
+                # Enviar solo a la ventana activa
                 if self.parent_window and hasattr(self.parent_window, 'viz_widget'):
-                    self.parent_window.viz_widget.draw_kinematic_step(step_data)
+                    active_viz = self.parent_window.viz_widget
+                    if active_viz:
+                        active_viz.draw_kinematic_step(step_data)
                 
-                # Sincronizar con el dialogo de Moment Curvature si está activo
+                # Sincronizar dialogos si está activo
                 if self.chk_sync.isChecked():
                     for widget in QApplication.instance().topLevelWidgets():
-                        if widget.windowTitle() == "Resultados de Sección: Momento-Curvatura":
+                        title = widget.windowTitle()
+                        if title in ["Resultados de Sección: Momento-Curvatura", "Análisis Pushover"]:
                             try:
-                                # Comprobamos limites nativos del Slider destino
-                                dest_slider = widget.slider_step
-                                safe_val = max(dest_slider.minimum(), min(value + 1, dest_slider.maximum()))
-                                dest_slider.setValue(safe_val)
+                                if hasattr(widget, 'slider_step'):
+                                    dest_slider = widget.slider_step
+                                    safe_val = max(dest_slider.minimum(), min(value + 1, dest_slider.maximum()))
+                                    dest_slider.setValue(safe_val)
                             except Exception as e:
-                                print(f"Error sincronizando grafica: {e}")
+                                print(f"Error sincronizando grafica en {title}: {e}")
