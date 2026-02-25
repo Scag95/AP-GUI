@@ -51,8 +51,8 @@ class CommandProcessor:
                 try:
                     val = float(args[1])
                     from src.utils.scale_manager import ScaleManager # Import local para evitar ciclos si los hubiera
-                    ScaleManager.instance().set_scale(s_type, val)
-                    return f"Escala '{s_type}' establecida a {val}", None
+                    ScaleManager.instance().set_user_multiplier(s_type, val)
+                    return f"Multiplicador de escala '{s_type}' establecido a {val}x", None
                 except ValueError:
                     return "Error: El valor debe ser numérico", None
 

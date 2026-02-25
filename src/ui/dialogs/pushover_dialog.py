@@ -38,6 +38,7 @@ class PushoverDialog(QDialog):
         self.spin_drift = UnitSpinBox(UnitType.LENGTH)
         self.spin_drift.setRange(0,100)
         self.spin_drift.setDecimals(3)
+        self.spin_drift.setSingleStep(0.1)
         self.spin_drift.set_value_base(0.3) #Default 30cm
 
         form_layout.addRow("Nodo de Control:",self.combo_node)
@@ -102,11 +103,16 @@ class PushoverDialog(QDialog):
                 # Guardar resultados en el Manager para persistencia
                 self.manager.pushover_results = results
                 
-                # Pasamos el diccionario crudo al dialog de resultados
-                # Dejamos que ResultsDialog gestione las unidades internamente
+                # Activar la nueva barra de animación en la ventana principal
+                if hasattr(self.parent(), 'toggle_animation_toolbar'):
+                    self.parent().toggle_animation_toolbar(True)
+                
+                # Pasamos el diccionario crudo al dialog de resultados para la curva XY
                 from src.ui.dialogs.pushover_result_dialog import PushoverResultsDialog
-                dlg = PushoverResultsDialog(results, self)
-                dlg.exec()
+                
+                # Guardamos la referencia para que no sea destruido por el Garbage Collector
+                self._results_dialog = PushoverResultsDialog(results, self)
+                self._results_dialog.show()
 
         except Exception as e:
             print(f"Error crítico en Pushover: {e}")

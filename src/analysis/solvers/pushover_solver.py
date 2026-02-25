@@ -98,8 +98,12 @@ class PushoverSolver:
             "roof_disp": [],
             "base_shear": [],
             "steps": [],
+            "node_displacements": [], # Añadido para animación (Video)
             "floors": {}
         }
+        
+        # Pre-caché estático de nodos para la iteración cinemática rápida
+        all_node_tags = [n.tag for n in self.manager.get_all_nodes()]
 
         #Inicializar istas de cada piso
 
@@ -172,6 +176,37 @@ class PushoverSolver:
                     
                 initial_story_shears[y] = shear_gravity
                    
+        # --- CAPTURAR ESTADO 0 (T=0, GRAVEDAD) PARA LA ANIMACIÓN ---
+        results["roof_disp"].append(ops.nodeDisp(control_node_tag, 1))
+        
+        ops.reactions()
+        initial_base_shear = 0.0
+        for b_node in base_nodes:
+             reacs = ops.nodeReaction(b_node)
+             initial_base_shear += reacs[0]
+        results["base_shear"].append(-initial_base_shear) # Suele ser 0 en X
+        results["steps"].append(0)
+        
+        step0_disp = {}
+        for n_tag in all_node_tags:
+            step0_disp[n_tag] = [
+                ops.nodeDisp(n_tag, 1), # dx
+                ops.nodeDisp(n_tag, 2), # dy
+                ops.nodeDisp(n_tag, 3)  # rz
+            ]
+        results["node_displacements"].append(step0_disp)
+        
+        # Inicializar derivas de piso en el paso 0
+        for y in sorted_floor_y:
+            meta = floor_meta[y]
+            u_top = ops.nodeDisp(meta["node_top_tag"], 1)
+            u_bot = ops.nodeDisp(meta["node_bot_tag"], 1)
+            drift0 = u_top - u_bot
+            results["floors"][y]["disp"].append(drift0)
+            results["floors"][y]["shear"].append(0.0) # Shear net es 0 en el t=0
+            results["floors"][y]["H"] = meta["h_floor"]
+
+        # --- BUCLE DE PUSHOVER ---
         for i in range(1, n_steps + 1):
             ok = ops.analyze(1)
             #ok = self.builder.log_command('analyze', 1)
@@ -193,6 +228,16 @@ class PushoverSolver:
             results["roof_disp"].append(current_roof_disp)
             results["base_shear"].append(-current_base_shear)
             results["steps"].append(i)
+            
+            # B) Captura Cinemática (Foto del paso)
+            step_disp = {}
+            for n_tag in all_node_tags:
+                step_disp[n_tag] = [
+                    ops.nodeDisp(n_tag, 1), # dx
+                    ops.nodeDisp(n_tag, 2), # dy
+                    ops.nodeDisp(n_tag, 3)  # rz
+                ]
+            results["node_displacements"].append(step_disp)
 
             for y in sorted_floor_y:
                 meta = floor_meta[y]
@@ -221,6 +266,7 @@ class PushoverSolver:
         """Helper para unir los resultados"""
         consolidated["roof_disp"].extend(new_res["roof_disp"])
         consolidated["base_shear"].extend(new_res["base_shear"]) 
+        consolidated.setdefault("node_displacements", []).extend(new_res.get("node_displacements", [])) # Video extension
 
         count = len(new_res["roof_disp"])
         consolidated["cycle_id"].extend([cycle_idx] * count)
