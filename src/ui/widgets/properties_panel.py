@@ -7,7 +7,8 @@ from src.ui.widgets.properties_forms import NodeForms, ElementForm
 class PropertiesPanel(QDockWidget):
     dataChanged = pyqtSignal()
     def __init__(self,parent=None):
-        super().__init__()
+        super().__init__("Panel de Propiedades", parent)
+        self.setWindowTitle("Panel de Propiedades")
         self.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea)
 
         #Widget contenedor

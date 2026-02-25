@@ -32,6 +32,13 @@ class AnalyzeMenu(QMenu):
         self.results_menu = QMenu("Ver Resultados", self)
         self.addMenu(self.results_menu)
 
+        # Acciones de Visualización
+        self.act_deform = QAction("Deformada", self)
+        self.act_deform.triggered.connect(lambda: self._set_deformed_visibility(True))
+        self.results_menu.addAction(self.act_deform)
+
+        self.results_menu.addSeparator()
+
         # Acciones de Diagramas
         self.act_moment = QAction("Momentos (M)", self)
         self.act_moment.triggered.connect(lambda: self._show_diagram("M"))
@@ -55,12 +62,18 @@ class AnalyzeMenu(QMenu):
 
         self.results_menu.addSeparator()
 
-        self.act_clear = QAction("Ocultar Diagramas", self)
-        self.act_clear.triggered.connect(lambda: self._show_diagram(None))
+        self.act_clear = QAction("Ocultar Resultados", self)
+        self.act_clear.triggered.connect(self._clear_results)
         self.results_menu.addAction(self.act_clear)
 
-    
+    def _set_deformed_visibility(self, visible):
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            self.parent().viz_widget.set_visibility("deformed", visible)
 
+    def _clear_results(self):
+        if self.parent() and hasattr(self.parent(), "viz_widget"):
+            self.parent().viz_widget.show_force_diagrams(None)
+            self.parent().viz_widget.set_visibility("deformed", False)
 
     def _show_diagram(self, type_):
         if self.parent() and hasattr(self.parent(), "viz_widget"):
@@ -80,6 +93,10 @@ class AnalyzeMenu(QMenu):
             if success:
                 #4. Obtener resultados 
                 results = translator.get_analysis_results()
+                
+                # Guardar resultados globalmente
+                from src.analysis.manager import ProjectManager
+                ProjectManager.instance().gravity_results = results
 
                 # Debug: Mostrar en consola para verificar
                 print("[DEBUG] [Resultados obtenidos]")
@@ -104,6 +121,19 @@ class AnalyzeMenu(QMenu):
 
 
     def show_pushover_dialog(self):
+        from src.analysis.manager import ProjectManager
+        if not ProjectManager.instance().gravity_results:
+            reply = QMessageBox.warning(self, "Análisis Requerido", 
+                                        "Es necesario ejecutar el análisis de gravedad antes de iniciar el Pushover para inicializar correctamente el estado estructural en OpenSees.\n\n¿Desea ejecutar el análisis de gravedad ahora?",
+                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.run_gravity()
+                # Verificar si tras el intento realmente se logró
+                if not ProjectManager.instance().gravity_results:
+                    return
+            else:
+                return
+
         dlg = PushoverDialog(self.parent())
         dlg.exec()
 
@@ -115,9 +145,9 @@ class AnalyzeMenu(QMenu):
              QMessageBox.warning(self, "No hay resultados", "Debe ejecutar primero un Análisis Pushover desde el menú Analizar.")
              return
 
-        dlg = PushoverResultsDialog(results, self.parent())
-        dlg.exec()
+        self._pushover_results_dlg = PushoverResultsDialog(results, self.parent())
+        self._pushover_results_dlg.show()
 
     def _show_section_results(self):
-        dlg = MomentCurvatureDialog(self.parent())
-        dlg.exec()
+        self._mc_dlg = MomentCurvatureDialog(self.parent())
+        self._mc_dlg.show()

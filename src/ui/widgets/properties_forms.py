@@ -1,6 +1,6 @@
 from src.analysis.manager import ProjectManager
 from PyQt6.QtWidgets import QComboBox
-from PyQt6.QtWidgets import (QWidget, QFormLayout, QDoubleSpinBox, 
+from PyQt6.QtWidgets import (QWidget, QFormLayout, QDoubleSpinBox, QSpinBox,
                              QLineEdit, QLabel, QVBoxLayout,QCheckBox,QHBoxLayout,QPushButton)
 from PyQt6.QtCore import pyqtSignal
 from src.ui.widgets.unit_spinbox import UnitSpinBox
@@ -111,20 +111,21 @@ class ElementForm(QWidget):
 
         #Campos
         self.lbl_tag = QLabel("-")
-        self.lbl_conn = QLabel("-")
+        # Nodos (Editable - SpinBox)
+        self.spin_node_i = QSpinBox()
+        self.spin_node_i.setRange(1, 999999)
+        self.spin_node_i.valueChanged.connect(self._on_value_changed)
 
-        #Mass Density (Editable)
-        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
-        self.spin_rho.setRange(0,1e9)
-        self.spin_rho.setDecimals(2)
-        self.spin_rho.valueChanged.connect(self._on_value_changed)
+        self.spin_node_j = QSpinBox()
+        self.spin_node_j.setRange(1, 999999)
+        self.spin_node_j.valueChanged.connect(self._on_value_changed)
 
         #Section (Editable - ComboBox)
         self.combo_section = QComboBox()
         self.combo_section.currentIndexChanged.connect(self._on_value_changed)
         form.addRow("Tag:", self.lbl_tag)
-        form.addRow("Nodos:", self.lbl_conn)
-        form.addRow("Desnidad:", self.spin_rho)
+        form.addRow("Nodo Inicial (I):", self.spin_node_i)
+        form.addRow("Nodo Final (J):", self.spin_node_j)
         form.addRow("Sección:",self.combo_section)
 
         self.layout.addLayout(form)
@@ -144,11 +145,10 @@ class ElementForm(QWidget):
 
         #Propiedades Básicas
         self.lbl_tag.setText(str(element.tag))
-        self.lbl_conn.setText(f"{element.node_i} -> {element.node_j}")
 
-        #Cargar densidad (si el atributo existe, si no 0)
-        rho = getattr(element, 'mass_density',0.0)
-        self.spin_rho.set_value_base(rho)
+        # Cargar id de los nodos conectados
+        self.spin_node_i.setValue(int(element.node_i))
+        self.spin_node_j.setValue(int(element.node_j))
 
         #cargar secciones disponibles
         self.combo_section.clear()
@@ -173,14 +173,26 @@ class ElementForm(QWidget):
     def apply_changes(self):
         if not self.current_element: return
         
-        #Guardar densidad
-        self.current_element.mass_density = self.spin_rho.get_value_base()
+        # Guardar nueva topología si cambió algún nodo
+        old_i, old_j = self.current_element.node_i, self.current_element.node_j
+        new_i = self.spin_node_i.value()
+        new_j = self.spin_node_j.value()
+        
+        topology_changed = False
+        if old_i != new_i or old_j != new_j:
+            self.current_element.node_i = new_i
+            self.current_element.node_j = new_j
+            topology_changed = True
 
         #Guardar sección
         idx = self.combo_section.currentIndex()
         if idx >= 0:
             sec_tag = self.combo_section.itemData(idx)
             self.current_element.section_tag = sec_tag
+
+        
+        if topology_changed:
+            ProjectManager.instance().mark_topology_dirty()
 
         self.dataChanged.emit()
         self.btn_apply.setEnabled(False)

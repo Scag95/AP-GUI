@@ -193,6 +193,8 @@ class ProjectManager(QObject):
     def mark_topology_dirty(self):
         """Avisa al manager que las coordenadas o elementos han cambiado"""
         self._topology_dirty = True
+        self.gravity_results = None
+        self.pushover_results = None
 
 ## Masas ##
     def get_floor_masses(self):
@@ -259,12 +261,16 @@ class ProjectManager(QObject):
         self.load[load.tag] = load
         if load.tag >= self.next_load_tag:
             self.next_load_tag = load.tag + 1
+        self.gravity_results = None
+        self.pushover_results = None
         self.dataChanged.emit()
     def get_load(self, tag):
         return self.load.get(tag)
     def delete_load(self, tag):
         if tag in self.load:
             del self.load[tag]
+            self.gravity_results = None
+            self.pushover_results = None
             self.dataChanged.emit()
     def get_next_load_tag(self):
         return self.next_load_tag

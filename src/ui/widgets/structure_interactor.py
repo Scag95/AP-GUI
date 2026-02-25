@@ -153,7 +153,27 @@ class StructureInteractor(QWidget):
         self.current_results = results
         self.refresh_viz() # Se encarga de llamar al renderer si show_deformed es True
 
-
+    def draw_kinematic_step(self, step_data):
+        """
+        Dibuja un frame específico de la deformación (usado por el QSlider de Pushover).
+        Ignora otras actualizaciones para evitar parpadeos en la animación.
+        """
+        if not self.show_deformed:
+            return
+            
+        # Formatear el diccionario para DeformationRenderer (espera un dict de tags -> (dx, dy, rz))
+        disp_dict = {tag: tuple(disp) for tag, disp in step_data.items()}
+        
+        # Obtener la escala actual sin forzar un recalculo completo del bounding box de la escena
+        s_def = ScaleManager.instance().get_scale('deformation')
+        
+        # Dibujar de forma directa superponiendo al modelo base (solo malla deformada)
+        self.renderer_deform.draw_deformed(
+            self.plot_widget,
+            self.manager,
+            disp_dict,
+            scale_factor=s_def
+        )
     def clear_results(self):
         self.current_results = None
         self.renderer_deform.clear(self.plot_widget)
@@ -162,23 +182,23 @@ class StructureInteractor(QWidget):
     # ... (Resto de métodos de escala e interacción sin cambios) ...
     def increase_load_scale(self):
         sm = ScaleManager.instance()
-        val = sm.get_scale('load') * 1.2
-        sm.set_scale('load', val)
+        val = sm.get_user_multiplier('load') * 1.25
+        sm.set_user_multiplier('load', val)
 
     def decrease_load_scale(self):
         sm = ScaleManager.instance()
-        val = sm.get_scale('load') / 1.2
-        sm.set_scale('load', val)
+        val = sm.get_user_multiplier('load') / 1.25
+        sm.set_user_multiplier('load', val)
 
     def increase_deform_scale(self):
         sm = ScaleManager.instance()
-        val = sm.get_scale('deformation') * 1.2
-        sm.set_scale('deformation', val)
+        val = sm.get_user_multiplier('deformation') * 1.25
+        sm.set_user_multiplier('deformation', val)
 
     def decrease_deform_scale(self):
         sm = ScaleManager.instance()
-        val = sm.get_scale('deformation') / 1.2
-        sm.set_scale('deformation', val)
+        val = sm.get_user_multiplier('deformation') / 1.25
+        sm.set_user_multiplier('deformation', val)
 
     def toggle_node_labels(self, visible):
         self.show_node_labels = visible

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QComboBox, QFrame, QListWidget, QListWidgetItem, QAbstractItemView)
+                             QComboBox, QFrame, QListWidget, QListWidgetItem, QAbstractItemView, QSlider)
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 import os
@@ -75,10 +75,25 @@ class MomentCurvatureDialog(QDialog):
         # Desactivar auto-escalado SI permanentemente
         self.plot_widget.getAxis('bottom').enableAutoSIPrefix(False)
         self.plot_widget.getAxis('left').enableAutoSIPrefix(False)
-        self.plot_widget.addLegend(offsett=(30,30))
+        self.plot_widget.addLegend(offset=(30,30))
 
+        # Slider para animar pasos
+        slider_layout = QHBoxLayout()
+        self.lbl_step = QLabel("Paso: Todos")
+        self.slider_step = QSlider(Qt.Orientation.Horizontal)
+        self.slider_step.setMinimum(1)
+        self.slider_step.valueChanged.connect(self._on_slider_changed)
+        
+        slider_layout.addWidget(self.lbl_step)
+        slider_layout.addWidget(self.slider_step)
 
-        main_layout.addWidget(self.plot_widget, 1)
+        plot_layout = QVBoxLayout()
+        plot_layout.addWidget(self.plot_widget, 1)
+        plot_layout.addLayout(slider_layout)
+
+        main_layout.addLayout(plot_layout, 1)
+        
+        self.current_step_val = None
 
     def load_available_elements(self):
         """Busca archivos de resultados en la carpeta data y filtra los validos."""
@@ -119,6 +134,10 @@ class MomentCurvatureDialog(QDialog):
         # Trigger initial load if items exist
         if self.element_combo.count() > 0:
             self._on_element_changed()
+
+    def _on_slider_changed(self, value):
+        self.current_step_val = value
+        self.update_plot()
 
     def _on_element_changed(self):
         ele_tag = self.element_combo.currentData()
@@ -238,6 +257,21 @@ class MomentCurvatureDialog(QDialog):
         deforms = self.current_data["deforms"]
         n_comps_f = self.current_data["comps_f"]
         n_comps_d = self.current_data["comps_d"]
+        
+        max_steps = len(forces)
+        
+        self.slider_step.blockSignals(True)
+        if self.slider_step.maximum() != max_steps:
+            self.slider_step.setMaximum(max_steps)
+            if self.current_step_val is None or self.current_step_val > max_steps:
+                self.slider_step.setValue(max_steps)
+                self.current_step_val = max_steps
+        self.slider_step.blockSignals(False)
+        
+        if self.current_step_val == max_steps:
+            self.lbl_step.setText(f"Paso: Todos ({max_steps})")
+        else:
+            self.lbl_step.setText(f"Paso: {self.current_step_val} / {max_steps}")
 
         # 1. Determinar Índice de columna para fuerza (Y Axis)
         y_type = self.y_axis_combo.currentIndex()
@@ -314,12 +348,21 @@ class MomentCurvatureDialog(QDialog):
                     x_values.insert(0, 0.0)
                     y_values.insert(0, 0.0)
 
+            # Recortar hasta el paso seleccionado
+            limit = self.current_step_val
+            x_plot = x_values[:limit]
+            y_plot = y_values[:limit]
+
             # Graficar
             color = pg.intColor(i, hues=count, alpha=200)
 
             name_legend = f"Sección {sec_num}"
 
-            self.plot_widget.plot(x_values, y_values, pen = pg.mkPen(color, width=2), name=name_legend)
+            if x_plot and y_plot:
+                self.plot_widget.plot(x_plot, y_plot, pen=pg.mkPen(color, width=2), name=name_legend)
+                # Punto líder para rastrear la animación
+                self.plot_widget.plot([x_plot[-1]], [y_plot[-1]], pen=None, symbol='o', symbolBrush=color, symbolSize=8)
+                
             self.plot_widget.showGrid(x=True, y=True, alpha=0.15)
             plotted_something = True
 
