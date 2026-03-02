@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import QMessageBox
 from src.analysis.opensees_translator import OpenSeesTranslator
 from src.ui.dialogs.pushover_dialog import PushoverDialog
-from src.ui.dialogs.pushover_result_dialog import PushoverResultsDialog
-from src.ui.dialogs.moment_curvature_dialog import MomentCurvatureDialog
+from src.ui.dialogs.pushover_result_dialog import PushoverResultsWidget
+from src.ui.dialogs.moment_curvature_dialog import MomentCurvatureWidget
+from src.analysis.manager import ProjectManager
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
@@ -122,7 +123,7 @@ class AnalyzeMenu(QMenu):
 
 
     def show_pushover_dialog(self):
-        from src.analysis.manager import ProjectManager
+
         if not ProjectManager.instance().gravity_results:
             reply = QMessageBox.warning(self, "Análisis Requerido", 
                                         "Es necesario ejecutar el análisis de gravedad antes de iniciar el Pushover para inicializar correctamente el estado estructural en OpenSees.\n\n¿Desea ejecutar el análisis de gravedad ahora?",
@@ -139,16 +140,18 @@ class AnalyzeMenu(QMenu):
         dlg.exec()
 
     def _show_curve_pushover(self):
-        from src.analysis.manager import ProjectManager
+
         results = ProjectManager.instance().pushover_results
         
         if not results:
              QMessageBox.warning(self, "No hay resultados", "Debe ejecutar primero un Análisis Pushover desde el menú Analizar.")
              return
 
-        self._pushover_results_dlg = PushoverResultsDialog(results, self.parent())
-        self._pushover_results_dlg.show()
+        widget = PushoverResultsWidget(results)
+        self.parent().add_tool_window(widget, "Curva de Capacidad (Pushover)")
+
 
     def _show_section_results(self):
-        self._mc_dlg = MomentCurvatureDialog(self.parent())
-        self._mc_dlg.show()
+        
+        widget = MomentCurvatureWidget()
+        self.parent().add_tool_window(widget, "Análisis de sección: Momento-Curvatura")

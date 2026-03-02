@@ -132,9 +132,13 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
     - [x] Conectar la señal con `StructureInteractor` (`draw_kinematic_step`) para visualizar el snapshot. 
     - [x] Bloquear escalas automáticas/ScaleManager durante la visualización dinámica para no tener saltos de dibujo abruptos.
 
-## 🧱 Prioridad 10: Materiales con Degradación (MinMax)
-- [ ] **Backend**:
-    - [ ] Envolver `Steel01` y `Concrete01` en `MinMax` Material para simular ruptura/aplastamiento real.
-    - [ ] Esto permitirá detectar caídas de fuerza "naturales" en el Pushover.
-- [ ] **UI**:
-    - [ ] Añadir campo `Rupture Strain` en `MaterialDialog`.
+## 🧱 Prioridad 11: Materiales con Degradación (MinMax)
+- [x] **Backend**:
+    - [x] Envolver `Steel01` y `Concrete01` en `MinMax` Material para simular ruptura/aplastamiento real.
+    - [x] Esto permitirá detectar caídas de fuerza "naturales" en el Pushover.
+- [x] **UI**:
+    - [x] Añadir campo `Rupture Strain` en `MaterialDialog` (propiedades opcionales).
+
+## 🎨 Prioridad 12: Mejoras de Interfaz (Window Management)
+- [ ] **Refactorizar `QMdiArea` a `QSplitter`**:
+    - [ ] Cambiar el comportamiento de las sub-ventanas flotantes estáticas por un sistema de paneles acoplables proporcionales que se redimensionen automáticamente en conjunto (estilo SAP2000/VSCode) al estirar la ventana principal.

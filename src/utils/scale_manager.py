@@ -15,7 +15,7 @@ class ScaleManager(QObject):
         
         # Escalas base (Cálculo interno geométrico)
         self._base_scales = {
-            'deformation': 10.0,
+            'deformation': 1.0,
             'moment': 0.003,
             'shear': 0.003,
             'axial': 0.003,

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox
+from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox, QCheckBox
 from src.ui.widgets.unit_spinbox import UnitSpinBox 
 from src.utils.units import UnitType
 
@@ -42,6 +42,45 @@ class ConcreteForm(QWidget):
         self.spin_epscU.setSingleStep(0.0001)
         self.spin_epscU.setValue(0.003)
         layout.addRow("Deformación última [epscU]",self.spin_epscU)
+
+        # --- Propiedades Opcionales ---
+        self.chk_optional = QCheckBox("Mostrar Propiedades Opcionales")
+        layout.addRow(self.chk_optional)
+
+        self.widget_optional = QWidget()
+        opt_layout = QFormLayout(self.widget_optional)
+        self.widget_optional.setVisible(False)
+
+        # Checkbox MinMax
+        self.chk_minmax = QCheckBox("Habilitar Envolvente de Rotura (MinMax)")
+        opt_layout.addRow(self.chk_minmax)
+
+        self.spin_min_strain = QDoubleSpinBox()
+        self.spin_min_strain.setDecimals(4)
+        self.spin_min_strain.setRange(-1.0, 1.0)
+        self.spin_min_strain.setSingleStep(0.001)
+        self.spin_min_strain.setValue(-0.05) # Compresión
+
+        self.spin_max_strain = QDoubleSpinBox()
+        self.spin_max_strain.setDecimals(4)
+        self.spin_max_strain.setRange(-1.0, 1.0)
+        self.spin_max_strain.setSingleStep(0.001)
+        self.spin_max_strain.setValue(0.05) # Tracción
+        
+        opt_layout.addRow("Deformación Mínima (Compresión):", self.spin_min_strain)
+        opt_layout.addRow("Deformación Máxima (Tracción):", self.spin_max_strain)
+
+        layout.addRow(self.widget_optional)
+
+        # Estado inicial
+        self.spin_min_strain.setEnabled(False)
+        self.spin_max_strain.setEnabled(False)
+
+        # Conexiones
+        self.chk_optional.toggled.connect(self.widget_optional.setVisible)
+        self.chk_minmax.toggled.connect(self.spin_min_strain.setEnabled)
+        self.chk_minmax.toggled.connect(self.spin_max_strain.setEnabled)
+
 
     def set_data(self, material):
         if not material: return
@@ -97,6 +136,65 @@ class SteelForm(QWidget):
         self.spin_b.setValue(0.01)
         layout.addRow("Ratio de endurecimiento [b]",self.spin_b)
 
+        # --- Propiedades Opcionales ---
+        self.chk_optional = QCheckBox("Mostrar Propiedades Opcionales")
+        layout.addRow(self.chk_optional)
+
+        self.widget_optional = QWidget()
+        opt_layout = QFormLayout(self.widget_optional)
+        self.widget_optional.setVisible(False)
+
+        # a1, a2, a3, a4
+        self.spin_a1 = QDoubleSpinBox()
+        self.spin_a1.setDecimals(3)
+        self.spin_a1.setValue(0.0)
+        opt_layout.addRow("Parámetro endur. [a1]:", self.spin_a1)
+
+        self.spin_a2 = QDoubleSpinBox()
+        self.spin_a2.setDecimals(3)
+        self.spin_a2.setValue(0.0)
+        opt_layout.addRow("Parámetro endur. [a2]:", self.spin_a2)
+
+        self.spin_a3 = QDoubleSpinBox()
+        self.spin_a3.setDecimals(3)
+        self.spin_a3.setValue(0.0)
+        opt_layout.addRow("Parámetro endur. [a3]:", self.spin_a3)
+
+        self.spin_a4 = QDoubleSpinBox()
+        self.spin_a4.setDecimals(3)
+        self.spin_a4.setValue(0.0)
+        opt_layout.addRow("Parámetro endur. [a4]:", self.spin_a4)
+
+        # Checkbox MinMax
+        self.chk_minmax = QCheckBox("Habilitar Envolvente de Rotura (MinMax)")
+        opt_layout.addRow(self.chk_minmax)
+
+        self.spin_min_strain = QDoubleSpinBox()
+        self.spin_min_strain.setDecimals(4)
+        self.spin_min_strain.setRange(-1.0, 1.0)
+        self.spin_min_strain.setSingleStep(0.001)
+        self.spin_min_strain.setValue(-0.05) 
+
+        self.spin_max_strain = QDoubleSpinBox()
+        self.spin_max_strain.setDecimals(4)
+        self.spin_max_strain.setRange(-1.0, 1.0)
+        self.spin_max_strain.setSingleStep(0.001)
+        self.spin_max_strain.setValue(0.05) 
+        
+        opt_layout.addRow("Def. Mínima (Compresión):", self.spin_min_strain)
+        opt_layout.addRow("Def. Máxima (Tracción):", self.spin_max_strain)
+
+        layout.addRow(self.widget_optional)
+
+        # Estado inicial
+        self.spin_min_strain.setEnabled(False)
+        self.spin_max_strain.setEnabled(False)
+
+        # Conexiones
+        self.chk_optional.toggled.connect(self.widget_optional.setVisible)
+        self.chk_minmax.toggled.connect(self.spin_min_strain.setEnabled)
+        self.chk_minmax.toggled.connect(self.spin_max_strain.setEnabled)
+
     def set_data(self, material):
         if not material: return
         self.spin_rho_s.set_value_base(material.rho)
@@ -104,11 +202,55 @@ class SteelForm(QWidget):
         self.spin_E0.set_value_base(material.E0)
         self.spin_b.setValue(material.b)
 
+        a1 = getattr(material, 'a1', 0.0)
+        a2 = getattr(material, 'a2', 0.0)
+        a3 = getattr(material, 'a3', 0.0)
+        a4 = getattr(material, 'a4', 0.0)
+        
+        self.spin_a1.setValue(a1)
+        self.spin_a2.setValue(a2)
+        self.spin_a3.setValue(a3)
+        self.spin_a4.setValue(a4)
+        
+        has_minmax = getattr(material, 'minmax', None) is not None
+        has_a = any(v != 0.0 for v in [a1, a2, a3, a4])
+        
+        if has_minmax or has_a:
+            self.chk_optional.setChecked(True)
+        else:
+            self.chk_optional.setChecked(False)
+            
+        if has_minmax:
+            self.chk_minmax.setChecked(True)
+            self.spin_min_strain.setValue(material.minmax.get("min", -0.05))
+            self.spin_max_strain.setValue(material.minmax.get("max", 0.05))
+        else:
+            self.chk_minmax.setChecked(False)
+
     def get_data(self):
         #Devuelve los valores del formulario
-        return{
+        data = {
             "rho": self.spin_rho_s.get_value_base(),
             "Fy": self.spin_Fy.get_value_base(),
             "E0": self.spin_E0.get_value_base(),
             "b": self.spin_b.value(),
+            "a1": 0.0,
+            "a2": 0.0,
+            "a3": 0.0,
+            "a4": 0.0,
+            "minmax": None
         }
+        
+        if self.chk_optional.isChecked():
+            data["a1"] = self.spin_a1.value()
+            data["a2"] = self.spin_a2.value()
+            data["a3"] = self.spin_a3.value()
+            data["a4"] = self.spin_a4.value()
+            
+            if self.chk_minmax.isChecked():
+                data["minmax"] = {
+                    "min": self.spin_min_strain.value(),
+                    "max": self.spin_max_strain.value()
+                }
+                
+        return data

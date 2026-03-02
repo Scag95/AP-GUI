@@ -71,12 +71,19 @@ class PushoverSolver:
   
         if fixed_load_vector:
             # Usar vector pre-calculado (consistente para Adaptive)
+            self.manager.pushover_loads.clear()
             for node_tag, f_val in fixed_load_vector.items():
                 self.builder.log_command('load', node_tag, f_val, 0.0, 0.0)
                 print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
+                
+               # Carga temporal para visualización
+                from src.analysis.loads import NodalLoad
+                temp_load = NodalLoad(tag=999000+node_tag, node_tag=node_tag, fx=f_val, fy=0.0, mz=0.0)
+                self.manager.pushover_loads.append(temp_load)
         else:
             # Calcular en el momento (Standard)
             periods, modal_data = self.load_pushover.run_modal_analysis(1)
+            self.manager.pushover_loads.clear()
             
             if load_pattern_type == "Modal":
                 for item in modal_data:
@@ -84,10 +91,20 @@ class PushoverSolver:
                     node_tag = item['tag']
                     self.builder.log_command('load', node_tag, f_val, 0.0, 0.0)
                     print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
+                    
+                    # Carga temporal param visualización
+                    from src.analysis.loads import NodalLoad
+                    temp_load = NodalLoad(tag=999000+node_tag, node_tag=node_tag, fx=f_val, fy=0.0, mz=0.0)
+                    self.manager.pushover_loads.append(temp_load)
             else:
                 for item in modal_data:
                     node_tag = item['tag']
                     self.builder.log_command('load', node_tag, 1.0, 0.0, 0.0)
+                    
+                    # Carga temporal param visualización
+                    from src.analysis.loads import NodalLoad
+                    temp_load = NodalLoad(tag=999000+node_tag, node_tag=node_tag, fx=1.0, fy=0.0, mz=0.0)
+                    self.manager.pushover_loads.append(temp_load)
 
         #5. Identificar columnas por piso (Pre-Proceso) 
         floor_cols_map = self._get_colums_by_floor()
@@ -161,7 +178,7 @@ class PushoverSolver:
 
         initial_story_shears = {}
         
-        if initial_shears_override:
+        if initial_shears_override is not None:
              initial_story_shears = initial_shears_override
         else:
             print("[Pushover] Capturando estado inicial (Gravedad)...")
@@ -197,13 +214,23 @@ class PushoverSolver:
         results["node_displacements"].append(step0_disp)
         
         # Inicializar derivas de piso en el paso 0
+        ops.reactions()
         for y in sorted_floor_y:
             meta = floor_meta[y]
             u_top = ops.nodeDisp(meta["node_top_tag"], 1)
             u_bot = ops.nodeDisp(meta["node_bot_tag"], 1)
             drift0 = u_top - u_bot
+            
+            shear_total0 = 0.0
+            for ele_tag, sec_idx in meta["cols_section_map"].items():
+                forces = ops.eleResponse(ele_tag, 'section', sec_idx, 'force')
+                if forces and len(forces) >= 3:
+                    shear_total0 += float(forces[2])
+                    
+            shear_net0 = shear_total0 - initial_story_shears.get(y, 0.0)
+            
             results["floors"][y]["disp"].append(drift0)
-            results["floors"][y]["shear"].append(0.0) # Shear net es 0 en el t=0
+            results["floors"][y]["shear"].append(shear_net0)
             results["floors"][y]["H"] = meta["h_floor"]
 
         # --- BUCLE DE PUSHOVER ---
@@ -214,6 +241,7 @@ class PushoverSolver:
             if ok != 0:
                 print(f"[Pushover] Convergencia perdida en paso {i}")
                 break
+        
         
             #A) Resultados globales
             current_roof_disp = ops.nodeDisp(control_node_tag, 1)
@@ -315,12 +343,19 @@ class PushoverSolver:
              ops.reactions() 
              for y in processed_ys:
                 shear = 0.0
-                for tag in floor_cols_map[y]:
-                     # USAMOS HELPER DINÁMICO
-                    shear += self._get_element_force(tag)
+                for ele_tag in floor_cols_map[y]:
+                    col_obj = self.manager.get_element(ele_tag)
+                    node_i = self.manager.get_node(col_obj.node_i)
+                    node_j = self.manager.get_node(col_obj.node_j)
+                    n_points = int(getattr(col_obj, 'integration_points', 0) or 0)
+                    sec_idx = n_points if node_j.y >= node_i.y else 1
+                    
+                    forces = ops.eleResponse(ele_tag, 'section', sec_idx, 'force')
+                    if forces and len(forces) >= 3:
+                        shear += float(forces[2])
                 gravity_base_shears[y] = shear
-        except:
-             pass 
+        except Exception as e:
+             print(f"[Adaptive] Error calculando gravity_base_shears: {e}") 
 
         # 0.b Pre-calcular Vector de Cargas (Fixed shape)
         initial_load_vector = {}

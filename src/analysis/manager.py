@@ -28,6 +28,9 @@ class ProjectManager(QObject):
         # Resultados de Análisis
         self.gravity_results = None
         self.pushover_results = None
+        
+        # Almacén Cargas Temporales Pushover
+        self.pushover_loads = []
 
         #Contador para los IDs automáticos
         self.next_material_tag = 1 
@@ -372,9 +375,11 @@ class ProjectManager(QObject):
         self.element.clear()
         self.load.clear()
         
-        # Limpiar resultados
+        # Limpiar resultados y temporales
         self.gravity_results = None
         self.pushover_results = None
+        self.pushover_loads.clear()
+        
         # Reiniciar contadores
         self.next_material_tag = 1
         self.next_section_tag = 1

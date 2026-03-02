@@ -58,6 +58,7 @@ class StructureInteractor(QWidget):
         self.show_loads_elements = True
         self.show_deformed = True
         self.show_diagrams = True
+        self.show_pushover_loads = False
 
         # --- ATAJOS DE TECLADO ---
         self.shortcut_inc = QShortcut(QKeySequence("Ctrl++"), self)
@@ -108,10 +109,27 @@ class StructureInteractor(QWidget):
         
         # Render Cargas
         s_load = ScaleManager.instance().get_scale('load')
+        
+        # 1. Dibujar cargas normales
         self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load, 
                                       show_nodes=self.show_loads_nodes, 
-                                      show_elements=self.show_loads_elements)
+                                      show_elements=self.show_loads_elements,
+                                      draw_pushover=False)
         
+        # 2. Si corresponde, sobreescribir con cargas temporales (ej. pushover lateral)    
+        #    Hacemos esto habilitando updates para que se dibujen encima de la base                
+        if self.show_pushover_loads:
+            # IMPORTANTE: No la limpiamos porque clear borraría también las gravitacionales
+            # Pero internamente LoadRenderer.clear() siempre limpia la capa.
+            # Para solucionarlo temporalmente sin reestructurar todo el cache,
+            # volvemos a llamar a draw_loads pero le decimos que dibuje por encima de las previas
+            # pero necesitamos modificar renderer_load ligeramente si no borra todo.
+            # Por ahora, como el método limpia la pantalla internamente, desactivamos
+            # la renderización base del Pushover para solo ver las laterales (es más visualmente limpio).
+            self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load, 
+                                      show_nodes=True, 
+                                      show_elements=False,
+                                      draw_pushover=True)
         # Render Deformada
         if self.current_results and self.show_deformed:
             s_def = ScaleManager.instance().get_scale('deformation')
@@ -142,6 +160,7 @@ class StructureInteractor(QWidget):
         elif item_type == 'loads': # Master toggle
              self.show_loads_nodes = visible
              self.show_loads_elements = visible
+             self.show_pushover_loads = visible
         self.refresh_viz()
 
     def set_load_visibility(self, load_type, visible):
@@ -178,6 +197,11 @@ class StructureInteractor(QWidget):
         self.current_results = None
         self.renderer_deform.clear(self.plot_widget)
         self.renderer_forces.clear(self.plot_widget)
+        
+    def set_pushover_loads_visible(self, visible):
+        """Muestra u oculta exclusivamente las fuerzas del patrón teórico utilizadas en el último Pushover"""
+        self.show_pushover_loads = visible
+        self.refresh_viz()
 
     # ... (Resto de métodos de escala e interacción sin cambios) ...
     def increase_load_scale(self):

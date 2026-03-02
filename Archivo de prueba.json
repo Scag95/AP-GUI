@@ -8,7 +8,8 @@
             "fpc": 25000000.0,
             "epsc0": 0.0021,
             "fpcu": 5000000.0,
-            "epsu": 0.003
+            "epsu": 0.003,
+            "minmax": null
         },
         {
             "tag": 2,
@@ -17,13 +18,21 @@
             "type": "Steel01",
             "Fy": 500000000.0,
             "E0": 200000000000.0,
-            "b": 0.01
+            "b": 0.01,
+            "a1": 0.0,
+            "a2": 0.0,
+            "a3": 0.0,
+            "a4": 0.0,
+            "minmax": {
+                "min": -0.05,
+                "max": 0.05
+            }
         }
     ],
     "sections": [
         {
             "tag": 1,
-            "name": "Sec_0.3x0.3",
+            "name": "Viga_300x300",
             "type": "FiberSection",
             "patches": [
                 {
@@ -59,6 +68,45 @@
                     "zEnd": 0.11
                 }
             ]
+        },
+        {
+            "tag": 2,
+            "name": "Columna_500x500",
+            "type": "FiberSection",
+            "patches": [
+                {
+                    "type": "RectPatch",
+                    "material_tag": 1,
+                    "yI": -0.15,
+                    "zI": -0.15,
+                    "yJ": 0.15,
+                    "zJ": 0.15,
+                    "nIy": 10,
+                    "nIz": 10
+                }
+            ],
+            "layers": [
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 5,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.11,
+                    "zStart": -0.11,
+                    "yEnd": 0.11,
+                    "zEnd": 0.11
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 5,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.11,
+                    "zStart": -0.11,
+                    "yEnd": -0.11,
+                    "zEnd": 0.11
+                }
+            ]
         }
     ],
     "nodes": [
@@ -75,7 +123,7 @@
         {
             "tag": 2,
             "x": 0.0,
-            "y": 3.0,
+            "y": 3.5,
             "fixity": [
                 0,
                 0,
@@ -84,6 +132,46 @@
         },
         {
             "tag": 3,
+            "x": 0.0,
+            "y": 7.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 4,
+            "x": 0.0,
+            "y": 10.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 5,
+            "x": 0.0,
+            "y": 14.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 6,
+            "x": 0.0,
+            "y": 17.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 7,
             "x": 3.0,
             "y": 0.0,
             "fixity": [
@@ -93,9 +181,109 @@
             ]
         },
         {
-            "tag": 4,
+            "tag": 8,
             "x": 3.0,
-            "y": 3.0,
+            "y": 3.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 9,
+            "x": 3.0,
+            "y": 7.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 10,
+            "x": 3.0,
+            "y": 10.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 11,
+            "x": 3.0,
+            "y": 14.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 12,
+            "x": 3.0,
+            "y": 17.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 13,
+            "x": 6.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ]
+        },
+        {
+            "tag": 14,
+            "x": 6.0,
+            "y": 3.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 15,
+            "x": 6.0,
+            "y": 7.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 16,
+            "x": 6.0,
+            "y": 10.5,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 17,
+            "x": 6.0,
+            "y": 14.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 18,
+            "x": 6.0,
+            "y": 17.5,
             "fixity": [
                 0,
                 0,
@@ -109,7 +297,7 @@
             "tag": 1,
             "node_i": 1,
             "node_j": 2,
-            "section_tag": 1,
+            "section_tag": 2,
             "transf_tag": 1,
             "mass_density": 225.0,
             "integration_points": 6
@@ -117,9 +305,9 @@
         {
             "type": "ForceBeamColumn",
             "tag": 2,
-            "node_i": 3,
-            "node_j": 4,
-            "section_tag": 1,
+            "node_i": 2,
+            "node_j": 3,
+            "section_tag": 2,
             "transf_tag": 1,
             "mass_density": 225.0,
             "integration_points": 6
@@ -127,8 +315,228 @@
         {
             "type": "ForceBeamColumn",
             "tag": 3,
-            "node_i": 2,
+            "node_i": 3,
             "node_j": 4,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 4,
+            "node_i": 4,
+            "node_j": 5,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 5,
+            "node_i": 5,
+            "node_j": 6,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 6,
+            "node_i": 7,
+            "node_j": 8,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 7,
+            "node_i": 8,
+            "node_j": 9,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 8,
+            "node_i": 9,
+            "node_j": 10,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 9,
+            "node_i": 10,
+            "node_j": 11,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 10,
+            "node_i": 11,
+            "node_j": 12,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 11,
+            "node_i": 13,
+            "node_j": 14,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 12,
+            "node_i": 14,
+            "node_j": 15,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 13,
+            "node_i": 15,
+            "node_j": 16,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 14,
+            "node_i": 16,
+            "node_j": 17,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 15,
+            "node_i": 17,
+            "node_j": 18,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 16,
+            "node_i": 2,
+            "node_j": 8,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 17,
+            "node_i": 8,
+            "node_j": 14,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 18,
+            "node_i": 3,
+            "node_j": 9,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 19,
+            "node_i": 9,
+            "node_j": 15,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 20,
+            "node_i": 4,
+            "node_j": 10,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 21,
+            "node_i": 10,
+            "node_j": 16,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 22,
+            "node_i": 5,
+            "node_j": 11,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 23,
+            "node_i": 11,
+            "node_j": 17,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 24,
+            "node_i": 6,
+            "node_j": 12,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 225.0,
+            "integration_points": 6
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 25,
+            "node_i": 12,
+            "node_j": 18,
             "section_tag": 1,
             "transf_tag": 1,
             "mass_density": 225.0,
@@ -138,22 +546,71 @@
     "loads": [
         {
             "type": "ElementLoad",
+            "tag": 1,
+            "element_tag": 16,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
             "tag": 2,
-            "element_tag": 1,
-            "wx": -2207.25,
-            "wy": -0.0
+            "element_tag": 17,
+            "wx": -0.0,
+            "wy": -2207.25
         },
         {
             "type": "ElementLoad",
             "tag": 3,
-            "element_tag": 2,
-            "wx": -2207.25,
-            "wy": -0.0
+            "element_tag": 18,
+            "wx": -0.0,
+            "wy": -2207.25
         },
         {
             "type": "ElementLoad",
             "tag": 4,
-            "element_tag": 3,
+            "element_tag": 19,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 5,
+            "element_tag": 20,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 6,
+            "element_tag": 21,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 7,
+            "element_tag": 22,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 8,
+            "element_tag": 23,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 9,
+            "element_tag": 24,
+            "wx": -0.0,
+            "wy": -2207.25
+        },
+        {
+            "type": "ElementLoad",
+            "tag": 10,
+            "element_tag": 25,
             "wx": -0.0,
             "wy": -2207.25
         }
