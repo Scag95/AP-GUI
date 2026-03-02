@@ -168,6 +168,7 @@ class MaterialDialog(QDialog):
             material.fpcu = new_data["fpcu"]
             material.epsu = new_data["epsu"]
             material.rho = new_data["rho"]
+            material.minmax = new_data.get("minmax")
                            
         elif isinstance(material,Steel01):
             new_data = self.form_steel.get_data()

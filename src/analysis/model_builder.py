@@ -54,7 +54,7 @@ class ModelBuilder:
         
         # 5. Definir Transformaciones Geométricas
         if self.debug_file: self.debug_file.write("\n# --- Transformations ---\n")
-        self.log_command('geomTransf', 'Linear', 1)
+        self.log_command('geomTransf', 'PDelta', 1)
         
         # 6. Definir Elementos
         self._build_elements()
@@ -79,12 +79,21 @@ class ModelBuilder:
         if self.debug_file: self.debug_file.write("\n# --- Materials ---\n")
 
         for mat in self.manager.get_all_materials():
-            if isinstance(mat, Concrete01):
-                self.log_command('uniaxialMaterial', 'Concrete01', mat.tag, mat.fpc, mat.epsc0, mat.fpcu, mat.epsu)
-            elif isinstance(mat, Steel01):
-                self.log_command('uniaxialMaterial', 'Steel01', mat.tag, mat.Fy, mat.E0, mat.b)
-            elif isinstance(mat, Elastic): # New elastic material
-                 self.log_command('uniaxialMaterial', 'Elastic', mat.tag, mat.E)
+            args = list(mat.get_opensees_args())
+            
+            base_tag = mat.tag
+            has_minmax = getattr(mat, 'minmax', None) is not None
+            
+            if has_minmax:
+                base_tag = mat.tag + 100000
+                args[1] = base_tag
+                
+            self.log_command('uniaxialMaterial', *args)
+            
+            if has_minmax:
+                min_val = mat.minmax.get("min", -0.05)
+                max_val = mat.minmax.get("max", 0.05)
+                self.log_command('uniaxialMaterial', 'MinMax', mat.tag, base_tag, '-min', min_val, '-max', max_val)
 
     def _build_sections(self):
         if self.debug_file: self.debug_file.write("\n# --- Sections ---\n")

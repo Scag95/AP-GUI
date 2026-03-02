@@ -58,21 +58,14 @@ class AnimationToolbar(QToolBar):
             node_disps = self.manager.pushover_results.get("node_displacements", [])
             if 0 <= value < len(node_disps):
                 step_data = node_disps[value]
+
                 # Enviar solo a la ventana activa
                 if self.parent_window and hasattr(self.parent_window, 'viz_widget'):
                     active_viz = self.parent_window.viz_widget
                     if active_viz:
                         active_viz.draw_kinematic_step(step_data)
                 
-                # Sincronizar dialogos si está activo
-                if self.chk_sync.isChecked():
-                    for widget in QApplication.instance().topLevelWidgets():
-                        title = widget.windowTitle()
-                        if title in ["Resultados de Sección: Momento-Curvatura", "Análisis Pushover"]:
-                            try:
-                                if hasattr(widget, 'slider_step'):
-                                    dest_slider = widget.slider_step
-                                    safe_val = max(dest_slider.minimum(), min(value + 1, dest_slider.maximum()))
-                                    dest_slider.setValue(safe_val)
-                            except Exception as e:
-                                print(f"Error sincronizando grafica en {title}: {e}")
+                # Le pedimos al MainWindow que se encargue de sincronizar a todos sus hijos
+                if self.parent_window and hasattr(self.parent_window, 'sync_animation_step'):
+                    self.parent_window.sync_animation_step(value, step_data, self.chk_sync.isChecked())
+                    

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QComboBox, QFrame, QListWidget, QListWidgetItem, QAbstractItemView, QSlider)
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
@@ -7,11 +7,9 @@ import glob
 from src.analysis.manager import ProjectManager
 from src.utils.units import UnitManager, UnitType 
 
-class MomentCurvatureDialog(QDialog):
+class MomentCurvatureWidget(QWidget):
     def __init__(self, element_tag=None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Resultados de Sección: Momento-Curvatura")
-        self.resize(1000, 700)
         self.manager = ProjectManager.instance()
         self.data_dir = "pushover_data"
         

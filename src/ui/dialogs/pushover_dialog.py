@@ -51,6 +51,11 @@ class PushoverDialog(QDialog):
         self.chk_adaptive = QCheckBox("Análisis Adaptativo Secuencial (Freeze Forward)")
         self.chk_adaptive.setToolTip("Congela pisos que fallen (mecanismo) y continúa el análisis para evaluar pisos superiores.")
         form_layout.addRow("Estrategia:", self.chk_adaptive)
+        
+        # 4. Checkbox Ver Cargas
+        self.chk_show_loads = QCheckBox("Visualizar distribución de cargas del análisis")
+        self.chk_show_loads.setChecked(True) # Activado por defecto
+        form_layout.addRow("Visualización:", self.chk_show_loads)
 
         # --- BOTONES ---
         # Run Button
@@ -106,13 +111,19 @@ class PushoverDialog(QDialog):
                 # Activar la nueva barra de animación en la ventana principal
                 if hasattr(self.parent(), 'toggle_animation_toolbar'):
                     self.parent().toggle_animation_toolbar(True)
+                    
+                # Mostrar cargas si se solicitó
+                if hasattr(self.parent(), 'set_pushover_loads_visible'):
+                    self.parent().set_pushover_loads_visible(self.chk_show_loads.isChecked())
                 
                 # Pasamos el diccionario crudo al dialog de resultados para la curva XY
-                from src.ui.dialogs.pushover_result_dialog import PushoverResultsDialog
+                from src.ui.dialogs.pushover_result_dialog import PushoverResultsWidget
                 
-                # Guardamos la referencia para que no sea destruido por el Garbage Collector
-                self._results_dialog = PushoverResultsDialog(results, self)
-                self._results_dialog.show()
+                # Pasamos también el estado inicial del checkbox para que el result_dialog arranque sincronizado
+                widget = PushoverResultsWidget(results, self.chk_show_loads.isChecked())
+                if hasattr(self.parent(), 'add_tool_window'):
+                    self.parent().add_tool_window(widget,"Curva de Capacidad (Pushover)")
+
 
         except Exception as e:
             print(f"Error crítico en Pushover: {e}")

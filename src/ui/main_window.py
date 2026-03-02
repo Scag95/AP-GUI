@@ -1,3 +1,4 @@
+from pandas.io.formats.format import save_to_buffer
 from PyQt6.QtWidgets import QMainWindow, QDockWidget, QMdiArea, QMdiSubWindow
 from PyQt6.QtCore import Qt 
 from PyQt6.QtGui import QAction
@@ -147,12 +148,45 @@ class MainWindow(QMainWindow):
         self.mdi_area.tileSubWindows()
         return interactor
 
+
+    def add_tool_window(self, widget, title):
+        """Envuelve cualquier QWidget en una sub-ventana MDI y la añade al lienzo."""
+
+        sub_window = QMdiSubWindow()
+        sub_window.setWidget(widget)
+        sub_window.setWindowTitle(title)
+
+        #Limpiar la memoria al cerrarse    
+        sub_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose) 
+        self.mdi_area.addSubWindow(sub_window)
+        sub_window.show()
+
+        self.mdi_area.tileSubWindows()
+        return sub_window
+
+    def resizeEvent(self, event):
+        """Sobreescribe el evento de redimensionamiento de Qt.
+        Cada vez que el usuario estira la ventana principal, forzamos el mosaico MDI."""
+
+        super().resizeEvent(event)
+        if hasattr(self, 'mdi_area'):
+            self.mdi_area.tileSubWindows()
+
+
+
     def broadcast_results(self, results):
         """Envía resultados a todas las ventanas abiertas y lanza panel de escalas"""
         self.scales_dock.show()
         self.scales_dock.raise_()
         for viz in self._viewports:
             viz.show_deformation(results)
+            
+    def set_pushover_loads_visible(self, visible):
+        """Alternar visibilidad de flechas de patrón lateral calculadas temporalmente en todas las vistas"""
+        for viz in self._viewports:
+            # Invocamos el nuevo método de la interactor
+            if hasattr(viz, 'set_pushover_loads_visible'):
+                viz.set_pushover_loads_visible(visible)
 
     def toggle_animation_toolbar(self, show=True):
         if show:
@@ -167,6 +201,46 @@ class MainWindow(QMainWindow):
             for viz in self._viewports:
                 viz.renderer_deform.clear(viz.plot_widget)
 
+    def sync_animation_step(self, step_index, step_data, sync_graphs=True):
+        """ Recibe una señal temporal de la barra de animación y la distribuye a 
+            todoas las subventanas (3D y Gráfcicos) que están escuchando."""
+        
+        if not hasattr(self, 'mdi_area'): return
+
+        #Recorremos todas las sub-ventanas del aréa central
+
+        for sub_window in self.mdi_area.subWindowList():
+            widget = sub_window.widget()
+
+
+            # --- 1. a los visores 3D les mandamos datos geográficos ---
+            if isinstance(widget, StructureInteractor):
+                widget.draw_kinematic_step(step_data)
+
+            # --- 2. A los g´raficos de resultados les mandamos el índice del Slider ---
+            elif sync_graphs:
+                #si el widget tiene un slider_step interno( como PushoverResults o MomentCurvature)
+                if hasattr(widget, 'slider_step'):
+                    try:
+                        dest_slider = widget.slider_step
+                        #Bloqueamos sus señales parra que no hagan eco infinito y seguramos el valor no exceda sus porpios limites
+                        safe_val = max(dest_slider.minimum(), min(step_index + 1, dest_slider.maximum()))
+                        dest_slider.setValue(safe_val)
+
+                        if hasattr(widget, 'update_plot'):
+                            #Actualizar variable fantasma de paso temporar si existe
+                            if hasattr(widget, 'current_step_val'):
+                                widget.current_step_vale = safe_val
+                            widget.update_plot()
+                        
+                        dest_slider.blockSignals(False)
+                    except Exception as e:
+                        print(f"Error sincronizando gráfico interno MDI: {e}")
+                        
+
+
+
+            
     def execute_command(self, cmd):
         # 1. Procesar lógica
         msg, action = self.cmd_processor.process_command(cmd)

@@ -1,5 +1,5 @@
 import pyqtgraph as pg
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFormLayout, 
                              QComboBox, QPushButton, QLabel, QDialogButtonBox, QSlider, QHBoxLayout, QListWidget, QListWidgetItem)
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
@@ -8,19 +8,11 @@ from src.utils.units import UnitManager
 from src.utils.units import UnitType
 
 
-class PushoverResultsDialog(QDialog):
-    def __init__(self, results, parent = None):
+class PushoverResultsWidget(QWidget):
+    def __init__(self, results, initial_load_viz_state=False, parent = None):
         super().__init__(parent)
         self.results = results
-        self.setWindowTitle("Análisis Pushover")
-        self.resize(800, 600)
         
-        #Centrar ventana al centro de la pantalla
-        qr = self.frameGeometry()
-        cp = self.screen().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
         self.manager = ProjectManager.instance()
 
         #Layout Principal
@@ -47,6 +39,18 @@ class PushoverResultsDialog(QDialog):
 
         # Panel derecho para plot y slider
         right_layout = QVBoxLayout()
+        
+        # --- CONTROLES SUPERIORES (DERECHA) ---
+        top_controls_layout = QHBoxLayout()
+        
+        from PyQt6.QtWidgets import QCheckBox
+        self.chk_toggle_loads = QCheckBox("Mostrar Fuerzas del Pushover en 3D")
+        self.chk_toggle_loads.setChecked(initial_load_viz_state)
+        self.chk_toggle_loads.stateChanged.connect(self._on_toggle_loads)
+        top_controls_layout.addWidget(self.chk_toggle_loads)
+        top_controls_layout.addStretch()
+        
+        right_layout.addLayout(top_controls_layout)
 
         # Añadir item Global
         item_global = QListWidgetItem("Global (Base Shear vs Roof Drift)")
@@ -109,6 +113,14 @@ class PushoverResultsDialog(QDialog):
         
         # Pintar inicial
         self.update_plot()
+        
+    def _on_toggle_loads(self, state):
+        from PyQt6.QtCore import Qt
+        is_checked = (state == Qt.CheckState.Checked.value or state == 2) # PyQt6 values
+        # El parent es PushoverDialog, el parent de PushoverDialog es MainWindow
+        main_window = self.parent().parent() if self.parent() else None
+        if main_window and hasattr(main_window, 'set_pushover_loads_visible'):
+            main_window.set_pushover_loads_visible(is_checked)
 
     def _on_slider_changed(self, value):
         self.current_step_val = value

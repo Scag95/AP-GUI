@@ -25,7 +25,7 @@ class ScalesPanel(QWidget):
         self.spin_load = self._create_spinbox('load', 0.1, 100.0, 0.25, 2)
         form_general.addRow("Escala de Cargas (x):", self.spin_load)
         
-        self.spin_deform = self._create_spinbox('deformation', 0.1, 100.0, 0.25, 2)
+        self.spin_deform = self._create_spinbox('deformation', 0.1, 1000.0, 0.25, 2)
         form_general.addRow("Deformada (x):", self.spin_deform)
         
         self.layout.addWidget(group_general)

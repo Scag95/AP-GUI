@@ -7,9 +7,11 @@ import math
 class LoadRenderer:
     def __init__(self):
         self.load_items = []
-        # Colores
+        # Colores estáticos
         self.color_nodal_load = '#FF5722'  # Naranja
         self.color_dist_load = '#9C27B0'   # Morado
+        # Color dinámico
+        self.color_pushover_load = '#00BCD4' # Cian
 
     def clear(self, plot_widget):
         """Elimina todos los items de carga del plot."""
@@ -17,7 +19,7 @@ class LoadRenderer:
             plot_widget.removeItem(item)
         self.load_items.clear()
 
-    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True):
+    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True, draw_pushover=False):
         """Dibuja todas las cargas del manager en el plot_widget."""
         # Desactivamos actualizaciones para acelerar la inserción masiva de items
         plot_widget.setUpdatesEnabled(False)
@@ -30,7 +32,15 @@ class LoadRenderer:
             dist_unit_str = um.get_current_unit(UnitType.DISTRIBUTED_FORCE)
             
             # Use faster lookups
-            all_loads = manager.get_all_loads()
+            if draw_pushover:
+                all_loads = manager.pushover_loads
+                color_override_nodal = self.color_pushover_load
+                color_override_dist = self.color_pushover_load
+            else:
+                all_loads = manager.get_all_loads()
+                color_override_nodal = self.color_nodal_load
+                color_override_dist = self.color_dist_load
+                
             nodes_map = {n.tag: n for n in manager.get_all_nodes()}
             elements_map = {e.tag: e for e in manager.get_all_elements()} # only needed if ElementLoads exist
 
@@ -38,7 +48,7 @@ class LoadRenderer:
                 if isinstance(load, NodalLoad) and show_nodes:
                     node = nodes_map.get(load.node_tag)
                     if node:
-                        self._draw_nodal_load(plot_widget, node, load, scale, um, force_unit_str)
+                        self._draw_nodal_load(plot_widget, node, load, scale, um, force_unit_str, color_override=color_override_nodal, is_pushover=draw_pushover)
                 
                 elif isinstance(load, ElementLoad) and show_elements:
                     elem = elements_map.get(load.element_tag)
@@ -46,16 +56,17 @@ class LoadRenderer:
                         ni = nodes_map.get(elem.node_i)
                         nj = nodes_map.get(elem.node_j)
                         if ni and nj:
-                            self._draw_element_load(plot_widget, ni, nj, load, scale, um, dist_unit_str)
+                            self._draw_element_load(plot_widget, ni, nj, load, scale, um, dist_unit_str, color_override=color_override_dist)
         finally:
             plot_widget.setUpdatesEnabled(True)
             plot_widget.update()
 
-    def _draw_nodal_load(self, plot_widget, node, load, scale, um, unit_str):
+    def _draw_nodal_load(self, plot_widget, node, load, scale, um, unit_str, color_override=None, is_pushover=False):
         # Parametros graficos
         HEAD_LEN = 1500 * scale
         OFFSET = 1000 * scale 
         TAIL_WIDTH = 0.1*scale
+        color = color_override if color_override else 'g'
         # um passed as arg
 
 
@@ -63,7 +74,9 @@ class LoadRenderer:
         # FX
         if abs(load.fx) > 1e-6:
             # GEOMETRÍA: Usar valor BASE para que el tamaño sea constante al cambiar unidades
-            tail_len = abs(load.fx) * scale
+            # Si es pushover, la escala es muy chica (~1.0), le damos un empujón visual para que se vea junto a fuerzas reales
+            base_val_x = abs(load.fx) * 10000 if is_pushover else abs(load.fx)
+            tail_len = base_val_x * scale
             
             # Ángulo de la flecha
             angle = 180 if load.fx > 0 else 0
@@ -77,18 +90,24 @@ class LoadRenderer:
                 angle=angle,
                 tipAngle=30, baseAngle=20, headLen=HEAD_LEN,
                 tailLen=tail_len, tailWidth=TAIL_WIDTH,
-                brush='g', pen='g', pxMode=False
+                brush=color, pen=color, pxMode=False
             )
             plot_widget.addItem(item)
             self.load_items.append(item)
             
             # Texto (VISUAL: Usar conversiones)
-            val_viz = um.from_base(load.fx, UnitType.FORCE)
+            if is_pushover:
+                val_viz = load.fx
+                display_str = f"Fx={val_viz:.2f}"
+            else:
+                val_viz = um.from_base(load.fx, UnitType.FORCE)
+                display_str = f"Fx={val_viz:.3f} {unit_str}"
+                
             # Calculamos cola
             total_len = tail_len + HEAD_LEN
             shift_x = total_len if angle == 0 else -total_len
             
-            text = pg.TextItem(f"Fx={val_viz:.1f} {unit_str}", color='g', anchor=(0.5, 1))
+            text = pg.TextItem(display_str, color=color, anchor=(0.5, 1))
             text.setPos(node.x + shift_x, node.y)
             plot_widget.addItem(text)
             self.load_items.append(text)
@@ -96,8 +115,10 @@ class LoadRenderer:
         # FY
         if abs(load.fy) > 1e-6:
             # GEOMETRÍA: Valor BASE
-            tail_len = abs(load.fy) * scale
+            base_val_y = abs(load.fy) * 10000 if is_pushover else abs(load.fy)
+            tail_len = base_val_y * scale
             angle = -90 if load.fy < 0 else 90 # Arriba(90) o Abajo(-90)
+            color_y = color_override if color_override else '#FFA500'
             
             dy_offset = -OFFSET if angle == -90 else OFFSET
             tip_y = node.y + dy_offset
@@ -107,22 +128,28 @@ class LoadRenderer:
                 angle=angle,
                 tipAngle=30, baseAngle=20, headLen=HEAD_LEN,
                 tailLen=tail_len, tailWidth=TAIL_WIDTH,
-                brush='#FFA500', pen='#FFA500', pxMode=False
+                brush=color_y, pen=color_y, pxMode=False
             )
             plot_widget.addItem(item)
             self.load_items.append(item)
             
             # Texto (VISUAL)
-            val_viz = um.from_base(load.fy, UnitType.FORCE)
+            if is_pushover:
+                val_viz = load.fy
+                display_str = f"Fy={val_viz:.3f} (ref)"
+            else:
+                val_viz = um.from_base(load.fy, UnitType.FORCE)
+                display_str = f"Fy={val_viz:.3f} {unit_str}"
+                
             total_len = tail_len + HEAD_LEN
             dy = total_len if angle == 90 else -total_len
             
-            text = pg.TextItem(f"Fy={val_viz:.1f} {unit_str}", color='#FFA500')
+            text = pg.TextItem(display_str, color=color_y)
             text.setPos(node.x, node.y + dy)
             plot_widget.addItem(text)
             self.load_items.append(text)
 
-    def _draw_element_load(self, plot_widget, ni, nj, load, scale, um, unit_str):
+    def _draw_element_load(self, plot_widget, ni, nj, load, scale, um, unit_str, color_override=None):
         # um passed as arg
         HEAD_LEN = 500 * scale
         OFFSET = 1000 * scale 
@@ -206,5 +233,5 @@ class LoadRenderer:
             self.load_items.append(text)
 
         # Llamadas: PASAMOS VALORES BASE SIN CONVERTIR
-        draw_block(load.wy, self.color_nodal_load, False) 
-        draw_block(load.wx, self.color_dist_load, True)
+        draw_block(load.wy, color_override if color_override else self.color_nodal_load, False) 
+        draw_block(load.wx, color_override if color_override else self.color_dist_load, True)

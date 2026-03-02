@@ -243,6 +243,20 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     - Tied `NodeForms` updates securely to internal signals, eliminating false dirty topologies causing crashes.
     - Patched edge case bugs involving slider syncs with configuration dialogs.
 
+### Session 24 (2026-03-02) - MinMax Materials & Adaptive Continuity (COMPLETED)
+1. **Material Degradation (MinMax)**:
+    - Implemented `MinMax` material wrapper for `Concrete01` and `Steel01` to simulate physical failure (strength drops to 0 at defined strain limits).
+    - UI: Added "Propiedades Opcionales" in `MaterialForms` with checkboxes activating MinMax strain limits and `Steel01` isotropic hardening parameters (`a1`-`a4`).
+    - Backend: Refactored `ModelBuilder._build_materials` to dynamically wrap base materials with `MinMax` if properties exist, ensuring backwards compatibility and clean Tcl generation (`tag + 100000`).
+2. **Adaptive Pushover Continuity**:
+    - **Problem**: Multi-floor capacity curves (base shear) dropped to 0 artificially at the start of each new adaptive cycle after `loadConst -time 0.0`.
+    - **Solution**: OpenSees natively preserves cumulative historical displacements and forces. Removed redundant python-side cumulative offsets. 
+    - Fixed `gravity_base_shears` extraction by dynamically correctly querying the latest integration point dynamically based on element geometry.
+3. **MDI Architecture & Synchronization**:
+    - Centralized `sync_animation_step` in `MainWindow` allowing the main Toolbar Slider to seamlessly iterate over all sub-windows (`MomentCurvatureWidget`, `PushoverResultsWidget`, and the 3D viewport).
+    - Converted Floating Dialogs into embedded `QMdiSubWindow` instances for a cleaner workspace.
+4. **Next Step**: Refactor `QMdiArea` into `QSplitter` or `QDockWidget` layouts so windows auto-arrange rather than overlap loosely.
+
 ## Pending Tasks (Priority Order)
 
 ### 1. Address OpenSees Convergence & Stabilization - [PRIORITY]
@@ -258,3 +272,5 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 ## Technical Context for Next Session
 -   **Current State**: The UI is robust and feature-complete for visualizations (MDI, Kinematic animations, live force plotting with auto-sync overlays). The `PushoverSolver` engine handles all iteration successfully.
 -   **Next Steps**: First thing next session, focus entirely on the OpenSees core mechanics to ensure stable failure mechanisms and realistic yielding curves rather than infinite stiffness, fixing the convergence loss.
+
+
