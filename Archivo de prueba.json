@@ -6,9 +6,9 @@
             "rho": 2500,
             "type": "Concrete01",
             "fpc": 25000000.0,
-            "epsc0": 0.0021,
-            "fpcu": 5000000.0,
-            "epsu": 0.003,
+            "epsc0": 0.002,
+            "fpcu": 25000000.0,
+            "epsu": 0.0035,
             "minmax": null
         },
         {
@@ -18,32 +18,29 @@
             "type": "Steel01",
             "Fy": 500000000.0,
             "E0": 200000000000.0,
-            "b": 0.01,
+            "b": 0.0,
             "a1": 0.0,
             "a2": 0.0,
             "a3": 0.0,
             "a4": 0.0,
-            "minmax": {
-                "min": -0.05,
-                "max": 0.05
-            }
+            "minmax": null
         }
     ],
     "sections": [
         {
             "tag": 1,
-            "name": "Viga_300x300",
+            "name": "Viga_400x600",
             "type": "FiberSection",
             "patches": [
                 {
                     "type": "RectPatch",
                     "material_tag": 1,
-                    "yI": -0.15,
-                    "zI": -0.15,
-                    "yJ": 0.15,
-                    "zJ": 0.15,
-                    "nIy": 10,
-                    "nIz": 10
+                    "yI": -0.3,
+                    "zI": -0.2,
+                    "yJ": 0.3,
+                    "zJ": 0.2,
+                    "nIy": 20,
+                    "nIz": 15
                 }
             ],
             "layers": [
@@ -52,20 +49,20 @@
                     "material_tag": 2,
                     "num_bars": 3,
                     "area_bar": 0.0003141592653589793,
-                    "yStart": 0.11,
-                    "zStart": -0.11,
-                    "yEnd": 0.11,
-                    "zEnd": 0.11
+                    "yStart": 0.26,
+                    "zStart": -0.16,
+                    "yEnd": 0.26,
+                    "zEnd": 0.16
                 },
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
                     "num_bars": 3,
                     "area_bar": 0.0003141592653589793,
-                    "yStart": -0.11,
-                    "zStart": -0.11,
-                    "yEnd": -0.11,
-                    "zEnd": 0.11
+                    "yStart": -0.26,
+                    "zStart": -0.16,
+                    "yEnd": -0.26,
+                    "zEnd": 0.16
                 }
             ]
         },
@@ -77,12 +74,12 @@
                 {
                     "type": "RectPatch",
                     "material_tag": 1,
-                    "yI": -0.15,
-                    "zI": -0.15,
-                    "yJ": 0.15,
-                    "zJ": 0.15,
-                    "nIy": 10,
-                    "nIz": 10
+                    "yI": -0.25,
+                    "zI": -0.25,
+                    "yJ": 0.25,
+                    "zJ": 0.25,
+                    "nIy": 20,
+                    "nIz": 20
                 }
             ],
             "layers": [
@@ -91,20 +88,20 @@
                     "material_tag": 2,
                     "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
-                    "yStart": 0.11,
-                    "zStart": -0.11,
-                    "yEnd": 0.11,
-                    "zEnd": 0.11
+                    "yStart": 0.21,
+                    "zStart": -0.21,
+                    "yEnd": 0.21,
+                    "zEnd": 0.21
                 },
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
                     "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
-                    "yStart": -0.11,
-                    "zStart": -0.11,
-                    "yEnd": -0.11,
-                    "zEnd": 0.11
+                    "yStart": -0.21,
+                    "zStart": -0.21,
+                    "yEnd": -0.21,
+                    "zEnd": 0.21
                 }
             ]
         }
@@ -337,7 +334,7 @@
             "tag": 5,
             "node_i": 5,
             "node_j": 6,
-            "section_tag": 1,
+            "section_tag": 2,
             "transf_tag": 1,
             "mass_density": 225.0,
             "integration_points": 6

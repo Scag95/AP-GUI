@@ -6,9 +6,10 @@
             "rho": 2500,
             "type": "Concrete01",
             "fpc": 25000000.0,
-            "epsc0": 0.0021,
+            "epsc0": 0.002,
             "fpcu": 25000000.0,
-            "epsu": 0.003
+            "epsu": 0.0035,
+            "minmax": null
         },
         {
             "tag": 2,
@@ -17,7 +18,12 @@
             "type": "Steel01",
             "Fy": 500000000.0,
             "E0": 200000000000.0,
-            "b": 0.01
+            "b": 0.01,
+            "a1": 0.0,
+            "a2": 0.0,
+            "a3": 0.0,
+            "a4": 0.0,
+            "minmax": null
         }
     ],
     "sections": [
@@ -41,7 +47,7 @@
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
-                    "num_bars": 3,
+                    "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
                     "yStart": 0.11,
                     "zStart": -0.11,
@@ -51,7 +57,7 @@
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
-                    "num_bars": 3,
+                    "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
                     "yStart": -0.11,
                     "zStart": -0.11,
@@ -91,7 +97,8 @@
             "node_j": 2,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 225.0
+            "mass_density": 225.0,
+            "integration_points": 5
         }
     ],
     "loads": []

@@ -236,6 +236,7 @@ class PushoverSolver:
         # --- BUCLE DE PUSHOVER ---
         for i in range(1, n_steps + 1):
             ok = ops.analyze(1)
+            #TODO: Añadir verificación del fallo del piso en cada step.
             #ok = self.builder.log_command('analyze', 1)
             
             if ok != 0:
@@ -277,8 +278,8 @@ class PushoverSolver:
                     if forces and len(forces) >= 3:
                         shear_total += float(forces[2])
 
-                shear_net = (shear_total - initial_story_shears[y])
-                
+                #shear_net = (shear_total - initial_story_shears[y])
+                shear_net = (shear_total)
                 # 2. Deriva Relativa directa con Tags de la caché
                 u_top = ops.nodeDisp(meta["node_top_tag"], 1)
                 u_bot = ops.nodeDisp(meta["node_bot_tag"], 1)
@@ -312,7 +313,7 @@ class PushoverSolver:
     
     def run_adaptative_pushover(self,control_node_tag, max_disp, load_pattern_type):
         MAX_ROUNDS = 5
-        base_steps = 100
+        base_steps = 1000
 
 
         #Desplazamiento por ronda
@@ -376,8 +377,8 @@ class PushoverSolver:
         for i in range(MAX_ROUNDS):
             print(f"\n[Adaptative] --- ronda {i+1}")
 
-            if i > 0:
-                self.builder.log_command('loadConst', '-time', 0.0)
+            #if i > 0:
+             #  self.builder.log_command('loadConst', '-time', 0.0)
 
             #Correr pushover incrementeal
             # Pasamos gravity_base_shears y fixed_load_vector
