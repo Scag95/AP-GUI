@@ -131,9 +131,9 @@ class SteelForm(QWidget):
 
         #Campo b
         self.spin_b = QDoubleSpinBox()
-        self.spin_b.setDecimals(3)
-        self.spin_b.setSingleStep(0.001)
-        self.spin_b.setValue(0.01)
+        self.spin_b.setDecimals(6)
+        self.spin_b.setSingleStep(0.000001)
+        self.spin_b.setValue(0.000001)
         layout.addRow("Ratio de endurecimiento [b]",self.spin_b)
 
         # --- Propiedades Opcionales ---

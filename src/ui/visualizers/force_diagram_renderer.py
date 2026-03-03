@@ -32,7 +32,7 @@ class ForceDiagramRenderer:
 
             sections_data = element_forces[ele.tag]
             lobatto_locs = [s['loc'] for s in sections_data]
-            
+            print(f"Los puntos de integración en el elemento {i}, estan en :{Lobatto_locs}")
             #Extraer la seire de valores a dibujar
 
             values = []

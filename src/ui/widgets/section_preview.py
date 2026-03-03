@@ -112,9 +112,9 @@ class SectionPreview(pg.PlotWidget):
         
         # Eje Z (Horizontal - Verde) - Apunta Derecha (+Z)
         # 0 grados apunta IZQUIERDA. 180 grados apunta DERECHA.
-        self.arrow_z.setPos(axis_len, 0)
+        self.arrow_z.setPos(-axis_len, 0)
         self.arrow_z.setStyle(
-            angle=180, 
+            angle=0, 
             headLen=head_len,
             tailLen=tail_len,
             tailWidth=tail_width,
@@ -123,7 +123,7 @@ class SectionPreview(pg.PlotWidget):
         
         # Etiquetas
         self.label_y.setPos(0, axis_len + head_len*0.5)
-        self.label_z.setPos(axis_len + head_len*0.5, 0)
+        self.label_z.setPos(-axis_len, 11*tail_width)
 
         # Auto-ajustar vista
         self.autoRange()
