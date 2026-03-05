@@ -73,6 +73,10 @@ class SectionDialog(QDialog):
             self.form_section.spin_bot_qty.valueChanged,
             self.form_section.spin_top_diam.valueChanged,
             self.form_section.spin_bot_diam.valueChanged,
+            self.form_section.spin_right_qty.valueChanged,
+            self.form_section.spin_right_diam.valueChanged,
+            self.form_section.spin_left_qty.valueChanged,
+            self.form_section.spin_left_diam.valueChanged
         ]
         combos = [
             self.form_section.combo_concrete.currentIndexChanged,
@@ -131,6 +135,54 @@ class SectionDialog(QDialog):
                 area_bar=area_bot,
                 yStart= round(-h/2 + cover, 6), zStart= round(-b/2 + cover, 6),
                 yEnd  = round(-h/2 + cover, 6), zEnd  =  round(b/2 - cover, 6)
+            ))
+
+        # --- REFUERZO LATERAL (Izquierdo y Derecho) ---
+        # La distancia vertical libre segura entre las capas superior e inferior
+        # es la altura de la sección menos dos veces el recubrimiento
+        h_interior = h - 2 * cover
+        top_y = round(h/2 - cover, 6)
+        bot_y = round(-h/2 + cover, 6)
+
+        # Capa IZQUIERDA
+        if data.get('left_qty', 0) > 0:
+            qty_left = data['left_qty']
+            area_left = (math.pi * (data['left_diam']**2)) / 4
+            
+            # Espaciado Opción A: h_interior / (N + 1)
+            spacing_left = h_interior / (qty_left + 1)
+            
+            # El punto más alto está un espaciado por debajo del acero superior
+            yStart_left = round(top_y - spacing_left, 6)
+            # El punto más bajo está un espaciado por encima del acero inferior
+            yEnd_left = round(bot_y + spacing_left, 6)
+            z_left = round(-b/2 + cover, 6)
+
+            section.add_layer_straight(LayerStraight(
+                material_tag=mat_steel,
+                num_bars=qty_left,
+                area_bar=area_left,
+                yStart=yStart_left, zStart=z_left,
+                yEnd=yEnd_left, zEnd=z_left
+            ))
+
+        # Capa DERECHA
+        if data.get('right_qty', 0) > 0:
+            qty_right = data['right_qty']
+            area_right = (math.pi * (data['right_diam']**2)) / 4
+            
+            spacing_right = h_interior / (qty_right + 1)
+            
+            yStart_right = round(top_y - spacing_right, 6)
+            yEnd_right = round(bot_y + spacing_right, 6)
+            z_right = round(b/2 - cover, 6)
+
+            section.add_layer_straight(LayerStraight(
+                material_tag=mat_steel,
+                num_bars=qty_right,
+                area_bar=area_right,
+                yStart=yStart_right, zStart=z_right,
+                yEnd=yEnd_right, zEnd=z_right
             ))
 
     def add_section(self):

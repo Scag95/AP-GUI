@@ -12,7 +12,6 @@ class PushoverSolver:
         self.builder = builder
         self.manager = ProjectManager.instance()
         self._element_top_section_cache = {}
-        self.failure_detector = FailureDetector()
         self.load_pushover = LoadPushoverGenerator(self.builder)
         
   
@@ -51,12 +50,18 @@ class PushoverSolver:
                 ops.recorder('Element', '-file', f'{output_dir}/ele_{ele.tag}_deform.out', 
                              '-time', '-ele', ele.tag, 'section', 'deformation')
 
-    def run_pushover(self, control_node_tag, max_disp, load_pattern_type, n_steps = 100, pattern_tag = 2,
-                     initial_shears_override=None, fixed_load_vector=None, setup_recorders=True):
+    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, pattern_tag = 2,
+                     initial_shears_override=None, fixed_load_vector=None, setup_recorders=True, frozen_floors=None,
+                     failure_kwargs=None):
         """
         Ejecuta un análisis Pushover (Displacement Control).
-        Retonra una tupa (lista_desplazamiento, lista_cortanes).
+        Retorna una tupa (lista_desplazamiento, lista_cortanes).
         """
+        if failure_kwargs is None:
+            failure_kwargs = {}
+        failure_detector = FailureDetector(**failure_kwargs)
+        if frozen_floors is None:
+            frozen_floors = set()
         self.builder.debug_file = open("model_debug.py", "a")
         
         if self.builder.debug_file: self.builder.debug_file.write(f"\n# --- PUSHOVER ANALYSIS (Node {control_node_tag}, Dmax = {max_disp}, Distribución {load_pattern_type})---\n")
@@ -116,6 +121,7 @@ class PushoverSolver:
             "base_shear": [],
             "steps": [],
             "node_displacements": [], # Añadido para animación (Video)
+            "failed_floors": [],      # Registro de fallos en tiempo real
             "floors": {}
         }
         
@@ -240,7 +246,7 @@ class PushoverSolver:
             #ok = self.builder.log_command('analyze', 1)
             
             if ok != 0:
-                print(f"[Pushover] Convergencia perdida en paso {i}")
+                print(f"[Pushover] 🔴 Convergencia perdida en paso {i}. Análisis de patrón {pattern_tag} interrumpido.")
                 break
         
         
@@ -289,6 +295,23 @@ class PushoverSolver:
                 results["floors"][y]["shear"].append(shear_net)
                 results["floors"][y]["H"] = meta["h_floor"]
                 
+            # C) Evaluador de Fallos en Tiempo Real
+            # Verifica si la planta ha cedido con los datos acumulados hasta el momento
+            failed = failure_detector.analyze(results)
+            new_failures_in_step = False
+            
+            if failed:
+                # Filtrar para evitar duplicados si se detectan varios en el mismo paso
+                # Y EXCLUIR las plantas que YA ESTÁN congeladas de rondas anteriores
+                for floor_y in failed:
+                    if floor_y not in frozen_floors and floor_y not in results["failed_floors"]:
+                         results["failed_floors"].append(floor_y)
+                         new_failures_in_step = True
+                         
+                if new_failures_in_step:
+                    print(f"[Pushover] ⚠️ Abortando ronda actual en paso {i} por NUEVO mecanismo de fallo en piso(s): {[f for f in results['failed_floors'] if f not in frozen_floors]}")
+                    break # Rompe el bucle for de n_steps prematuramente
+                
         return results
     
     def _merge_results(self, consolidated, new_res,cycle_idx):
@@ -311,9 +334,16 @@ class PushoverSolver:
             consolidated["floors"][y]["disp"].extend(data["disp"])
             consolidated["floors"][y]["shear"].extend(data["shear"])
     
-    def run_adaptative_pushover(self,control_node_tag, max_disp, load_pattern_type):
-        MAX_ROUNDS = 5
-        base_steps = 1000
+    def run_adaptative_pushover(self,control_node_tag, max_disp, steps, load_pattern_type,
+                                sensitivity=None, drift_limit=None, safety_limit=None):
+        MAX_ROUNDS = len(ProjectManager.instance().get_floor_data())
+        base_steps = steps
+
+        # Preparar argumentos del detector de fallos
+        failure_kwargs = {}
+        if sensitivity is not None: failure_kwargs['sensitivity'] = sensitivity/100
+        if drift_limit is not None: failure_kwargs['drift_limit'] = drift_limit/100
+        if safety_limit is not None: failure_kwargs['safety_limit'] = safety_limit/100
 
 
         #Desplazamiento por ronda
@@ -377,22 +407,25 @@ class PushoverSolver:
         for i in range(MAX_ROUNDS):
             print(f"\n[Adaptative] --- ronda {i+1}")
 
-            #if i > 0:
-             #  self.builder.log_command('loadConst', '-time', 0.0)
+            if i > 0:
+                 self.builder.log_command('loadConst', '-time', 0.0)
 
-            #Correr pushover incrementeal
-            # Pasamos gravity_base_shears y fixed_load_vector
+            # Correr pushover incrementeal
+            # Pasamos gravity_base_shears y fixed_load_vector, además de frozen_floors
             results = self.run_pushover(control_node_tag, disp_per_round, load_pattern_type, 
                                       n_steps=base_steps, 
                                       pattern_tag=current_pattern,
                                       initial_shears_override=gravity_base_shears,
                                       fixed_load_vector=initial_load_vector,
-                                      setup_recorders=False)
+                                      setup_recorders=False,
+                                      frozen_floors=frozen_floors,
+                                      failure_kwargs=failure_kwargs)
 
             #unir resultados
             self._merge_results(consolidated, results, i)
 
-            new_failures = self.failure_detector.analyze(results)
+            # Leer fallos directamente desde los resultados del pushover
+            new_failures = results.get("failed_floors", [])
             has_new_freeze = False
             for y_fail in new_failures:
                 if y_fail not in frozen_floors:
@@ -402,11 +435,14 @@ class PushoverSolver:
 
                     if idx > 0:
                         y_prev = sorted_ys[idx-1] 
-                        self.builder.freeze_floor(y_fail, y_prev)
-                        frozen_floors.add(y_fail)
-                        has_new_freeze = True 
-                    else: 
-                        print(f"[adaptive] Ignorando fallo en piso base Y = {y_fail}")
+                    else:
+                        # Si es la primera planta, su base es el suelo (Y=0 aprox)
+                        # Buscamos la cota real de la base si es muy estricto, o le pasamos 0.0
+                        y_prev = 0.0
+                        
+                    self.builder.freeze_floor(y_fail, y_prev)
+                    frozen_floors.add(y_fail)
+                    has_new_freeze = True 
             if any(y == sorted(results["floors"].keys())[-1] for y in new_failures):
                 print("[Adaptive] La última planta ha fallado. Deteniendo análisis para evitar singularidad.")
                 break

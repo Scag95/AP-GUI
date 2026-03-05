@@ -18,7 +18,7 @@
             "type": "Steel01",
             "Fy": 500000000.0,
             "E0": 200000000000.0,
-            "b": 0.0,
+            "b": 1e-06,
             "a1": 0.0,
             "a2": 0.0,
             "a3": 0.0,
@@ -39,15 +39,15 @@
                     "zI": -0.2,
                     "yJ": 0.3,
                     "zJ": 0.2,
-                    "nIy": 20,
-                    "nIz": 15
+                    "nIy": 10,
+                    "nIz": 10
                 }
             ],
             "layers": [
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
-                    "num_bars": 3,
+                    "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
                     "yStart": 0.26,
                     "zStart": -0.16,
@@ -57,11 +57,31 @@
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
-                    "num_bars": 3,
+                    "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
                     "yStart": -0.26,
                     "zStart": -0.16,
                     "yEnd": -0.26,
+                    "zEnd": 0.16
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 2,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.086667,
+                    "zStart": -0.16,
+                    "yEnd": -0.086667,
+                    "zEnd": -0.16
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 2,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.086667,
+                    "zStart": 0.16,
+                    "yEnd": -0.086667,
                     "zEnd": 0.16
                 }
             ]
@@ -78,8 +98,8 @@
                     "zI": -0.25,
                     "yJ": 0.25,
                     "zJ": 0.25,
-                    "nIy": 20,
-                    "nIz": 20
+                    "nIy": 10,
+                    "nIz": 10
                 }
             ],
             "layers": [
@@ -101,6 +121,26 @@
                     "yStart": -0.21,
                     "zStart": -0.21,
                     "yEnd": -0.21,
+                    "zEnd": 0.21
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.105,
+                    "zStart": -0.21,
+                    "yEnd": -0.105,
+                    "zEnd": -0.21
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.105,
+                    "zStart": 0.21,
+                    "yEnd": -0.105,
                     "zEnd": 0.21
                 }
             ]

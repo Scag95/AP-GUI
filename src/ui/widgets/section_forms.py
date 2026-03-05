@@ -24,13 +24,15 @@ class SectionForm(QWidget):
         self.spin_b.setRange(0, 1e6) # Rango amplio visual (ej. 1,000,000 mm)
         self.spin_b.setDecimals(2)   # 2 decimales fijos
         self.spin_b.set_value_base(0.3) # 300 mm = 0.3 m
+        self.spin_b.setSingleStep(10)
         layout.addRow("Base de la sección:", self.spin_b)
 
         #Altura
         self.spin_h = UnitSpinBox(UnitType.SECTION_DIM)
         self.spin_h.setRange(0,1e6)  # Rango amplio visual (ej. 1,000,000 mm)
-        self.spin_b.setDecimals(2)   # 2 decimales fijos
+        self.spin_h.setDecimals(2)   # 2 decimales fijos
         self.spin_h.set_value_base(0.3)    # 300 mm = 0.3 m
+        self.spin_h.setSingleStep(10)
         layout.addRow("Altura de la sección:",self.spin_h)
 
         self.combo_concrete = QComboBox()
@@ -85,6 +87,44 @@ class SectionForm(QWidget):
         
         layout.addRow(group_bot)
 
+
+        # --- Refuerzo Izquierdo ---
+        group_left = QGroupBox("Refuerzo Izquierdo")
+        form_left = QFormLayout()
+        group_left.setLayout(form_left)
+
+        self.spin_left_qty = QSpinBox()
+        self.spin_left_qty.setRange(0,50)
+        self.spin_left_qty.setValue(0)
+        form_left.addRow("Cantidad", self.spin_left_qty)
+
+        self.spin_left_diam = UnitSpinBox(UnitType.SECTION_DIM)
+        self.spin_left_diam.setRange(0, 100)
+        self.spin_left_diam.setDecimals(2)
+        self.spin_left_diam.set_value_base(0.020)
+        form_left.addRow("Diámetro:", self.spin_left_diam)
+
+        layout.addRow(group_left)
+
+        # --- Refuerzo Derecho ---
+
+        group_right = QGroupBox("Refuerzo Izquierdo")
+        form_right = QFormLayout()
+        group_right.setLayout(form_right)
+
+        self.spin_right_qty = QSpinBox()
+        self.spin_right_qty.setRange(0,50)
+        self.spin_right_qty.setValue(0)
+        form_right.addRow("Cantidad", self.spin_right_qty)
+
+        self.spin_right_diam = UnitSpinBox(UnitType.SECTION_DIM)
+        self.spin_right_diam.setRange(0, 100)
+        self.spin_right_diam.setDecimals(2)
+        self.spin_right_diam.set_value_base(0.020)
+        form_right.addRow("Diámetro:", self.spin_right_diam)
+
+        layout.addRow(group_right)
+
         # --- Discretización ---
         group_subdivision = QGroupBox("Discretización")
         form_subdivision = QFormLayout()
@@ -93,7 +133,6 @@ class SectionForm(QWidget):
         self.spin_nIy = QSpinBox()
         self.spin_nIy.setValue(10)
         form_subdivision.addRow("Número de subdivisión en Y", self.spin_nIy)
-
 
         self.spin_nIz = QSpinBox()
         self.spin_nIz.setValue(10)
@@ -128,6 +167,10 @@ class SectionForm(QWidget):
             "bot_diam": self.spin_bot_diam.get_value_base(),
             "top_qty": self.spin_top_qty.value(),
             "top_diam": self.spin_top_diam.get_value_base(),
+            "left_qty": self.spin_left_qty.value(),
+            "left_diam": self.spin_left_diam.get_value_base(),
+            "right_qty": self.spin_right_qty.value(),
+            "right_diam": self.spin_right_diam.get_value_base(),
             "nIy": self.spin_nIy.value(),
             "nIz": self.spin_nIz.value()
         }
@@ -155,6 +198,8 @@ class SectionForm(QWidget):
                 
         self.spin_top_qty.setValue(0)
         self.spin_bot_qty.setValue(0)
+        self.spin_left_qty.setValue(0)
+        self.spin_right_qty.setValue(0)
 
         found_steel_mat = False
 
@@ -167,14 +212,28 @@ class SectionForm(QWidget):
 
             diam = math.sqrt(4*layer.area_bar/math.pi)
 
-            if layer.yStart > 0:
-                self.spin_top_qty.setValue(layer.num_bars)
-                self.spin_top_diam.set_value_base(diam)
-                h_val = self.spin_h.get_value_base()
-                cover = (h_val/2) - layer.yStart
+            # Opción A: Por orientación geométrica
+            # Verificamos si es una línea horizontal o vertical (con un pequeño margen de tolerancia por redondeo)
+            tol = 1e-6
 
-                if cover >0:
-                    self.spin_cover.set_value_base(cover)
-            elif layer.yStart <0:
-                self.spin_bot_qty.setValue(layer.num_bars)
-                self.spin_bot_diam.set_value_base(diam)
+            if abs(layer.yStart - layer.yEnd) <= tol:
+                # Línea Horizontal (Superior o Inferior)
+                if layer.yStart > 0:
+                    self.spin_top_qty.setValue(layer.num_bars)
+                    self.spin_top_diam.set_value_base(diam)
+                    h_val = self.spin_h.get_value_base()
+                    cover = (h_val/2) - layer.yStart
+                    if cover > 0:
+                        self.spin_cover.set_value_base(cover)
+                elif layer.yStart < 0:
+                    self.spin_bot_qty.setValue(layer.num_bars)
+                    self.spin_bot_diam.set_value_base(diam)
+
+            elif abs(layer.zStart - layer.zEnd) <= tol:
+                # Línea Vertical (Izquierda o Derecha)
+                if layer.zStart < 0:
+                    self.spin_left_qty.setValue(layer.num_bars)
+                    self.spin_left_diam.set_value_base(diam)
+                elif layer.zStart > 0:
+                    self.spin_right_qty.setValue(layer.num_bars)
+                    self.spin_right_diam.set_value_base(diam)
