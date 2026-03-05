@@ -26,43 +26,49 @@ class FailureDetector:
             shears = data["shear"]
             h_floor = data.get("H") # Altura del piso (default 3m)
             
-            if len(disps) < 5: continue
+            # Filtro 1: Necesitamos suficiente historia para no captar ruido numérico del reinicio (Ej: Paso 4)
+            if len(disps) < 20: 
+                continue
             
-            # 1. Calcular Rigidez Inicial (K_ini)
-            # Promedio de los primeros 3 pasos (o pasos iniciales)
-            dq = disps[2] - disps[0]
-            if abs(dq) > 1e-9:
-                k_ini = (shears[2] - shears[0]) / dq
+            # 1. Calcular Rigidez Inicial (K_ini) del inicio de la ronda (suavizado)
+            dq_ini = disps[5] - disps[0]
+            dv_ini = shears[5] - shears[0]
+            if abs(dq_ini) > 1e-9:
+                k_ini = dv_ini / dq_ini
             else:
                 k_ini = 1.0e9 # Muy rígido
             
             # 2. Analizar últimos pasos (Pendiente Tangente)
-            # Usamos regresión lineal simple de los últimos 3 puntos
-            d_last = disps[-3:]
-            v_last = shears[-3:]
+            # Usamos regresión lineal simple de los últimos 5 puntos para más estabilidad
+            d_last = disps[-5:]
+            v_last = shears[-5:]
             current_drift = d_last[-1]
             
             # Pendiente local (K_tan)
+            dq_tan = d_last[-1] - d_last[0]
+            dv_tan = v_last[-1] - v_last[0]
             try:
-                k_tan = (v_last[-1] - v_last[0]) / (d_last[-1] - d_last[0])
+                k_tan = dv_tan / dq_tan
             except ZeroDivisionError:
                 k_tan = 0.0 # Vertical
             
             # 3. Evaluar Criterios
-            # A) Deriva Relativa Significativa (> 0.5%)
+            # A) Deriva Relativa Significativa (> 0.5% real para evitar micro-asentamientos)
             drift_ratio = abs(current_drift) / h_floor
-            is_significant_drift = drift_ratio > 0.005 # 0.5%
+            is_significant_drift = drift_ratio > self.drift_limit
             
-            # B) Pendiente plana (o negativa) -> Mecanismo
-            # Si K_tan cae por debajo del 1% de K_ini
-            sensitivity = 0.001 
-            is_flat = k_tan < (sensitivity * k_ini)
+            # B) Mecanismo Estructural: Pendiente puramente plana (usando absolutos)
+            is_flat = abs(k_tan) < (self.sensitivity * abs(k_ini))
             
-            # C) Safety Net (Deriva excesiva > 5%)
-            is_huge_drift = drift_ratio > 0.08
+            # B.2) Softening crítico: Pérdida marcada de resistencia (tangente muy negativa respecto al empuje original)
+            is_softening = k_tan < 0 and abs(k_tan) > (0.05 * abs(k_ini)) and is_significant_drift
+            
+            # C) Safety Net (Deriva excesiva de colapso)
+            is_huge_drift = drift_ratio > self.safety_limit
 
-            if (is_significant_drift and is_flat) or is_huge_drift:
-                print(f"[Adaptive] Piso Y={y:.2f} DETECTADO FALLO (Drift Ratio={drift_ratio*100:.2f}%, K_tan/K_ini={k_tan/k_ini:.4f})")
+            if (is_significant_drift and is_flat) or is_softening or is_huge_drift:
+                cause = "Mecanismo Plano" if is_flat else ("Caída Resistencia" if is_softening else "Colapso Displ")
+                print(f"[Adaptive] Piso Y={y:.2f} DETECTADO FALLO [{cause}] (Drift={drift_ratio*100:.2f}%, K_tan/K_ini={k_tan/k_ini:.4f})")
                 failed_floors.append(y)
                 
         return failed_floors

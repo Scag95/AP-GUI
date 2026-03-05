@@ -1,3 +1,4 @@
+from PyQt6.QtWidgets import QSpinBox
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
                              QComboBox, QPushButton, QCheckBox)
 from src.analysis.manager import ProjectManager
@@ -40,9 +41,16 @@ class PushoverDialog(QDialog):
         self.spin_drift.setDecimals(3)
         self.spin_drift.setSingleStep(0.1)
         self.spin_drift.set_value_base(0.3) #Default 30cm
+        
+        #2.5 Número de pasos
+        self.spin_steps = QSpinBox()
+        self.spin_steps.setRange(0 , 100000)
+        self.spin_steps.setSingleStep(500)
+        self.spin_steps.setValue(1000)
 
         form_layout.addRow("Nodo de Control:",self.combo_node)
         form_layout.addRow("Desplazamiento Máx:", self.spin_drift)
+        form_layout.addRow("Número de pasos:", self.spin_steps)
         form_layout.addRow("Modo de aplicación de fuerza", self.combo_load_pattern_type)
         
         layout.addLayout(form_layout)
@@ -51,6 +59,49 @@ class PushoverDialog(QDialog):
         self.chk_adaptive = QCheckBox("Análisis Adaptativo Secuencial (Freeze Forward)")
         self.chk_adaptive.setToolTip("Congela pisos que fallen (mecanismo) y continúa el análisis para evaluar pisos superiores.")
         form_layout.addRow("Estrategia:", self.chk_adaptive)
+
+        # 3.5 Criterios de Fallo Personalizados
+        from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox
+        self.chk_custom_failure = QCheckBox("Personalizar Criterios de Fallo")
+        self.chk_custom_failure.setToolTip("Modifica los límites de deriva y pérdida de resistencia espacial.")
+        form_layout.addRow("Criterios de Fallo:", self.chk_custom_failure)
+
+        # Contenedor para los parámetros (inicialmente oculto)
+        self.failure_params_group = QGroupBox("Parámetros del Detector de Fallos")
+        failure_layout = QFormLayout()
+        self.failure_params_group.setLayout(failure_layout)
+        
+        self.spin_sensitivity = QDoubleSpinBox()
+        self.spin_sensitivity.setRange(0, 100)
+        self.spin_sensitivity.setSingleStep(1)
+        self.spin_sensitivity.setDecimals(2)
+        self.spin_sensitivity.setValue(1)
+        self.spin_sensitivity.setSuffix(" %")
+        self.spin_sensitivity.setToolTip("Porcentaje de la rigidez inicial para considerar 'plana' la curva (Mecanismo).")
+        failure_layout.addRow("Sensibilidad de Caída (1-100%):", self.spin_sensitivity)
+
+        self.spin_drift_limit = QDoubleSpinBox()
+        self.spin_drift_limit.setRange(0, 100)
+        self.spin_drift_limit.setSingleStep(0.1)
+        self.spin_drift_limit.setDecimals(2)
+        self.spin_drift_limit.setValue(0.5)
+        self.spin_drift_limit.setSuffix(" %")
+        self.spin_drift_limit.setToolTip("Deriva relativa mínima para considerar que un mecanismo es significativo.")
+        failure_layout.addRow("Límite de Deriva Significativa:", self.spin_drift_limit)
+
+        self.spin_safety_limit = QDoubleSpinBox()
+        self.spin_safety_limit.setRange(0, 100)
+        self.spin_safety_limit.setSingleStep(1)
+        self.spin_safety_limit.setDecimals(2)
+        self.spin_safety_limit.setValue(8)
+        self.spin_safety_limit.setSuffix(" %")
+        self.spin_safety_limit.setToolTip("Límite absoluto de deriva para detener por deformación excesiva (colapso).")
+        failure_layout.addRow("Deriva Máxima de Colapso:", self.spin_safety_limit)
+
+        self.failure_params_group.setVisible(False)
+        form_layout.addRow(self.failure_params_group)
+
+        self.chk_custom_failure.toggled.connect(self.failure_params_group.setVisible)
         
         # 4. Checkbox Ver Cargas
         self.chk_show_loads = QCheckBox("Visualizar distribución de cargas del análisis")
@@ -85,6 +136,7 @@ class PushoverDialog(QDialog):
         if idx < 0: return
         control_node = self.combo_node.itemData(idx)
         max_disp = self.spin_drift.get_value_base()
+        steps = self.spin_steps.value()
 
 
         #2. Instacniar Tranaltor y ejecutar
@@ -99,10 +151,16 @@ class PushoverDialog(QDialog):
             results = None
             if self.chk_adaptive.isChecked():
                 print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
-                results = translator.run_adaptive_pushover(control_node, max_disp, load_pattern_type)
+                # Extraer parámetros personalizados si aplica
+                sen = self.spin_sensitivity.value() if self.chk_custom_failure.isChecked() else None
+                drf = self.spin_drift_limit.value() if self.chk_custom_failure.isChecked() else None
+                sft = self.spin_safety_limit.value() if self.chk_custom_failure.isChecked() else None
+                
+                results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
+                                                           sensitivity=sen, drift_limit=drf, safety_limit=sft)
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
-                results = translator.run_pushover_analysis(control_node, max_disp, load_pattern_type)
+                results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)
 
             if results:
                 # Guardar resultados en el Manager para persistencia
