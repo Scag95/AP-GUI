@@ -33,10 +33,18 @@ class FailureDetector:
             # 1. Calcular Rigidez Inicial (K_ini) del inicio de la ronda (suavizado)
             dq_ini = disps[5] - disps[0]
             dv_ini = shears[5] - shears[0]
+            
+            # Guardamos el signo original de la fuerza elástica pura para saber 
+            # hacia dónde "tira" la estructura naturalmente al empujarla.
+            original_sign = 1 if dv_ini >= 0 else -1
+
             if abs(dq_ini) > 1e-9:
-                k_ini = dv_ini / dq_ini
+                # Trabajamos con magnitudes absolutas para la rigidez base de referencia
+                k_ini_mag = abs(dv_ini / dq_ini)
+                k_ini = dv_ini / dq_ini  # Mantenemos para el log original
             else:
-                k_ini = 1.0e9 # Muy rígido
+                k_ini_mag = 1.0e9 # Muy rígido
+                k_ini = 1.0e9
             
             # 2. Analizar últimos pasos (Pendiente Tangente)
             # Usamos regresión lineal simple de los últimos 5 puntos para más estabilidad
@@ -51,6 +59,9 @@ class FailureDetector:
                 k_tan = dv_tan / dq_tan
             except ZeroDivisionError:
                 k_tan = 0.0 # Vertical
+                
+            # Evaluar qué signo tiene esta tangente respecto al empuje original
+            tan_sign = 1 if dv_tan >= 0 else -1
             
             # 3. Evaluar Criterios
             # A) Deriva Relativa Significativa (> 0.5% real para evitar micro-asentamientos)
@@ -58,10 +69,13 @@ class FailureDetector:
             is_significant_drift = drift_ratio > self.drift_limit
             
             # B) Mecanismo Estructural: Pendiente puramente plana (usando absolutos)
-            is_flat = abs(k_tan) < (self.sensitivity * abs(k_ini))
+            is_flat = abs(k_tan) < (self.sensitivity * k_ini_mag)
             
-            # B.2) Softening crítico: Pérdida marcada de resistencia (tangente muy negativa respecto al empuje original)
-            is_softening = k_tan < 0 and abs(k_tan) > (0.05 * abs(k_ini)) and is_significant_drift
+            # B.2) Softening crítico: Pérdida marcada de resistencia
+            # Ocurre cuando la rigidez cambia al SIGNO OPUESTO de su fase elástica inicial
+            # Ej: Empezó absorbiendo fuerza en negativo, y ahora va cayendo hacia positivo.
+            # Y solo lo consideramos softening si esa caída es mínimamente pronunciada (>5% de kini)
+            is_softening = (tan_sign != original_sign) and abs(k_tan) > (0.05 * k_ini_mag) and is_significant_drift
             
             # C) Safety Net (Deriva excesiva de colapso)
             is_huge_drift = drift_ratio > self.safety_limit
@@ -69,6 +83,7 @@ class FailureDetector:
             if (is_significant_drift and is_flat) or is_softening or is_huge_drift:
                 cause = "Mecanismo Plano" if is_flat else ("Caída Resistencia" if is_softening else "Colapso Displ")
                 print(f"[Adaptive] Piso Y={y:.2f} DETECTADO FALLO [{cause}] (Drift={drift_ratio*100:.2f}%, K_tan/K_ini={k_tan/k_ini:.4f})")
+                print(f"DEBUG: k_ini={k_ini}, k_tan={k_tan}")
                 failed_floors.append(y)
                 
         return failed_floors
