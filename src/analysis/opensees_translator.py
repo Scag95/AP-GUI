@@ -26,7 +26,7 @@ class OpenSeesTranslator:
         """Delegates result extraction to GravitySolver."""
         return self.gravity_solver.get_results()
         
-    def run_pushover_analysis(self, control_node_tag, max_disp, load_pattern_type, n_steps = 100):
+    def run_pushover_analysis(self, control_node_tag, max_disp, load_pattern_type, n_steps):
         """Delegates pushover analysis to PushoverSolver."""
         return self.pushover_solver.run_pushover(control_node_tag, max_disp, load_pattern_type, n_steps)
         

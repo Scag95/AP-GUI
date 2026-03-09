@@ -143,6 +143,11 @@ class PushoverSolver:
         if setup_recorders:
             self._setup_pushover_recorders()
 
+        # REAJUSTE TOPOLÓGICO CLAVE
+        self.builder.log_command('system', 'UmfPack') 
+        self.builder.log_command('numberer', 'RCM')   
+        self.builder.log_command('constraints', 'Transformation') 
+        
         self.builder.log_command('integrator', 'DisplacementControl', control_node_tag,1,incr_disp)
         self.builder.log_command('test','NormDispIncr', 1e-06, 100)
         self.builder.log_command('algorithm', 'KrylovNewton')
@@ -412,8 +417,7 @@ class PushoverSolver:
 
             # Correr pushover incrementeal
             # Pasamos gravity_base_shears y fixed_load_vector, además de frozen_floors
-            results = self.run_pushover(control_node_tag, disp_per_round, load_pattern_type, 
-                                      n_steps=base_steps, 
+            results = self.run_pushover(control_node_tag, disp_per_round, n_steps=base_steps, load_pattern_type = load_pattern_type, 
                                       pattern_tag=current_pattern,
                                       initial_shears_override=gravity_base_shears,
                                       fixed_load_vector=initial_load_vector,

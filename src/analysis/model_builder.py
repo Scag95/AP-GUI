@@ -78,6 +78,10 @@ class ModelBuilder:
     def _build_materials(self):
         if self.debug_file: self.debug_file.write("\n# --- Materials ---\n")
 
+        # Material Rígido para futuras Congelaciones (Cruces de San Andrés)
+        if self.debug_file: self.debug_file.write("# Material Elastico Rígido para Congelaciones adaptativas\n")
+        self.log_command('uniaxialMaterial', 'Elastic', 99999, 1.0e12)
+
         for mat in self.manager.get_all_materials():
             args = list(mat.get_opensees_args())
             
@@ -178,23 +182,17 @@ class ModelBuilder:
             elif isinstance(load, ElementLoad):
                 self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
                 
-    def create_rigid_material_internal(self):
-        """Helper to create internal rigid material without polluting Manager."""
-        try:
-            self.log_command('uniaxialMaterial', 'Elastic', 99999, 1.0e12) 
-        except:
-            pass
+
 
     def freeze_floor(self, y_roof, y_floor_below):
         """Cross-Bracing freeze logic."""
-        self.create_rigid_material_internal()
-        
         tol = 0.1
         nodes_top = [n for n in self.manager.get_all_nodes() if abs(n.y - y_roof) < tol]
         nodes_bot = [n for n in self.manager.get_all_nodes() if abs(n.y - y_floor_below) < tol]
         
-        if not nodes_top or not nodes_bot: return
-        
+        if not nodes_top or not nodes_bot: 
+            return
+            
         nodes_top.sort(key=lambda n: n.x)
         nodes_bot.sort(key=lambda n: n.x)
         
@@ -203,6 +201,7 @@ class ModelBuilder:
         
         print(f"[Adaptive] Congelando piso Y={y_roof}")
         
+        # Opcion: Inyectando Cruces Fisicas Rigidas
         for i in range(num_bays):
             n_bl = nodes_bot[i]
             n_br = nodes_bot[i+1]
