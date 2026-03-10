@@ -74,12 +74,22 @@ class PushoverSolver:
         self.builder.log_command('timeSeries', 'Linear', ts_tag_push)
         self.builder.log_command('pattern', 'Plain', pattern_tag_push, ts_tag_push)
   
+        # Determinar nodos maestros para DEBUG (los de menor X por planta)
+        master_nodes = {}
+        for n in self.manager.get_all_nodes():
+            if n.y not in master_nodes or n.x < master_nodes[n.y].x:
+                master_nodes[n.y] = n
+        master_tags = {n.tag for n in master_nodes.values()}
+
         if fixed_load_vector:
             # Usar vector pre-calculado (consistente para Adaptive)
             self.manager.pushover_loads.clear()
             for node_tag, f_val in fixed_load_vector.items():
+                if abs(f_val) < 1e-9:
+                    continue
                 self.builder.log_command('load', node_tag, f_val, 0.0, 0.0)
-                print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
+                if node_tag in master_tags:
+                    print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val:.4f}")
                 
                # Carga temporal para visualización
                 from src.analysis.loads import NodalLoad
@@ -94,8 +104,10 @@ class PushoverSolver:
                 for item in modal_data:
                     f_val = item['f_norm']
                     node_tag = item['tag']
+                    if abs(f_val) < 1e-9: continue
                     self.builder.log_command('load', node_tag, f_val, 0.0, 0.0)
-                    print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val}")
+                    if node_tag in master_tags:
+                        print(f"[DEBUG Pushover] Load Node {node_tag} FX = {f_val:.4f}")
                     
                     # Carga temporal param visualización
                     from src.analysis.loads import NodalLoad
@@ -104,12 +116,16 @@ class PushoverSolver:
             else:
                 for item in modal_data:
                     node_tag = item['tag']
-                    self.builder.log_command('load', node_tag, 1.0, 0.0, 0.0)
-                    
-                    # Carga temporal param visualización
-                    from src.analysis.loads import NodalLoad
-                    temp_load = NodalLoad(tag=999000+node_tag, node_tag=node_tag, fx=1.0, fy=0.0, mz=0.0)
-                    self.manager.pushover_loads.append(temp_load)
+                    if node_tag in master_tags:
+                        self.builder.log_command('load', node_tag, 1.0, 0.0, 0.0)
+                        print(f"[DEBUG Pushover] Load Node {node_tag} FX = 1.0000")
+                        
+                        # Carga temporal param visualización
+                        from src.analysis.loads import NodalLoad
+                        temp_load = NodalLoad(tag=999000+node_tag, node_tag=node_tag, fx=1.0, fy=0.0, mz=0.0)
+                        self.manager.pushover_loads.append(temp_load)
+                    else:
+                        self.builder.log_command('load', node_tag, 0.0, 0.0, 0.0)
 
         #5. Identificar columnas por piso (Pre-Proceso) 
         floor_cols_map = self._get_colums_by_floor()
@@ -340,7 +356,7 @@ class PushoverSolver:
             consolidated["floors"][y]["shear"].extend(data["shear"])
     
     def run_adaptative_pushover(self,control_node_tag, max_disp, steps, load_pattern_type,
-                                sensitivity=None, drift_limit=None, safety_limit=None):
+                                sensitivity=None, drift_limit=None, safety_limit=None, freeze_method="truss"):
         MAX_ROUNDS = len(ProjectManager.instance().get_floor_data())
         base_steps = steps
 
@@ -369,7 +385,7 @@ class PushoverSolver:
         # Historial de pisos ya congelado para no repetor freeze
         frozen_floors = set()
 
-        print(f"[Adaptive] Iniciando Pushover Adaptativo ({MAX_ROUNDS} Rondas, Dmax={max_disp})")
+        print(f"[Adaptive] Iniciando Pushover Adaptativo ({MAX_ROUNDS} Rondas, Dmax={max_disp}, Freeze={freeze_method})")
         
         # 0. Capturar Gravedad Base una única vez
         gravity_base_shears = {}
@@ -399,12 +415,22 @@ class PushoverSolver:
         # Ejecutamos modal una vez para obtener distribución
         periods, modal_data = self.load_pushover.run_modal_analysis(1)
         
+        # Determinar nodos maestros para el init vector  (los de menor X por planta)
+        master_nodes = {}
+        for n in self.manager.get_all_nodes():
+            if n.y not in master_nodes or n.x < master_nodes[n.y].x:
+                master_nodes[n.y] = n
+        master_tags = {n.tag for n in master_nodes.values()}
+        
         for item in modal_data:
             node_tag = item['tag']
             if load_pattern_type == "Modal":
                 initial_load_vector[node_tag] = item['f_norm']
             else:
-                initial_load_vector[node_tag] = 1.0
+                if node_tag in master_tags:
+                    initial_load_vector[node_tag] = 1.0
+                else:
+                    initial_load_vector[node_tag] = 0.0
         
         # PRE-SETUP RECORDERS (Una vez para todo el análisis)
         self._setup_pushover_recorders()
@@ -415,12 +441,52 @@ class PushoverSolver:
             if i > 0:
                  self.builder.log_command('loadConst', '-time', 0.0)
 
+            # Leer fallos de iteración anterior y re-calcular cargas si usamos el método "Load Pattern"
+            dynamic_load_vector = dict(initial_load_vector)
+            
+            if freeze_method == "load" and frozen_floors:
+                # 1. Averiguamos qué piso fallido es el más alto (el mecanismo dominante)
+                top_frozen_y = max(frozen_floors)
+                
+                # 2. Identificamos todos los nodos que están estrictamente POR ENCIMA del nivel fallido
+                nodes_above = [n.tag for n in self.manager.get_all_nodes() if n.y > top_frozen_y + 0.1]
+                
+                # 3. Sumamos toda la fuerza relativa que se aplicará en las plantas superiores
+                total_force_above = sum(dynamic_load_vector.get(tag, 0.0) for tag in nodes_above)
+                
+                if total_force_above > 0:
+                    # 4. En vez de todos los nodos, ubicamos el NODO MAESTRO (Control Node) de esa planta
+                    master_node_tag = None
+                     
+                    # Escanear restricciones equalDOF o buscar el nodo principal de esa cota
+                    # Por convención en MII-UPM y el manager, podemos extraerlo de la masa o asumir el de menor X
+                    nodes_frozen_roof = [n for n in self.manager.get_all_nodes() if abs(n.y - top_frozen_y) < 0.1]
+                    if nodes_frozen_roof:
+                         # La manera estricta es usar el master de diaphragm. Como fallback usamos el primero ordenado por X.
+                         nodes_frozen_roof.sort(key=lambda n: n.x)
+                         master_node_tag = nodes_frozen_roof[0].tag
+                     
+                    if master_node_tag is not None:
+                        # 5. Todo el vector cortante opuesto va directo al Master Node
+                        dynamic_load_vector[master_node_tag] = -total_force_above
+                            
+                        # Mantenemos a 0 las demás cargas del techo para que solo se concentre en el maestro
+                        for n in nodes_frozen_roof:
+                            if n.tag != master_node_tag:
+                                dynamic_load_vector[n.tag] = 0.0
+                        
+                    # 6. Opcional (CANCELADO): El usuario solicitó mantener empuje bajo el fallo
+                    # para continuar deformando estructuralmente el bloque activo.
+                    # nodes_below = [n.tag for n in self.manager.get_all_nodes() if n.y < top_frozen_y - 0.1]
+                    # for n_tag in nodes_below:
+                    #      dynamic_load_vector[n_tag] = 0.0
+
             # Correr pushover incrementeal
-            # Pasamos gravity_base_shears y fixed_load_vector, además de frozen_floors
+            # Pasamos gravity_base_shears y el vector de cargas ajustado
             results = self.run_pushover(control_node_tag, disp_per_round, n_steps=base_steps, load_pattern_type = load_pattern_type, 
                                       pattern_tag=current_pattern,
                                       initial_shears_override=gravity_base_shears,
-                                      fixed_load_vector=initial_load_vector,
+                                      fixed_load_vector=dynamic_load_vector,
                                       setup_recorders=False,
                                       frozen_floors=frozen_floors,
                                       failure_kwargs=failure_kwargs)
@@ -440,13 +506,15 @@ class PushoverSolver:
                     if idx > 0:
                         y_prev = sorted_ys[idx-1] 
                     else:
-                        # Si es la primera planta, su base es el suelo (Y=0 aprox)
-                        # Buscamos la cota real de la base si es muy estricto, o le pasamos 0.0
                         y_prev = 0.0
                         
-                    self.builder.freeze_floor(y_fail, y_prev)
+                    # Si el método no es de cargas artificiales, mandamos a inyectar geometría
+                    if freeze_method in ["truss", "fix"]:
+                        self.builder.freeze_floor(y_fail, y_prev, freeze_method)
+                        
                     frozen_floors.add(y_fail)
                     has_new_freeze = True 
+                    
             if any(y == sorted(results["floors"].keys())[-1] for y in new_failures):
                 print("[Adaptive] La última planta ha fallado. Deteniendo análisis para evitar singularidad.")
                 break
