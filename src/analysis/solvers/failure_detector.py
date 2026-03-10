@@ -1,89 +1,88 @@
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+
+@dataclass
+class FloorFailureState:
+    """Estructura de datos que encapsul toda la información sobre el fallo de una planta."""
+    y_level: float
+    cause: str
+    k_ini: float
+    k_tan: float
+    current_drift: float
+
 class FailureDetector:
-    """
-    Clase responsable exclusivamente de analizar las curvas de respuesta (Pushover)
-    para detectar la formación de mecanismos (fallo) en los diferentes pisos.
-    """
-
-    def __init__(self, sensitivity=0.001, drift_limit=0.005,safety_limit=0.08):
-        # sensitivity: Porcentaje de la rigidez inicial para considerar "plana" la curva (Mecanismo)
-        # drift_limit: Deriva relativa mínima para considerar que un mecanismo es significativo
-        # safety_limit: Límite absoluto de deriva para detener por deformación excesiva (colapso)
-
+    """Clase responsable de analizar secuencias de resultados de un Pushover para detectar la pérdida de capacidad estructural"""
+    def __init__(self, sensitivity: float = 0.001):
+        #sensitivity: FActor multiplicador para considerar "plana" la rigidez tangente frente a la inicial.ProcessLookupError
         self.sensitivity = sensitivity
-        self.drift_limit = drift_limit
-        self.safety_limit = safety_limit
 
+    def analyze(self, results: Dict[str, Any]) -> List[FloorFailureState]:
+        """
+        Punto de entrada. Evalua iterativamente cada planta registrada en 'results'
+        buscando formación de mecanismos
+        """
 
-    def analyze(self, results):
-        """
-        Analiza el diccionario de resultados de un Pushover y devuelve los niveles 'y' que han fallado.
-        Reemplaza a PushoverSolver.detect_failed_floors()
-        """
-        failed_floors = []
+        failed_floors: List[FloorFailureState] = []
 
         for y, data in results["floors"].items():
-            disps = data["disp"] # Drift absoluto (m)
+            disps = data["disp"]
             shears = data["shear"]
-            h_floor = data.get("H") # Altura del piso (default 3m)
-            
-            # Filtro 1: Necesitamos suficiente historia para no captar ruido numérico del reinicio (Ej: Paso 4)
-            if len(disps) < 20: 
+
+            # Filtro : Necesitamos suficiente historia de pasos en la ronda 
+
+            if len(disps) < 20:
                 continue
-            
-            # 1. Calcular Rigidez Inicial (K_ini) del inicio de la ronda (suavizado)
-            dq_ini = disps[5] - disps[0]
-            dv_ini = shears[5] - shears[0]
-            
-            # Guardamos el signo original de la fuerza elástica pura para saber 
-            # hacia dónde "tira" la estructura naturalmente al empujarla.
-            original_sign = 1 if dv_ini >= 0 else -1
 
-            if abs(dq_ini) > 1e-9:
-                # Trabajamos con magnitudes absolutas para la rigidez base de referencia
-                k_ini_mag = abs(dv_ini / dq_ini)
-                k_ini = dv_ini / dq_ini  # Mantenemos para el log original
-            else:
-                k_ini_mag = 1.0e9 # Muy rígido
-                k_ini = 1.0e9
-            
-            # 2. Analizar últimos pasos (Pendiente Tangente)
-            # Usamos regresión lineal simple de los últimos 5 puntos para más estabilidad
-            d_last = disps[-5:]
-            v_last = shears[-5:]
-            current_drift = d_last[-1]
-            
-            # Pendiente local (K_tan)
-            dq_tan = d_last[-1] - d_last[0]
-            dv_tan = v_last[-1] - v_last[0]
-            try:
-                k_tan = dv_tan / dq_tan
-            except ZeroDivisionError:
-                k_tan = 0.0 # Vertical
-                
-            # Evaluar qué signo tiene esta tangente respecto al empuje original
-            tan_sign = 1 if dv_tan >= 0 else -1
-            
-            # 3. Evaluar Criterios
-            # A) Deriva Relativa Significativa (> 0.5% real para evitar micro-asentamientos)
-            drift_ratio = abs(current_drift) / h_floor
-            is_significant_drift = drift_ratio > self.drift_limit
-            
-            # B) Mecanismo Estructural: Pendiente puramente plana (usando absolutos)
-            is_flat = abs(k_tan) < (self.sensitivity * k_ini_mag)
-            
-            # B.2) Softening crítico: Pérdida marcada de resistencia
-            # Ocurre cuando la rigidez cambia al SIGNO OPUESTO de su fase elástica inicial
-            # Ej: Empezó absorbiendo fuerza en negativo, y ahora va cayendo hacia positivo.
-            # Y solo lo consideramos softening si esa caída es mínimamente pronunciada (>5% de kini)
-            is_softening = (tan_sign != original_sign) and abs(k_tan) > (0.05 * k_ini_mag) and is_significant_drift
-            
-            # C) Safety Net (Deriva excesiva de colapso)
-            is_huge_drift = drift_ratio > self.safety_limit
+            #1. Extraemos las magnitudes netas a través de nuestros helpers
+            k_ini = self._calculate_initial_stiffness(disps, shears)
+            k_tan = self._calculate_tangent_stiffness(disps, shears)
+            currente_drift = disps[-1]
 
-            if (is_significant_drift and is_flat) or is_softening or is_huge_drift:
-                cause = "Mecanismo Plano" if is_flat else ("Caída Resistencia" if is_softening else "Colapso Displ")
-                print(f"[Adaptive] Piso Y={y:.2f} DETECTADO FALLO [{cause}] (Drift={drift_ratio*100:.2f}%, K_tan/K_ini={k_tan/k_ini:.4f})")
-                print(f"DEBUG: k_ini={k_ini}, k_tan={k_tan}")
-                failed_floors.append(y)
-                
+            #2. Evaluacióndel Mecanismo (Curva Plana)
+            is_flat = abs(k_tan) < self.sensitivity
+
+            #3. Empaquetar y reportar si se activó el fallo
+            if is_flat:
+                failure_state = FloorFailureState(
+                    y_level = y,
+                    cause = "Mecanismo Plano (K_tan = 0)",
+                    k_ini = k_ini,
+                    k_tan = k_tan,
+                    currente_drift = currente_drift
+                )
+                failed_floors.append(failure_state)
+
         return failed_floors
+
+    def _calculate_initial_stiffness(self, disps: List[float], shears: List[float]) -> float:
+        """ 
+        Calcula la Rigidez Inicial (K_ini) usando los primeros pasoso de la ronda 
+        para evitar ruido numérico en el paso 0. Devuelve la magnitud absoluta.
+        """
+
+        dq_ini = disps[5] - disps[0]
+        dv_ini = shears[5] - shears[0]
+
+        if abs(dq_ini) > 1e-9:
+            return abs(dv_ini /dq_ini)
+        return 1.0e9 #Asumir rigidez infinita si no hay desplazamiento válido
+
+
+    def _calculate_tangent_stiffness(self, disps: List[float], shears: List[float]) -> float:
+        """
+        Calcula la rigidez Tangente actual (K_tan) analizando la pendiente
+        lineal simple de los últimos 5 puntyos para la estabilidad numérica.
+        """
+
+        d_last = disps[-5:]
+        v_last = shears[-5:]
+
+        dq_tan = d_last[-1] - d_last[0]
+        dv_tan = v_last[-1] - v_last[0]
+
+        try:
+            return dv_tan/dq_tan
+        except ZeroDivisionError:
+            return 0.0 #Vertcial / Plana por infinito
+
+    

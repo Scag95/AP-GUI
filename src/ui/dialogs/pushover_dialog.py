@@ -60,6 +60,21 @@ class PushoverDialog(QDialog):
         self.chk_adaptive.setToolTip("Congela pisos que fallen (mecanismo) y continúa el análisis para evaluar pisos superiores.")
         form_layout.addRow("Estrategia:", self.chk_adaptive)
 
+        # --- Selector de Método de Congelamiento ---
+        from PyQt6.QtWidgets import QHBoxLayout, QLabel
+        freeze_method_layout = QHBoxLayout()
+        self.freeze_method_combo = QComboBox()
+        self.freeze_method_combo.addItems(["Truss Bracing (Resortes Físicos)", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)"])
+        self.freeze_method_combo.setToolTip("Elige cómo OpenSees tratará cinemáticamente a un piso que acaba de fallar.")
+
+        freeze_method_layout.addWidget(self.freeze_method_combo)
+        
+        # Ocultar o mostrar según el checkbox adaptativo
+        self.freeze_method_combo.setVisible(False)
+        self.chk_adaptive.toggled.connect(self.freeze_method_combo.setVisible)
+
+        form_layout.addRow("Método Congelamiento:", freeze_method_layout)
+
         # 3.5 Criterios de Fallo Personalizados
         from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox
         self.chk_custom_failure = QCheckBox("Personalizar Criterios de Fallo")
@@ -156,8 +171,15 @@ class PushoverDialog(QDialog):
                 drf = self.spin_drift_limit.value() if self.chk_custom_failure.isChecked() else None
                 sft = self.spin_safety_limit.value() if self.chk_custom_failure.isChecked() else None
                 
+                # Extraer método de congelamiento escogido
+                idx_method = self.freeze_method_combo.currentIndex()
+                if idx_method == 0: freeze_method = "truss"
+                elif idx_method == 1: freeze_method = "fix"
+                else: freeze_method = "load"
+                
                 results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
-                                                           sensitivity=sen, drift_limit=drf, safety_limit=sft)
+                                                           sensitivity=sen, drift_limit=drf, safety_limit=sft,
+                                                           freeze_method=freeze_method)
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
                 results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)
