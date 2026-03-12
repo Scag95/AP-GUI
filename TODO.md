@@ -104,6 +104,7 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 - [x] **Gestión de Resultados**:
     - [x] Concatenar curvas de capacidad de las diferentes fases con ID de ciclo.
     - [x] Mostrar en `PushoverResultsDialog` las curvas compuestas finales coloreadas por fase.
+    - [ ] **Debug Cortante Base Adaptativo**: Resolver el problema de la caída a valores negativos (-100kN) del cortante base global (`_get_base_shear`) en la Ronda 2 tras congelar un piso con el método `spring` (`zeroLength` tags inversos).
 - [x] **Cálculo de Masas y Topología (Session 20)**:
     - [x] Implementar caché de topología (`get_floor_data`) en `ProjectManager` para agrupar nodos/elementos por piso con invalidación (`mark_topology_dirty`).
     - [x] Implementar `get_floor_masses` en `ProjectManager` (100% vigas, 50% columnas superior/inferior, exclusión de bases fijas).

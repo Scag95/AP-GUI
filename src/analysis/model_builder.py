@@ -184,87 +184,50 @@ class ModelBuilder:
                 
 
 
-    def freeze_floor(self, y_roof, y_floor_below, method="truss"):
+    def freeze_floor(self, deformed_state: list, method="spring"):
         """
-        Freeze logic: Can be "truss" (Cross-Bracing) or "fix" (Node Constraints).
+        Freeze logic SRP: Recibe el estado deformado desde el Solver.
+        Inyecta restricciones en el modelo (Opensees) temporalmente.
         """
-        tol = 0.1
-        nodes_top = [n for n in self.manager.get_all_nodes() if abs(n.y - y_roof) < tol]
-        nodes_bot = [n for n in self.manager.get_all_nodes() if abs(n.y - y_floor_below) < tol]
-        
-        if not nodes_top or not nodes_bot: 
-            return
-            
-        nodes_top.sort(key=lambda n: n.x)
-        nodes_bot.sort(key=lambda n: n.x)
-        
-        print(f"[Adaptive] Congelando piso Y={y_roof} (Usando método: {method})")
-        
-        if method == "truss":
-            import openseespy.opensees as ops
-            import math
-            
-            num_bays = min(len(nodes_top), len(nodes_bot)) - 1
-            freeze_base_tag = 900000 + int(y_roof * 100)
-            
-            # Opción A: Cruces Físicas Rígidas con Pre-deformación (InitStrain)
-            for i in range(num_bays):
-                n_bl = nodes_bot[i]
-                n_br = nodes_bot[i+1]
-                n_tl = nodes_top[i]
-                n_tr = nodes_top[i+1]
-                
-                # Coordenadas indeformadas
-                x_bl, y_bl = n_bl.x, n_bl.y
-                x_br, y_br = n_br.x, n_br.y
-                x_tl, y_tl = n_tl.x, n_tl.y
-                x_tr, y_tr = n_tr.x, n_tr.y
-                
-                # Desplazamientos actuales
-                disp_bl = [ops.nodeDisp(n_bl.tag, 1), ops.nodeDisp(n_bl.tag, 2)]
-                disp_br = [ops.nodeDisp(n_br.tag, 1), ops.nodeDisp(n_br.tag, 2)]
-                disp_tl = [ops.nodeDisp(n_tl.tag, 1), ops.nodeDisp(n_tl.tag, 2)]
-                disp_tr = [ops.nodeDisp(n_tr.tag, 1), ops.nodeDisp(n_tr.tag, 2)]
-                
-                # Coordenadas Deformadas
-                def_x_bl, def_y_bl = x_bl + disp_bl[0], y_bl + disp_bl[1]
-                def_x_br, def_y_br = x_br + disp_br[0], y_br + disp_br[1]
-                def_x_tl, def_y_tl = x_tl + disp_tl[0], y_tl + disp_tl[1]
-                def_x_tr, def_y_tr = x_tr + disp_tr[0], y_tr + disp_tr[1]
-                
-                # Longitud Teórica (Indeformada L0) vs Longitud Actual (Deformada L)
-                # Cruz 1: Bottom-Left to Top-Right
-                L0_1 = math.hypot(x_tr - x_bl, y_tr - y_bl)
-                L_1 = math.hypot(def_x_tr - def_x_bl, def_y_tr - def_y_bl)
-                strain_1 = (L_1 - L0_1) / L0_1
-                
-                # Cruz 2: Bottom-Right to Top-Left
-                L0_2 = math.hypot(x_tl - x_br, y_tl - y_br)
-                L_2 = math.hypot(def_x_tl - def_x_br, def_y_tl - def_y_br)
-                strain_2 = (L_2 - L0_2) / L0_2
-                
-                tag1 = freeze_base_tag + (i*2)
-                tag2 = freeze_base_tag + (i*2) + 1
-                
-                # Crear envolventes de deformación inicial para el material 99999 (Rígido global)
-                mat_tag1 = freeze_base_tag * 10 + (i*2)
-                mat_tag2 = freeze_base_tag * 10 + (i*2) + 1
-                
-                self.log_command('uniaxialMaterial', 'InitStrainMaterial', mat_tag1, 99999, strain_1)
-                self.log_command('uniaxialMaterial', 'InitStrainMaterial', mat_tag2, 99999, strain_2)
-                
-                self.log_command('element', 'Truss', tag1, n_bl.tag, n_tr.tag, 1000.0, mat_tag1)
-                self.log_command('element', 'Truss', tag2, n_br.tag, n_tl.tag, 1000.0, mat_tag2)
-                
-        elif method == "fix":
-            # Opción B: Congelamiento estricto de coordenadas ('sp' en X)
-            import openseespy.opensees as ops
-            for node in nodes_top:
-                # 1. Leemos el desplazamiento deformado exacto al momento del fallo (DOF 1)
-                current_disp_x = ops.nodeDisp(node.tag, 1)
-                
-                # 2. Obligamos al nodo a NO SALIR NUNCA MÁS de esa coordenada específica en X
-                # sp(nodeTag, dofTag, dofValue)
-                self.log_command('sp', node.tag, 1, current_disp_x)
 
+        if not deformed_state:
+            return
+
+        print(f"[Adaptative] Congelando piso ({len(deformed_state)} nodos). Método: {method}")
+
+        created_nodes = []
+
+        if method == "spring":
+
+            # Creamos el material Uniforme 
+            self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
+
+            for i, node_data in enumerate(deformed_state):
+                real_tag = node_data["real_node_tag"]
+
+                ghost_tag = 2000000 + (real_tag * 10)
+                spring_ele_tag = 3000000 + (real_tag * 10)
+
+                #1. Crear el nodo fantasma exactamente en la coordenada deformada
+                self.log_command('node', ghost_tag, node_data["def_x"], node_data["def_y"])
+
+                #2. Fijar el nodo fantasma
+                self.log_command('fix', ghost_tag, 1, 1, 1)
+
+                #3. Conectar el nodo real con el fantasma usando zeroLength solo en la dirección x
+                self.log_command('element', 'zeroLength', spring_ele_tag, ghost_tag, real_tag, '-mat', 999999, '-dir', 1)
+
+                #4. Guardamos el anclaje creado
+                created_nodes.append(ghost_tag)
+
+        elif method == "fix":
+            for node_data in deformed_state:
+                real_tag = node_data["real_node_tag"]
+                current_disp_x = ops.nodeDisp(real_tag,1)
+                self.log_command('sp', real_tag, 1, current_disp_x)
+
+
+        return created_nodes 
+
+            
 
