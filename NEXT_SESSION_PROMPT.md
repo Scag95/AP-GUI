@@ -259,18 +259,17 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 
 ## Pending Tasks (Priority Order)
 
-### 1. Address OpenSees Convergence & Stabilization - [PRIORITY]
--   **Objective**: Solve the premature loss of convergence around load steps prior to yielding (error flag -3) during standard monotonic pushover.
--   **Implementation Plan**:
-    1.  Investigate if `Steel01` material's infinite strength without rupture limits is causing numerical instability in the displacement control iterator.
-    2.  Check static initialization variables and algorithm robustness against large dU steps.
+### 1. Debugging Cortante Base en Pushover Adaptativo (Ronda 2) - [PRIORITY]
+-   **Contexto Actual**: Hemos refactorizado `freeze_floor` para usar el método `spring` (Node real -> Node ghost fijo vía `zeroLength`). También hemos inyectado correctamente el vector de fuerzas modales constante desde la Ronda 1.
+-   **El Bug**: Durante la Ronda 2 (tras congelar un piso), la curva de capacidad cae en picado a valores negativos (ej. -100kN).
+-   **Lo que probamos**: Invertimos la conectividad del `zeroLength` (`ghost_tag` -> `real_tag`) para intentar arreglar el signo de tracción en las reacciones reportadas por `ops.nodeReaction()`. También creamos un `test_debug.py` puro sin UI para inspeccionar paso a paso las reacciones, pero falló por un problema de `PYTHONPATH`.
+-   **Siguiente paso estricto**: Configurar las rutas e importar el proyecto en `test_debug.py` para visualizar exactamente cuánto devuelve `ops.nodeReaction(b_node, 1)` en cada paso del análisis para la base original y los `ghost_nodes`, y entender matemáticamente por qué la suma resulta negativa.
 
-### 2. Implement Material Degradation (MinMax Wrapper)
--   **Objective**: Enclose `Steel01` and `Concrete01` inside a `MinMax` material wrapper to simulate realistic structural failure (crushing/rupture force drop).
--   **Implementation Plan**: Add `Rupture Strain` field in `MaterialDialog` and translate into OpenSees `uniaxialMaterial MinMax` commands.
+### 2. Implementar Extracción del Cortante de Piso Interno (Opción B)
+-   **Plan de Respaldo**: Si no logramos cuadrar la termodinámica de apoyos de OpenSees (Opción A), volver a la estrategia de calcular el cortante base sumando directamente las fuerzas internas `ops.eleResponse(..., 'force')[2]` de las columnas del primer piso (`first_story_y`).
 
 ## Technical Context for Next Session
--   **Current State**: The UI is robust and feature-complete for visualizations (MDI, Kinematic animations, live force plotting with auto-sync overlays). The `PushoverSolver` engine handles all iteration successfully.
--   **Next Steps**: First thing next session, focus entirely on the OpenSees core mechanics to ensure stable failure mechanisms and realistic yielding curves rather than infinite stiffness, fixing the convergence loss.
+-   **Current State**: UI, animaciones y bucle SRP del Pushover adaptativo (detección y congelación) operan bien. El error residual es puramente numérico/físico de la función `-total_shear` de OpenSeesPy.
+-   **Next Steps**: First thing next session, correr un script de depuración standalone o usar `print()` extensivo en el solver para diseccionar las reacciones (apoyo `y=0` vs fantasma) devueltas en la Ronda 2.
 
 

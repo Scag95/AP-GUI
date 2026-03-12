@@ -18,7 +18,7 @@
             "type": "Steel01",
             "Fy": 500000000.0,
             "E0": 200000000000.0,
-            "b": 0.01,
+            "b": 1e-06,
             "a1": 0.0,
             "a2": 0.0,
             "a3": 0.0,
@@ -29,18 +29,18 @@
     "sections": [
         {
             "tag": 1,
-            "name": "Sec_0.3x0.3",
+            "name": "Columna",
             "type": "FiberSection",
             "patches": [
                 {
                     "type": "RectPatch",
                     "material_tag": 1,
-                    "yI": -0.15,
-                    "zI": -0.15,
-                    "yJ": 0.15,
-                    "zJ": 0.15,
-                    "nIy": 10,
-                    "nIz": 10
+                    "yI": -0.3,
+                    "zI": -0.3,
+                    "yJ": 0.3,
+                    "zJ": 0.3,
+                    "nIy": 20,
+                    "nIz": 20
                 }
             ],
             "layers": [
@@ -49,20 +49,40 @@
                     "material_tag": 2,
                     "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
-                    "yStart": 0.11,
-                    "zStart": -0.11,
-                    "yEnd": 0.11,
-                    "zEnd": 0.11
+                    "yStart": 0.26,
+                    "zStart": -0.26,
+                    "yEnd": 0.26,
+                    "zEnd": 0.26
                 },
                 {
                     "type": "LayerStraight",
                     "material_tag": 2,
                     "num_bars": 5,
                     "area_bar": 0.0003141592653589793,
-                    "yStart": -0.11,
-                    "zStart": -0.11,
-                    "yEnd": -0.11,
-                    "zEnd": 0.11
+                    "yStart": -0.26,
+                    "zStart": -0.26,
+                    "yEnd": -0.26,
+                    "zEnd": 0.26
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.13,
+                    "zStart": -0.26,
+                    "yEnd": -0.13,
+                    "zEnd": -0.26
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.13,
+                    "zStart": 0.26,
+                    "yEnd": -0.13,
+                    "zEnd": 0.26
                 }
             ]
         }
@@ -87,6 +107,16 @@
                 0,
                 0
             ]
+        },
+        {
+            "tag": 3,
+            "x": 0.0,
+            "y": 6.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
         }
     ],
     "elements": [
@@ -97,7 +127,17 @@
             "node_j": 2,
             "section_tag": 1,
             "transf_tag": 1,
-            "mass_density": 225.0,
+            "mass_density": 900.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 2,
+            "node_i": 2,
+            "node_j": 3,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 900.0,
             "integration_points": 5
         }
     ],

@@ -30,16 +30,16 @@ class FailureDetector:
 
             # Filtro : Necesitamos suficiente historia de pasos en la ronda 
 
-            if len(disps) < 20:
+            if len(disps) < 100:
                 continue
 
             #1. Extraemos las magnitudes netas a través de nuestros helpers
             k_ini = self._calculate_initial_stiffness(disps, shears)
             k_tan = self._calculate_tangent_stiffness(disps, shears)
-            currente_drift = disps[-1]
+            current_drift = disps[-1]
 
             #2. Evaluacióndel Mecanismo (Curva Plana)
-            is_flat = abs(k_tan) < self.sensitivity
+            is_flat = (k_tan < 0) or (abs(k_tan) < (self.sensitivity * k_ini))
 
             #3. Empaquetar y reportar si se activó el fallo
             if is_flat:
@@ -48,7 +48,7 @@ class FailureDetector:
                     cause = "Mecanismo Plano (K_tan = 0)",
                     k_ini = k_ini,
                     k_tan = k_tan,
-                    currente_drift = currente_drift
+                    current_drift = current_drift
                 )
                 failed_floors.append(failure_state)
 
@@ -60,8 +60,8 @@ class FailureDetector:
         para evitar ruido numérico en el paso 0. Devuelve la magnitud absoluta.
         """
 
-        dq_ini = disps[5] - disps[0]
-        dv_ini = shears[5] - shears[0]
+        dq_ini = disps[40] - disps[0]
+        dv_ini = shears[40] - shears[0]
 
         if abs(dq_ini) > 1e-9:
             return abs(dv_ini /dq_ini)
@@ -74,8 +74,8 @@ class FailureDetector:
         lineal simple de los últimos 5 puntyos para la estabilidad numérica.
         """
 
-        d_last = disps[-5:]
-        v_last = shears[-5:]
+        d_last = disps[-40:]
+        v_last = shears[-40:]
 
         dq_tan = d_last[-1] - d_last[0]
         dv_tan = v_last[-1] - v_last[0]

@@ -64,7 +64,7 @@ class PushoverDialog(QDialog):
         from PyQt6.QtWidgets import QHBoxLayout, QLabel
         freeze_method_layout = QHBoxLayout()
         self.freeze_method_combo = QComboBox()
-        self.freeze_method_combo.addItems(["Truss Bracing (Resortes Físicos)", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)"])
+        self.freeze_method_combo.addItems(["Springs", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)"])
         self.freeze_method_combo.setToolTip("Elige cómo OpenSees tratará cinemáticamente a un piso que acaba de fallar.")
 
         freeze_method_layout.addWidget(self.freeze_method_combo)
@@ -94,24 +94,6 @@ class PushoverDialog(QDialog):
         self.spin_sensitivity.setSuffix(" %")
         self.spin_sensitivity.setToolTip("Porcentaje de la rigidez inicial para considerar 'plana' la curva (Mecanismo).")
         failure_layout.addRow("Sensibilidad de Caída (1-100%):", self.spin_sensitivity)
-
-        self.spin_drift_limit = QDoubleSpinBox()
-        self.spin_drift_limit.setRange(0, 100)
-        self.spin_drift_limit.setSingleStep(0.1)
-        self.spin_drift_limit.setDecimals(2)
-        self.spin_drift_limit.setValue(0.5)
-        self.spin_drift_limit.setSuffix(" %")
-        self.spin_drift_limit.setToolTip("Deriva relativa mínima para considerar que un mecanismo es significativo.")
-        failure_layout.addRow("Límite de Deriva Significativa:", self.spin_drift_limit)
-
-        self.spin_safety_limit = QDoubleSpinBox()
-        self.spin_safety_limit.setRange(0, 100)
-        self.spin_safety_limit.setSingleStep(1)
-        self.spin_safety_limit.setDecimals(2)
-        self.spin_safety_limit.setValue(8)
-        self.spin_safety_limit.setSuffix(" %")
-        self.spin_safety_limit.setToolTip("Límite absoluto de deriva para detener por deformación excesiva (colapso).")
-        failure_layout.addRow("Deriva Máxima de Colapso:", self.spin_safety_limit)
 
         self.failure_params_group.setVisible(False)
         form_layout.addRow(self.failure_params_group)
@@ -168,18 +150,15 @@ class PushoverDialog(QDialog):
                 print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
                 # Extraer parámetros personalizados si aplica
                 sen = self.spin_sensitivity.value() if self.chk_custom_failure.isChecked() else None
-                drf = self.spin_drift_limit.value() if self.chk_custom_failure.isChecked() else None
-                sft = self.spin_safety_limit.value() if self.chk_custom_failure.isChecked() else None
                 
                 # Extraer método de congelamiento escogido
                 idx_method = self.freeze_method_combo.currentIndex()
-                if idx_method == 0: freeze_method = "truss"
+                if idx_method == 0: freeze_method = "spring"
                 elif idx_method == 1: freeze_method = "fix"
                 else: freeze_method = "load"
                 
                 results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
-                                                           sensitivity=sen, drift_limit=drf, safety_limit=sft,
-                                                           freeze_method=freeze_method)
+                                                           sensitivity=sen, freeze_method=freeze_method)
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
                 results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)

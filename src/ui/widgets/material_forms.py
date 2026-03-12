@@ -203,9 +203,9 @@ class SteelForm(QWidget):
         self.spin_b.setValue(material.b)
 
         a1 = getattr(material, 'a1', 0.0)
-        a2 = getattr(material, 'a2', 0.0)
+        a2 = getattr(material, 'a2', 1.0)
         a3 = getattr(material, 'a3', 0.0)
-        a4 = getattr(material, 'a4', 0.0)
+        a4 = getattr(material, 'a4', 1.0)
         
         self.spin_a1.setValue(a1)
         self.spin_a2.setValue(a2)
