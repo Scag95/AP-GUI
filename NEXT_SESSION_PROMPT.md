@@ -257,19 +257,46 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
     - Converted Floating Dialogs into embedded `QMdiSubWindow` instances for a cleaner workspace.
 4. **Next Step**: Refactor `QMdiArea` into `QSplitter` or `QDockWidget` layouts so windows auto-arrange rather than overlap loosely.
 
+---
+
+### Session 25 (2026-03-15) - Debugging Pushover Adaptativo & Recorders (COMPLETED)
+
+#### 1. Cortante Basal Negativo — RESUELTO
+- **Fix 1 — Amnesia de apoyos**: `run_pushover` llamaba `_initialize_supports()` al inicio de cada ronda, borrando los ghost nodes. Fix: llamada condicional `if not self.active_support_nodes`.
+- **Fix 2 — Signo ghost nodes**: Eliminada lógica que restaba (`-=`) la reacción de los ghost nodes. Ahora `total_shear += reacs[0]` para todos los apoyos sin discriminación de tipo.
+- **Fix 3 — Ghost node L=0**: Añadido flag `USE_ORIGINAL_COORDS = True` en `ModelBuilder.freeze_floor`. Con `True`, el ghost node se crea en las coordenadas originales del nodo real, eliminando el `WARNING ZeroLength: Element has L > tolerance`.
+
+#### 2. Gráficas de Pisos Solo Mostraban Ronda 1 — RESUELTO
+- En `_merge_results`, el `.extend()` de datos de piso estaba dentro del `if y not in consolidated["floors"]:`. En la Ronda 2, el `if` era `False` y los nuevos datos se descartaban silenciosamente. Fix: mover el `.extend()` fuera del bloque `if`.
+
+#### 3. Pasos Residuales de Pisos Fallidos — RESUELTO
+- Añadido filtro en `_merge_results`: `if y in consolidated["failed_floors"]: continue`. Evita acumular pasos residuales de pisos ya congelados.
+
+#### 4. Recorders de Sección (Moment-Curvature) — RESUELTO
+- Sintaxis correcta OpenSees: `ops.recorder('Element', '-file', ..., '-time', '-ele', tag, 'section', 'force')` **sin índice de sección** — OpenSees vuelca todos los puntos de integración en una fila automáticamente.
+- Añadido parámetro `setup_recorders=True` a `run_pushover`. Adaptativo pasa `setup_recorders=False` para no resetear ficheros entre rondas.
+
+#### Pendiente para próxima sesión
+- **[PRIORITY]** Revisar gráfica del Pushover Monotónico (parece "rara"). Analizar valores numéricos de la curva Vb vs drift_techo y compararlos con lo esperado físicamente.
+- Verificar curva global del Pushover Adaptativo con el cortante base ya corregido.
+- Mejora UI: refactorizar `QMdiArea` → `QSplitter`/`QDockWidget`.
+
 ## Pending Tasks (Priority Order)
 
-### 1. Debugging Cortante Base en Pushover Adaptativo (Ronda 2) - [PRIORITY]
--   **Contexto Actual**: Hemos refactorizado `freeze_floor` para usar el método `spring` (Node real -> Node ghost fijo vía `zeroLength`). También hemos inyectado correctamente el vector de fuerzas modales constante desde la Ronda 1.
--   **El Bug**: Durante la Ronda 2 (tras congelar un piso), la curva de capacidad cae en picado a valores negativos (ej. -100kN).
--   **Lo que probamos**: Invertimos la conectividad del `zeroLength` (`ghost_tag` -> `real_tag`) para intentar arreglar el signo de tracción en las reacciones reportadas por `ops.nodeReaction()`. También creamos un `test_debug.py` puro sin UI para inspeccionar paso a paso las reacciones, pero falló por un problema de `PYTHONPATH`.
--   **Siguiente paso estricto**: Configurar las rutas e importar el proyecto en `test_debug.py` para visualizar exactamente cuánto devuelve `ops.nodeReaction(b_node, 1)` en cada paso del análisis para la base original y los `ghost_nodes`, y entender matemáticamente por qué la suma resulta negativa.
+### 1. Revisar Gráfica del Pushover Monotónico — [PRIORITY]
+-   **Contexto**: El usuario observó que la curva de capacidad del Pushover Monotónico "parece rara". Aún no se ha analizado en detalle.
+-   **Siguiente paso**: Correr el Pushover Monotónico, capturar los valores numéricos de la curva (Vb máximo, desplazamiento techo máximo) y compararlos con lo esperado físicamente para el modelo de ejemplo.
+-   **Posibles causas a investigar**: Signo del cortante, escala de unidades, desplazamiento negativo en el eje X, o efecto del nuevo flujo `setup_recorders`.
 
-### 2. Implementar Extracción del Cortante de Piso Interno (Opción B)
--   **Plan de Respaldo**: Si no logramos cuadrar la termodinámica de apoyos de OpenSees (Opción A), volver a la estrategia de calcular el cortante base sumando directamente las fuerzas internas `ops.eleResponse(..., 'force')[2]` de las columnas del primer piso (`first_story_y`).
+### 2. Verificar Calidad de la Curva Adaptativa
+-   Ahora que `_get_base_shear` está corregido (signo y ghost nodes), verificar visualmente que la curva global del Pushover Adaptativo tenga coherencia física.
+-   Comparar la curva global con las curvas de cada piso.
+
+### 3. Mejora UI: QMdiArea → QSplitter/QDockWidget
+-   Refactorizar `QMdiArea` en `MainWindow` a un sistema de paneles acoplables que se redimensionen solidariamente con la ventana principal (estilo SAP2000/VSCode).
 
 ## Technical Context for Next Session
--   **Current State**: UI, animaciones y bucle SRP del Pushover adaptativo (detección y congelación) operan bien. El error residual es puramente numérico/físico de la función `-total_shear` de OpenSeesPy.
--   **Next Steps**: First thing next session, correr un script de depuración standalone o usar `print()` extensivo en el solver para diseccionar las reacciones (apoyo `y=0` vs fantasma) devueltas en la Ronda 2.
-
-
+-   **Estado actual**: Los bugs de cortante basal negativo, gráficas de pisos truncadas a Ronda 1, y recorders de sección están todos resueltos. 
+-   **Archivos más activos**: `src/analysis/solvers/pushover_solver.py`, `src/analysis/model_builder.py`.
+-   **Primer paso siguiente sesión**: Correr el Pushover Monotónico y analizar si la curva tiene sentido físico.
+-   **Error recurrente a vigilar**: `MapOfTaggedObjects::addComponent - not adding as one with similar tag exists, tag: 200` — aparece si se corre un segundo Pushover sin reconstruir el modelo. Ya gestionado por `OpenSeesTranslator`, pero vigilar si aparece en flujos no estándar.

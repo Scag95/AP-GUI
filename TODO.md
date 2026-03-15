@@ -104,7 +104,7 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 - [x] **Gestión de Resultados**:
     - [x] Concatenar curvas de capacidad de las diferentes fases con ID de ciclo.
     - [x] Mostrar en `PushoverResultsDialog` las curvas compuestas finales coloreadas por fase.
-    - [ ] **Debug Cortante Base Adaptativo**: Resolver el problema de la caída a valores negativos (-100kN) del cortante base global (`_get_base_shear`) en la Ronda 2 tras congelar un piso con el método `spring` (`zeroLength` tags inversos).
+    - [x] **Debug Cortante Base Adaptativo**: Resuelto — el signo incorrecto en la reacción de los ghost nodes y el reseteo de `active_support_nodes` entre rondas causaban valores negativos. Fix: eliminado el `if is_ghost: total -=` y añadida lógica condicional de inicialización de apoyos.
 - [x] **Cálculo de Masas y Topología (Session 20)**:
     - [x] Implementar caché de topología (`get_floor_data`) en `ProjectManager` para agrupar nodos/elementos por piso con invalidación (`mark_topology_dirty`).
     - [x] Implementar `get_floor_masses` en `ProjectManager` (100% vigas, 50% columnas superior/inferior, exclusión de bases fijas).
@@ -113,6 +113,7 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 ## 🧱 Prioridad 8: Análisis Sección (Moment-Curvature)
 - [x] **Backend**:
     - [x] Implementar recorders para 'section force' y 'section deformation'.
+    - [x] Reimplementado `_setup_recorders()` con sintaxis correcta (`'section', 'force'` sin índice) y patrón `setup_recorders=True/False` para usos standalone vs adaptativo.
     - [x] Extraer dinámicamente columnas de datos basadas en `integration_points` y detección automática de componentes.
 - [x] **UI**:
     - [x] `MomentCurvatureDialog` con selección de Elemento y Puntos de Integración (Multi-Selección).
@@ -143,3 +144,6 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 ## 🎨 Prioridad 12: Mejoras de Interfaz (Window Management)
 - [ ] **Refactorizar `QMdiArea` a `QSplitter`**:
     - [ ] Cambiar el comportamiento de las sub-ventanas flotantes estáticas por un sistema de paneles acoplables proporcionales que se redimensionen automáticamente en conjunto (estilo SAP2000/VSCode) al estirar la ventana principal.
+
+## 🟡 Prioridad 13: Revisión Gráfica Pushover Monotónico
+- [ ] **Revisar y corregir la gráfica del Pushover Monotónico**: El usuario detectó que la curva tiene aspecto "raro" (posible problema de signo, escala o desplazamiento). Analizar los valores numéricos de desplazamiento-techo vs cortante-base y compararlos con lo esperado físicamente.

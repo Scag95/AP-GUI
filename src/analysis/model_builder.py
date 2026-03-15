@@ -199,6 +199,10 @@ class ModelBuilder:
 
         if method == "spring":
 
+            # --- FLAG DE PRUEBA: True = nodo fantasma en coordenadas ORIGINALES del nodo real (sin warning)
+            #                     False = nodo fantasma en coordenadas DEFORMADAS (comportamiento anterior)
+            USE_ORIGINAL_COORDS = True
+
             # Creamos el material Uniforme 
             self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
 
@@ -208,8 +212,15 @@ class ModelBuilder:
                 ghost_tag = 2000000 + (real_tag * 10)
                 spring_ele_tag = 3000000 + (real_tag * 10)
 
-                #1. Crear el nodo fantasma exactamente en la coordenada deformada
-                self.log_command('node', ghost_tag, node_data["def_x"], node_data["def_y"])
+                # Decidir coordenadas del fantasma según el flag
+                if USE_ORIGINAL_COORDS:
+                    node_obj = self.manager.get_node(real_tag)
+                    ghost_x, ghost_y = node_obj.x, node_obj.y
+                else:
+                    ghost_x, ghost_y = node_data["def_x"], node_data["def_y"]
+
+                #1. Crear el nodo fantasma en la posición elegida
+                self.log_command('node', ghost_tag, ghost_x, ghost_y)
 
                 #2. Fijar el nodo fantasma
                 self.log_command('fix', ghost_tag, 1, 1, 1)
