@@ -1,8 +1,10 @@
+import os
 import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
 from src.analysis.solvers.failure_detector import FailureDetector
 from src.analysis.solvers.load_generator import LoadPushoverGenerator
 from src.analysis.solvers.pushover_configurator import PushoverConfigurator
+from src.analysis.element import ForceBeamColumn
 
 class PushoverSolver:
     """
@@ -17,7 +19,7 @@ class PushoverSolver:
         self.load_generator = LoadPushoverGenerator(self.builder)
         self.configurator = PushoverConfigurator(self.builder)
         self.failure_detector = FailureDetector()
-        self.acntive_support_nodes = []
+        self.active_support_nodes = []
 
 
     def _initialize_results_structure(self):
@@ -72,13 +74,13 @@ class PushoverSolver:
             if abs(force) > 1e-9:
                 self.builder.log_command('load', node_tag, force, 0.0, 0.0)
 
-    def _capture_step_state(self, results_dict, step_idx, control_node_tag):
+    def _capture_step_state(self, results_dict, step_idx, control_node_tag, cycle_idx=0):
         """ Helper para extrae desplazamientos y reaccionnes del modelo actual en OpenSees."""
 
         #1. Globales
         results_dict["steps"].append(step_idx)
         results_dict["roof_disp"].append(ops.nodeDisp(control_node_tag,1))
-        results_dict["base_shear"].append(self._get_base_shear())
+        results_dict["base_shear"].append(self._get_base_shear(step_idx, cycle_idx))
 
         #2.
         results_dict["node_displacements"].append(self._get_all_node_displacements())
@@ -87,24 +89,72 @@ class PushoverSolver:
         self._capture_floor_data(results_dict)
         
 
-    def _get_base_shear(self) -> float:
+    def _get_base_shear(self, step_idx=0, cycle_idx=0) -> float:
         """Suma las reacciones en X de todos los nodos anclados a tierra."""
         ops.reactions()
 
         total_shear = 0.0
+        
+        # --- CHIVATO: Logueando en .csv ---
+        import os
+        log_file = os.path.join(self.manager.base_dir if hasattr(self.manager, 'base_dir') else '.', "debug_reactions.csv")
+        
+        # Si es el primer paso de la primera ronda, limpiar o crear cabecera
+        if step_idx == 1 and cycle_idx == 0:
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write("Cycle,Step,NodeTag,IsGhost,ReacX,ReacY,ReacZ\n")
+        # ----------------------------------
 
         for b_node in self.active_support_nodes:
             reacs = ops.nodeReaction(b_node)
 
             if reacs:
-                # Los apoyos fantasma devuelven tracción en el resorte con signo opuesto,
+                is_ghost = b_node >= 2000000
+                
+                # --- Guardamos el valor exacto devuelto por OpenSees ---
+                with open(log_file, "a", encoding="utf-8") as f:
+                    # reacs suele tener 3 valores (Fx, Fy, Mz) para 2D, protegido por si falla.
+                    rx = reacs[0] if len(reacs) > 0 else 0.0
+                    ry = reacs[1] if len(reacs) > 1 else 0.0
+                    rz = reacs[2] if len(reacs) > 2 else 0.0
+                    f.write(f"{cycle_idx},{step_idx},{b_node},{is_ghost},{rx},{ry},{rz}\n")
+                # -------------------------------------------------------
+
                 # por lo que invertimos su reacción.
-                if b_node >= 2000000:
-                    total_shear -= reacs[0]
-                else:
                     total_shear += reacs[0]
 
-        return -total_shear 
+        return -total_shear
+
+    
+    def _setup_recorders(self, output_dir="pushover_data"):
+        """
+        Configura los recorders de OpenSees para capturar fuerzas y deformaciones
+        de todas las secciones de todos los ForceBeamColumn. Compatible con MomentCurvatureWidget.
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        print(f"[Recorders] Configurando en: {os.path.abspath(output_dir)}")
+
+        # Limpiar recorders previos para evitar duplicados en OpenSees
+        ops.remove('recorders')
+
+        count = 0
+        for ele in self.manager.get_all_elements():
+            if not isinstance(ele, ForceBeamColumn):
+                continue
+
+            force_file = os.path.join(output_dir, f"ele_{ele.tag}_force.out")
+            deform_file = os.path.join(output_dir, f"ele_{ele.tag}_deform.out")
+
+            # Sin índice: OpenSees vuelca todos los puntos de integración en una fila
+            ops.recorder('Element', '-file', force_file, '-time',
+                         '-ele', ele.tag, 'section', 'force')
+            ops.recorder('Element', '-file', deform_file, '-time',
+                         '-ele', ele.tag, 'section', 'deformation')
+            count += 1
+
+        print(f"[Recorders] {count} elementos registrados en '{output_dir}/'")
 
     def _get_all_node_displacements(self) -> dict:
         """Captura (dx, dy, rz) de todos los nodos para la animación."""
@@ -160,7 +210,7 @@ class PushoverSolver:
             results_dict["floors"][y]["shear"].append(shear_total)
             results_dict["floors"][y]["H"] = h_floor
 
-    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None):
+    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True):
         """
         Ejecución limpia de un Pushover Monotónico estándar.
         """
@@ -168,7 +218,15 @@ class PushoverSolver:
         if frozen_floors is None:
             frozen_floors = set()
 
-        self._initialize_supports()
+        # Asegurarnos de tener los apoyos base si alguien llama a este método directamente
+        # (El análisis adaptativo ya los inicializa por fuera para mantener los fantasmas)
+        if not self.active_support_nodes:
+            self._initialize_supports()
+
+        # Configurar recorders salvo que el orquestador adaptativo ya lo haya hecho
+        if setup_recorders:
+            self._setup_recorders()
+            
         results = self._initialize_results_structure()
         
 
@@ -186,7 +244,7 @@ class PushoverSolver:
                 print(f"[Pushover] 🔴 Fin prematuro por falta de convergencia en paso {i}.")
                 break
 
-            self._capture_step_state(results, i, control_node_tag)
+            self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
 
             #4. Evaluación paso a paso:
 
@@ -215,12 +273,14 @@ class PushoverSolver:
         consolidated["steps"].extend(new_steps)
 
         for y, data in new_res["floors"].items():
+            # Si el piso ya falló en una ronda anterior, no añadir más datos residuales 
+            if y in consolidated["failed_floors"]:
+                continue
             if y not in consolidated["floors"]:
-                consolidated["floors"][y] = {"disp": [], "shear": [], "H": data.get("H",0.0)}
-                consolidated["floors"][y]["disp"].extend(data["disp"])
-                consolidated["floors"][y]["shear"].extend(data["shear"])
+                consolidated["floors"][y] = {"disp":[], "shear": [], "H": data.get("H",0.0)}
 
-
+            consolidated["floors"][y]["disp"].extend(data["disp"])
+            consolidated["floors"][y]["shear"].extend(data["shear"]) 
 
     def _get_deformed_floor_state(self, y_level: float) -> list:
         """
@@ -266,8 +326,10 @@ class PushoverSolver:
         #1. Preparar el FailureDetector
         kwargs = {}
         if sensitivity is not None: kwargs['sensitivity'] = sensitivity/100.0
+
         self.failure_detector = FailureDetector(**kwargs)
         self._initialize_supports()
+        self._setup_recorders()
 
         #2. Diccionario consolidado 
         consolidated = {
@@ -291,6 +353,10 @@ class PushoverSolver:
                 self.builder.log_command('loadConst', '-time', 0.0)
 
             current_pattern_tag = 200 + round_idx
+            
+            # Pasamos el cycle_idx actual al solver a través de un flag temporal para usarlo en el CSV
+            self._current_cycle_idx = round_idx
+            
             # 3. Correr un Pushover Estándar (Delegar el Empuje)
             round_results = self.run_pushover(
                 control_node_tag=control_node_tag, 
@@ -299,7 +365,8 @@ class PushoverSolver:
                 load_pattern_type=load_pattern_type,
                 failure_detector=self.failure_detector,
                 frozen_floors=frozen_floors, pattern_tag=current_pattern_tag,
-                precalc_vector=base_force_vector # Pasamos el vector inmutable
+                precalc_vector=base_force_vector,
+                setup_recorders=False  # Los recorders ya están configurados antes del bucle
             )
 
             #4. Fusión de Datos
@@ -336,7 +403,9 @@ class PushoverSolver:
             if sorted_ys[-1] in nuevos_fallos:
                  print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
                  break
-
+                 
+        ops.remove('recorders')
         print("[Adaptive] Análisis Finalizado Exitosamente.")
+
 
         return consolidated                

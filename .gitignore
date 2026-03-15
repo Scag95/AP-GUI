@@ -9,3 +9,4 @@ venv/
 .idea/
 pushover_data/
 .vscode/
+debug_reactions.csv

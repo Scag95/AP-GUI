@@ -152,7 +152,7 @@ class SteelForm(QWidget):
 
         self.spin_a2 = QDoubleSpinBox()
         self.spin_a2.setDecimals(3)
-        self.spin_a2.setValue(0.0)
+        self.spin_a2.setValue(1.0)
         opt_layout.addRow("Parámetro endur. [a2]:", self.spin_a2)
 
         self.spin_a3 = QDoubleSpinBox()
@@ -162,7 +162,7 @@ class SteelForm(QWidget):
 
         self.spin_a4 = QDoubleSpinBox()
         self.spin_a4.setDecimals(3)
-        self.spin_a4.setValue(0.0)
+        self.spin_a4.setValue(1.0)
         opt_layout.addRow("Parámetro endur. [a4]:", self.spin_a4)
 
         # Checkbox MinMax
