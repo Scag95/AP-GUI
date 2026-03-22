@@ -28,6 +28,7 @@ class ModelBuilder:
 
         # 2. Execute
         func = getattr(ops, command)
+        
         return func(*args)
 
     def build_model(self):
@@ -201,10 +202,13 @@ class ModelBuilder:
 
             # --- FLAG DE PRUEBA: True = nodo fantasma en coordenadas ORIGINALES del nodo real (sin warning)
             #                     False = nodo fantasma en coordenadas DEFORMADAS (comportamiento anterior)
-            USE_ORIGINAL_COORDS = True
+            USE_ORIGINAL_COORDS = False
 
             # Creamos el material Uniforme 
-            self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
+            try:
+                self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
+            except:
+                pass
 
             for i, node_data in enumerate(deformed_state):
                 real_tag = node_data["real_node_tag"]
@@ -232,9 +236,16 @@ class ModelBuilder:
                 created_nodes.append(ghost_tag)
 
         elif method == "fix":
+            # Creamos una "caja fuerte" (Pattern estático y permanente) para estas anclas
+            # Usamos un ID derivado del nodo para que no choque si congelamos varias plantas
+            safe_pattern_tag = 8000 + int(deformed_state[0]["real_node_tag"])
+            self.log_command('pattern', 'Plain', safe_pattern_tag, 1)
+            
             for node_data in deformed_state:
                 real_tag = node_data["real_node_tag"]
-                current_disp_x = ops.nodeDisp(real_tag,1)
+                # 1. Leemos dónde está el nodo en este instante milimétrico
+                current_disp_x = ops.nodeDisp(real_tag, 1)
+                # 2. Le clavamos una tuerca irrompible exactamente en ese punto
                 self.log_command('sp', real_tag, 1, current_disp_x)
 
 

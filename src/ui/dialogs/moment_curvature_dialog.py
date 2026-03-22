@@ -280,7 +280,7 @@ class MomentCurvatureWidget(QWidget):
         # 1. Determinar Índice de columna para fuerza (Y Axis)
         y_type = self.y_axis_combo.currentIndex()
         if y_type == 0: # Momento (Mz)
-            comp_offset_f = 1
+            comp_offset_f = 2
             unit_type = UnitType.MOMENT
             label_base = "Momento"
         elif y_type == 1: # Axial (P)
@@ -288,7 +288,7 @@ class MomentCurvatureWidget(QWidget):
             unit_type = UnitType.FORCE
             label_base = "Axial"
         else: # Cortante (Vy)
-            comp_offset_f = 2
+            comp_offset_f = 1
             unit_type = UnitType.FORCE
             label_base = "Cortante"
         unit_label_y = u_man.get_current_unit(unit_type)
