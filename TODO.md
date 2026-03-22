@@ -145,5 +145,7 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 - [ ] **Refactorizar `QMdiArea` a `QSplitter`**:
     - [ ] Cambiar el comportamiento de las sub-ventanas flotantes estáticas por un sistema de paneles acoplables proporcionales que se redimensionen automáticamente en conjunto (estilo SAP2000/VSCode) al estirar la ventana principal.
 
-## 🟡 Prioridad 13: Revisión Gráfica Pushover Monotónico
-- [ ] **Revisar y corregir la gráfica del Pushover Monotónico**: El usuario detectó que la curva tiene aspecto "raro" (posible problema de signo, escala o desplazamiento). Analizar los valores numéricos de desplazamiento-techo vs cortante-base y compararlos con lo esperado físicamente.
+## 🟡 Prioridad 13: Revisión Gráfica Pushover Monotónico y Adaptativo (COMPLETED)
+- [x] **Revisar y corregir la gráfica del Pushover Monotónico**: Solucionado el problema visual donde la estructura se deformaba excesivamente ("como chicle"). El culpable era un `base_scale` de `50.0` hardcodeado en `ScaleManager`, que fue cambiado a `1.0`.
+- [x] **Corregir cargas visuales**: Modificado el `PushoverSolver` para que guarde las cargas generadas en `manager.pushover_loads` como instancias de `NodalLoad`, permitiendo su visualización 3D al activar el checkbox.
+- [ ] **Repunte infinito de capacidad en Adaptativo**: Solucionado el pico numérico anormal de 11000 kN. Implementada la solución arquitectónica para el método de congelamiento `fix`, guardando las restricciones paramétricas (`sp`) dentro de un `loadPattern` estático e intocable (tag 8000+) para evitar que sean eliminadas entre rondas adaptativas.

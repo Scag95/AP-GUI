@@ -95,6 +95,15 @@ class PushoverDialog(QDialog):
         self.spin_sensitivity.setToolTip("Porcentaje de la rigidez inicial para considerar 'plana' la curva (Mecanismo).")
         failure_layout.addRow("Sensibilidad de Caída (1-100%):", self.spin_sensitivity)
 
+        self.spin_max_drift = QDoubleSpinBox()
+        self.spin_max_drift.setRange(0.1, 100.0) # Normalmete del 0.1 al 20%
+        self.spin_max_drift.setSingleStep(0.5)
+        self.spin_max_drift.setDecimals(2)
+        self.spin_max_drift.setValue(8.0) # 8% por defecto (Límite clásico)
+        self.spin_max_drift.setSuffix(" %")
+        self.spin_max_drift.setToolTip("Deriva relativa máxima permitida antes de declarar colapso estructural por planta.")
+        failure_layout.addRow("Deriva Máxima de Piso:", self.spin_max_drift)
+
         self.failure_params_group.setVisible(False)
         form_layout.addRow(self.failure_params_group)
 
@@ -139,6 +148,13 @@ class PushoverDialog(QDialog):
         #2. Instacniar Tranaltor y ejecutar
         translator = OpenSeesTranslator()
 
+        # Reabrir archivo existente para que registre log de pushover
+        try:
+            translator.builder.debug_file = open("model_debug.py", "a", encoding="utf-8")
+            translator.builder.debug_file.write("\n\n# ====== CONFIGURACION DE PUSHOVER ======\n")
+        except Exception as e:
+            print(f"Aviso: No se pudo reabrir model_debug.py ({e})")
+
         print(f"Lanzando Pushover: Node {control_node}, Disp {max_disp}, Pattern {load_pattern_type}")
 
 
@@ -148,8 +164,10 @@ class PushoverDialog(QDialog):
             results = None
             if self.chk_adaptive.isChecked():
                 print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
+                
                 # Extraer parámetros personalizados si aplica
                 sen = self.spin_sensitivity.value() if self.chk_custom_failure.isChecked() else None
+                drf = self.spin_max_drift.value() if self.chk_custom_failure.isChecked() else None
                 
                 # Extraer método de congelamiento escogido
                 idx_method = self.freeze_method_combo.currentIndex()
@@ -158,7 +176,7 @@ class PushoverDialog(QDialog):
                 else: freeze_method = "load"
                 
                 results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
-                                                           sensitivity=sen, freeze_method=freeze_method)
+                                                           sensitivity=sen, freeze_method=freeze_method, max_drift = drf)
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
                 results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)

@@ -276,27 +276,41 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 - Sintaxis correcta OpenSees: `ops.recorder('Element', '-file', ..., '-time', '-ele', tag, 'section', 'force')` **sin índice de sección** — OpenSees vuelca todos los puntos de integración en una fila automáticamente.
 - Añadido parámetro `setup_recorders=True` a `run_pushover`. Adaptativo pasa `setup_recorders=False` para no resetear ficheros entre rondas.
 
+---
+
+### Session 26 (2026-03-22) - Graphic Scaling & Adaptive Infinite Spike (COMPLETED)
+
+#### 1. Graphic Scaling Bug
+- Fixed a bug where building deformation appeared excessively large visually ("como chicle") while numerical displacement was small.
+- Updated `ScaleManager` base scale for `deformation` from `50.0` to `1.0`.
+
+#### 2. Visual Loads Debugging
+- Fixed visual load rendering error where the load vector wasn't recorded into the UI.
+- Updated `PushoverSolver._apply_load_pattern` to append generated loads as `NodalLoad` instances into `manager.pushover_loads`.
+
+#### 3. Failure Detector Tuning
+- Reduced the rolling window of `_calculate_tangent_stiffness` in `FailureDetector` from 40 to 20 to reduce "group delay" when detecting stiffness softening.
+- Added the tangent/initial stiffness ratio (`%`) to the failure causal string to track threshold cuts clearly.
+
+#### 4. Adaptive Infinite Capacity Spike
+- Diagnosed a profound bug where intact floors mapped an infinite shear spike (11,000 kN) due to the naive "spring" freeze method generating massive restoring forces on previously displaced nodes.
+- **Architectural Solution**: Validated `fix` method (`sp` constraints) as the mathematically sound approach. Placed the `sp` constraints into a dedicated isolated `loadPattern` (tags 8000+) so they are not wiped during the sequential cycle clears (`ops.remove('loadPattern')`). Emphasized the shift to `fix` over the problematic `spring` methodology.
+
 #### Pendiente para próxima sesión
-- **[PRIORITY]** Revisar gráfica del Pushover Monotónico (parece "rara"). Analizar valores numéricos de la curva Vb vs drift_techo y compararlos con lo esperado físicamente.
-- Verificar curva global del Pushover Adaptativo con el cortante base ya corregido.
+- Evaluar el desempeño del método `fix` con su rediseño mediante patrón independiente (tag = 8000+).
+- Añadir visualización en el `model_debug.py` si hay errores de convergencia persistentes con `fix`.
 - Mejora UI: refactorizar `QMdiArea` → `QSplitter`/`QDockWidget`.
 
 ## Pending Tasks (Priority Order)
 
-### 1. Revisar Gráfica del Pushover Monotónico — [PRIORITY]
--   **Contexto**: El usuario observó que la curva de capacidad del Pushover Monotónico "parece rara". Aún no se ha analizado en detalle.
--   **Siguiente paso**: Correr el Pushover Monotónico, capturar los valores numéricos de la curva (Vb máximo, desplazamiento techo máximo) y compararlos con lo esperado físicamente para el modelo de ejemplo.
--   **Posibles causas a investigar**: Signo del cortante, escala de unidades, desplazamiento negativo en el eje X, o efecto del nuevo flujo `setup_recorders`.
+### 1. Evaluar el desempeño del método "Fix" (Congelamiento) — [PRIORITY]
+-   **Contexto**: El flag `USE_ORIGINAL_COORDS` y los `zeroLength` fueron descartados lógicamente para usar restricciones puntuales exclusivas (`sp`) consolidadas en sus propios patrones de carga constantes (impidiendo su borrado y el latigazo regresivo del piso).
+-   **Siguiente paso**: Correr Pushover Adaptativo eligiendo el método "Fix" y confirmar la desaparición de los estallidos matemáticos hacia el infinito.
 
-### 2. Verificar Calidad de la Curva Adaptativa
--   Ahora que `_get_base_shear` está corregido (signo y ghost nodes), verificar visualmente que la curva global del Pushover Adaptativo tenga coherencia física.
--   Comparar la curva global con las curvas de cada piso.
-
-### 3. Mejora UI: QMdiArea → QSplitter/QDockWidget
+### 2. Mejora UI: QMdiArea → QSplitter/QDockWidget
 -   Refactorizar `QMdiArea` en `MainWindow` a un sistema de paneles acoplables que se redimensionen solidariamente con la ventana principal (estilo SAP2000/VSCode).
 
 ## Technical Context for Next Session
--   **Estado actual**: Los bugs de cortante basal negativo, gráficas de pisos truncadas a Ronda 1, y recorders de sección están todos resueltos. 
--   **Archivos más activos**: `src/analysis/solvers/pushover_solver.py`, `src/analysis/model_builder.py`.
--   **Primer paso siguiente sesión**: Correr el Pushover Monotónico y analizar si la curva tiene sentido físico.
--   **Error recurrente a vigilar**: `MapOfTaggedObjects::addComponent - not adding as one with similar tag exists, tag: 200` — aparece si se corre un segundo Pushover sin reconstruir el modelo. Ya gestionado por `OpenSeesTranslator`, pero vigilar si aparece en flujos no estándar.
+-   **Estado actual**: Solucionado el bug visual de desplazamientos 50x. Diagnosticado y corregido el "latigazo de resorte" paramétrico que causaba cortantes elásticos infinitos en plantas no falladas al usar `zeroLength`. Se opta por el método de congelamiento `Fix`.
+-   **Archivos más activos**: `src/analysis/solvers/pushover_solver.py`, `src/analysis/model_builder.py`, `src/analysis/solvers/failure_detector.py`.
+-   **Primer paso siguiente sesión**: Ejecutar el análisis adaptativo utilizando el método "Fix" que ahora está contenido en su propia capa de carga segura, y evaluar el renderizado de la curva final de capacidad integral.

@@ -1,3 +1,4 @@
+from src.analysis.loads import NodalLoad
 import os
 import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
@@ -58,6 +59,14 @@ class PushoverSolver:
 
     def _apply_load_pattern(self, load_pattern_type: str, pattern_tag: int, precalc_vector=None):
         """Helper para delegar la creación del patrón al generador."""
+
+        #0. Limpieza preventiva: Evita crasheos si el usuario ejecuta multiples pushover seguidos sobre el mismo modelo
+        try:
+            ops.remove('loadPattern', pattern_tag)
+            ops.remove('timeSeries', pattern_tag)
+        except:
+            pass    
+
         #1. Definir Pattern en Opensees a través del configurador / builder
         self.builder.log_command('timeSeries', 'Linear', pattern_tag)
         self.builder.log_command('pattern', 'Plain', pattern_tag, pattern_tag)
@@ -73,6 +82,9 @@ class PushoverSolver:
         for node_tag, force in force_vector.items():
             if abs(force) > 1e-9:
                 self.builder.log_command('load', node_tag, force, 0.0, 0.0)
+
+                load_pushover = NodalLoad(tag=9000 + node_tag, node_tag=node_tag, fx= force)
+                self.manager.pushover_loads.append(load_pushover)
 
     def _capture_step_state(self, results_dict, step_idx, control_node_tag, cycle_idx=0):
         """ Helper para extrae desplazamientos y reaccionnes del modelo actual en OpenSees."""
@@ -124,6 +136,7 @@ class PushoverSolver:
                     total_shear += reacs[0]
 
         return -total_shear
+
 
     
     def _setup_recorders(self, output_dir="pushover_data"):
@@ -192,7 +205,7 @@ class PushoverSolver:
                 forces = ops.eleResponse(col.tag, 'section', sec_idx, 'force')
 
                 if forces and len(forces) >= 3:
-                    shear_total += float(forces[2]) #El cortante se encuentra en esa posición
+                    shear_total += float(forces[1]) #El cortante se encuentra en esa posición
 
             #2. Clacular Deriva Relativa (U-top - U_bot) de la primera columna como representante
 
@@ -247,13 +260,13 @@ class PushoverSolver:
             self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
 
             #4. Evaluación paso a paso:
-
             if failure_detector:
                 fallos_dectectados = failure_detector.analyze(results)
                 nuevos_fallos = [f for f in fallos_dectectados if f.y_level not in frozen_floors]
                 
                 if nuevos_fallos:
-                    print(f"[Pushover] ⚠️ Fallo estructural detectado en vivo (Y={nuevos_fallos[0].y_level}) en paso {i}. Rompiendo bucle.")
+                    f = nuevos_fallos[0]
+                    print(f"[Pushover] ⚠️ Fallo detectado en piso (Y={f.y_level}) Causa principal: '{f.cause}'. Rompiendo bucle estático.")
                     break
 
         return results
@@ -315,7 +328,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity = None, freeze_method="spring"):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity = None, freeze_method="spring", max_drift = None):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -327,7 +340,10 @@ class PushoverSolver:
         kwargs = {}
         if sensitivity is not None: kwargs['sensitivity'] = sensitivity/100.0
 
+        if max_drift is not None: kwargs['max_drift'] = max_drift/100.0
+
         self.failure_detector = FailureDetector(**kwargs)
+        
         self._initialize_supports()
         self._setup_recorders()
 
@@ -376,7 +392,7 @@ class PushoverSolver:
             nuevos_fallos = [f.y_level for f in self.failure_detector.analyze(consolidated) if f.y_level not in frozen_floors]
 
             if not nuevos_fallos:
-                print("[Adaptive] Ronda terminada sin nuevos mecanismos identificables u objetivo alcanzado.")
+                nuevos_fallos = [f.y_level for f in self.failure_detector.analyze(consolidated) if f.y_level not in frozen_floors]
                 break
 
             #6. Congelar la planta
@@ -384,7 +400,7 @@ class PushoverSolver:
             
             for y_fail in nuevos_fallos:
                 idx = sorted_ys.index(y_fail)
-                print(f"[Adaptive] ⚠️ Fallo detectado en cota Y={y_fail}. Aplicando Freeze='{freeze_method}'")
+                print(f"[Adaptive] ⚠️ Fallo detectado en piso {idx} cota Y={y_fail}. Aplicando Freeze='{freeze_method}'")
 
                 # REFACTOR SRP: Extraermos el estacio espacial de los nodos
                 deformed_state = self._get_deformed_floor_state(y_fail)

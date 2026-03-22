@@ -10,3 +10,5 @@ venv/
 pushover_data/
 .vscode/
 debug_reactions.csv
+.venv/
+outputs/

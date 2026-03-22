@@ -89,7 +89,7 @@ class ScaleManager(QObject):
         # Actualizamos solo la BASE (física). El multiplicador visual se queda donde el usuario lo puso (ej 1.0)
         self.set_base_scale('moment', base_diagram)
         self.set_base_scale('shear', base_diagram)
-        self.set_base_scale('deformation', 50.0) 
+        self.set_base_scale('deformation', 1.0) 
         self.set_base_scale('load', L_char * 0.00001)
         self.set_base_scale('node_size', 6.0) 
         
