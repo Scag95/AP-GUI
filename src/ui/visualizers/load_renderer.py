@@ -164,6 +164,7 @@ class LoadRenderer:
 
         # Sub-funcion helper
         def draw_block(magnitude_base, color, is_axial):
+            import numpy as np
             # magnitude_base: Valor en N/m (base)
             if abs(magnitude_base) < 1e-6: return
 
@@ -180,18 +181,21 @@ class LoadRenderer:
             p1_load = (x1 + off_x, y1 + off_y)
             p2_load = (x2 + off_x, y2 + off_y)
 
-            # Techo
-            curve = pg.PlotCurveItem(
-                [p1_load[0], p2_load[0]], 
-                [p1_load[1], p2_load[1]], 
-                pen=pg.mkPen(color, width=1)
-            )
-            plot_widget.addItem(curve)
-            self.load_items.append(curve)
+            # --- VECTORIZACIÓN: Numpy array para dibujar de golpe ---
+            # Usaremos una matriz en pares. Cada 2 puntos representan 1 línea separada.
+            x_lines = [p1_load[0], p2_load[0]]
+            y_lines = [p1_load[1], p2_load[1]]
             
-            # Flechas internas (3)
-            import numpy as np
             NUM_ARROWS = 3 
+            
+            # Vector de dirección techo -> viga
+            dir_x = -nx * direction
+            dir_y = -ny * direction
+            
+            # Arreglos para ScatterPlot centralizado (Las puntas de las flechas)
+            tip_x = []
+            tip_y = []
+            
             for i in range(NUM_ARROWS + 1):
                 t = i / NUM_ARROWS
                 bx = x1 + dx * t
@@ -199,23 +203,58 @@ class LoadRenderer:
                 lx = p1_load[0] + (p2_load[0] - p1_load[0]) * t 
                 ly = p1_load[1] + (p2_load[1] - p1_load[1]) * t
 
-                # Vector flecha: Techo -> Viga
-                ax, ay = bx - lx, by - ly
-                angle = np.degrees(np.arctan2(ay, ax)) + 180
+                # Palito (Techo -> Viga). Añadimos exactamente 2 puntos por línea (un par).
+                x_lines.extend([lx, bx])
+                y_lines.extend([ly, by])
                 
-                arrow = pg.ArrowItem(
-                    pos=(bx, by),
-                    headLen=HEAD_LEN, tailLen=0,
-                    brush=color, pen=None, pxMode=False
-                )
-                arrow.setStyle(angle=angle)
-                plot_widget.addItem(arrow)
-                self.load_items.append(arrow)
-                
-                # Palito
-                conn = pg.PlotCurveItem([lx, bx], [ly, by], pen=pg.mkPen(color, width=1))
-                plot_widget.addItem(conn)
-                self.load_items.append(conn)
+                # Guardamos la posición exacta donde DEBE ir una cabeza en el gráfico
+                tip_x.append(bx)
+                tip_y.append(by)
+            
+            # 1. Llamada masiva al plotter de Líneas (Techo y Palos usando "pairs" para no cruzarlos)
+            curve = pg.PlotCurveItem(
+                np.array(x_lines), 
+                np.array(y_lines), 
+                pen=pg.mkPen(color, width=1),
+                connect='pairs'
+            )
+            plot_widget.addItem(curve)
+            self.load_items.append(curve)
+            
+            # 2. Llamada masiva acelerada para las Flechas (ScatterPlotItem)
+            from PyQt6.QtGui import QPainterPath, QTransform
+            
+            # Ángulo de rotación pura en la pantalla
+            angle_rad = np.arctan2(dir_y, dir_x)
+            angle_deg = np.degrees(angle_rad)
+            
+            # Construimos un QPainterPath de flecha pura, renderizada indestructible a nivel pixel
+            path = QPainterPath()
+            path.moveTo(0, 0)
+            path.lineTo(-10, 5)
+            path.lineTo(-10, -5)
+            path.closeSubpath()
+            
+            # Agregamos geometría invisible para engañar al BoundingBox de Pyqtgraph y forzar 
+            # que la punta (0,0) sea el centro pivote exacto
+            path.moveTo(10, 0)
+            
+            # Rotamos la forma para que apunte en la dirección de la carga
+            tr = QTransform()
+            tr.rotate(-angle_deg) 
+            rotated_path = tr.map(path)
+            
+            # Inyectamos el símbolo masivo (solo 1 llamada, renderiza N flechas)
+            scatter = pg.ScatterPlotItem(
+                x=tip_x, 
+                y=tip_y, 
+                symbol=rotated_path, 
+                brush=color, 
+                pen=None,
+                size=12
+            )
+            plot_widget.addItem(scatter)
+            self.load_items.append(scatter)
             
             # Label (VISUAL)
             mid_x = (p1_load[0] + p2_load[0]) / 2

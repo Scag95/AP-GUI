@@ -1,5 +1,6 @@
 
 class Material:
+    __slots__ = ['tag', 'name', 'rho']
     def __init__(self, tag, name, rho=0.0):
         self.tag = tag
         self.name = name
@@ -17,6 +18,7 @@ class Material:
 
 
 class Concrete01(Material):
+    __slots__ = ['fpc', 'epsc0', 'fpcu', 'epsu', 'minmax']
     def __init__(self,tag,name,fpc,epsc0,fpcu,epsu, rho=2500.0, minmax = None):
         super().__init__(tag,name,rho)
 
@@ -57,6 +59,7 @@ class Concrete01(Material):
         )
 
 class Steel01(Material):
+    __slots__ = ['Fy', 'E0', 'b', 'a1', 'a2', 'a3', 'a4', 'minmax']
     def __init__(self,tag,name,Fy,E0,b, rho=7850.0,a1=0.0, a2=0.0, a3=0.0, a4=0.0, minmax=None):
         super().__init__(tag,name, rho)
         
@@ -106,6 +109,7 @@ class Steel01(Material):
         )
 
 class Elastic(Material):
+    __slots__ = ['E']
     def __init__(self, tag, name, E, rho=0.0):
         super().__init__(tag, name, rho)
         self.E = E

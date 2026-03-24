@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 class Load(ABC):
+    __slots__ = ['tag']
     def __init__(self, tag):
         self.tag = tag
 
@@ -13,6 +14,7 @@ class Load(ABC):
         pass
 
 class NodalLoad(Load):
+    __slots__ = ['node_tag', 'fx', 'fy', 'mz']
     def __init__(self, tag, node_tag, fx=0.0 ,fy=0.0, mz=0.0):
         super().__init__(tag)
         self.node_tag = node_tag
@@ -38,6 +40,7 @@ class NodalLoad(Load):
             mz=data.get("mz", 0.0)
         )
 class ElementLoad(Load):
+    __slots__ = ['element_tag', 'wx', 'wy']
     def __init__(self, tag, element_tag, wx =0.0, wy = 0.0):
         super().__init__(tag)
         self.element_tag = element_tag

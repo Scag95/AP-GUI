@@ -2,6 +2,7 @@ from src.analysis.materials import Material
 
 #---------Clases Auxiliares -------  
 class RectPatch:
+    __slots__ = ['material_tag', 'yI', 'zI', 'yJ', 'zJ', 'nIy', 'nIz']
     def __init__(self, material_tag,yI,zI,yJ,zJ,nIy,nIz):
         self.material_tag = material_tag
         self.yI = yI
@@ -30,6 +31,7 @@ class RectPatch:
 
 
 class LayerStraight:
+    __slots__ = ['material_tag', 'num_bars', 'area_bar', 'yStart', 'zStart', 'yEnd', 'zEnd']
     def __init__(self, material_tag, num_bars, area_bar, yStart, zStart, yEnd, zEnd):
         self.material_tag = material_tag
         self.num_bars = num_bars
@@ -68,6 +70,7 @@ class LayerStraight:
 
 #---------Clases Princpales -------        
 class Section:
+    __slots__ = ['tag', 'name']
     def __init__(self,tag,name):
         self.tag = tag
         self.name = name
@@ -79,6 +82,7 @@ class Section:
         }
 
 class FiberSection(Section):
+    __slots__ = ['patches', 'layers']
     def __init__(self,tag,name):
         super().__init__(tag,name)
         self.patches = []

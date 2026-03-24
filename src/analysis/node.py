@@ -1,4 +1,5 @@
 class Node:
+    __slots__ = ['tag', 'x', 'y', 'fixity']
     def __init__(self, tag, x, y, fixity=None):
         self.tag = tag
         self.x = x
