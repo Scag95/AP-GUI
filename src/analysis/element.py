@@ -1,4 +1,5 @@
 class Element:
+    __slots__ = ['tag', 'node_i', 'node_j']
     def __init__(self, tag, node_i, node_j):
         self.tag = tag
         self.node_i = node_i # ID del nodo inicial
@@ -17,6 +18,7 @@ class Element:
         return cls(data["tag"], data["node_i"], data["node_j"])
 
 class ForceBeamColumn(Element):
+    __slots__ = ['integration_points', 'section_tag', 'transf_tag', 'mass_density']
     def __init__(self, tag, node_i, node_j, section_tag, transf_tag, integration_points, mass_density= 0.0):
         super().__init__(tag, node_i, node_j)
         self.integration_points = integration_points

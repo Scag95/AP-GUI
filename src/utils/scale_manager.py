@@ -93,4 +93,4 @@ class ScaleManager(QObject):
         self.set_base_scale('load', L_char * 0.00001)
         self.set_base_scale('node_size', 6.0) 
         
-        print(f"[ScaleManager] Escalas base recalculadas para L={L_char:.2f}")
+    

@@ -1,14 +1,50 @@
+# ==========================================
+# Archivos de la máquina virtual / Ejecución
+# ==========================================
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
-.ipynb_checkpoints/
+
+# ==========================================
+# Entornos Virtuales
+# ==========================================
 .venv/
-env/
 venv/
-.agent/
+env/
+ENV/
+
+# ==========================================
+# Archivos de entorno y logs
+# ==========================================
+.env
+*.log
+
+# ==========================================
+# IDEs / Editores de Código
+# ==========================================
 .idea/
-pushover_data/
 .vscode/
-debug_reactions.csv
-.venv/
+.ipynb_checkpoints/
+*.swp
+
+# ==========================================
+# Sistemas Operativos
+# ==========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ==========================================
+# Específicos del Proyecto (AP-GUI)
+# ==========================================
+.agent/
+pushover_data/
 outputs/
+debug_reactions.csv

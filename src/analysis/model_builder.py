@@ -202,7 +202,7 @@ class ModelBuilder:
 
             # --- FLAG DE PRUEBA: True = nodo fantasma en coordenadas ORIGINALES del nodo real (sin warning)
             #                     False = nodo fantasma en coordenadas DEFORMADAS (comportamiento anterior)
-            USE_ORIGINAL_COORDS = False
+            USE_ORIGINAL_COORDS = True
 
             # Creamos el material Uniforme 
             try:
