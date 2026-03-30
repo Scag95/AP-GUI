@@ -4,7 +4,8 @@ from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 from src.ui.dialogs.material_dialog import MaterialDialog
 from src.ui.dialogs.section_dialog import SectionDialog
-from src.ui.dialogs.grid_dialog import gridDialog
+
+from src.ui.dialogs.geometry_dialog import GeometryDialog 
 
 
 class DefineMenu(QMenu):
@@ -25,11 +26,12 @@ class DefineMenu(QMenu):
         self.action_sections.triggered.connect(self.open_section_dialog)
         self.addAction(self.action_sections)
 
-        #Grid
-        grid_action = QAction("Generar Pórtico 2D", self)
-        grid_action.triggered.connect(self.show_grid_dialog)
-        self.addAction(grid_action)
-        
+        #Geometría
+        self.action_geometry = QAction("Geometría Libre (Nodos/Elementos)", self)
+        self.action_geometry.triggered.connect(self.open_geometry_dialog)
+        self.addAction(self.action_geometry)     
+
+
     def open_material_dialog(self):
         dlg = MaterialDialog(self)
         dlg.exec()
@@ -38,29 +40,8 @@ class DefineMenu(QMenu):
         dlg = SectionDialog(self)
         dlg.exec()
 
-    def show_grid_dialog(self):
-        dialog = gridDialog(self)
-        if dialog.exec():
-            data = dialog.get_data()
+    def open_geometry_dialog(self):
+        dlg = GeometryDialog(self)
+        dlg.exec()
 
-            generator = FrameGenerator()
-            try:
-                generator.generate_2d_frame(
-                    stories= data["stories"],
-                    bays=data["bays"],
-                    story_height=data["story_height"],
-                    bay_width=data["bay_width"],
-                    beam_sec_tag=data["beam_sec_tag"],
-                    col_sec_tag=data["col_sec_tag"],
-                    integration_points=data["integration_points"],
-                    add_base_beams=data["add_base_beams"]
-
-                )
-                QMessageBox.information(self, "Exito","Portico generado correctamente")
-                parent_window = self.parent()
-                if hasattr(parent_window, 'viz_widget'):
-                    parent_window.viz_widget.refresh_viz()
-            except Exception as e:
-                print(str(e))
-                QMessageBox.critical(self, "Error", f"Error generando pórtico: {str(e)}")
     
