@@ -59,9 +59,9 @@ element('forceBeamColumn', 9, 4, 8, 1, 2, '-mass', 150.0, '-iter', 10, 1e-12)
 # --- Patterns ---
 timeSeries('Linear', 1)
 pattern('Plain', 1, 1)
-eleLoad('-ele', 7, '-type', '-beamUniform', -1471.5, -0.0)
-eleLoad('-ele', 8, '-type', '-beamUniform', -1471.5, -0.0)
-eleLoad('-ele', 9, '-type', '-beamUniform', -1471.5, -0.0)
+load(4, 10000.0, 0.0, 0.0)
+load(3, 15400.0, 0.0, 0.0)
+load(2, 5400.0, 0.0, 0.0)
 
 # --- Gravity Analysis ---
 system('UmfPack')

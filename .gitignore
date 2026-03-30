@@ -45,6 +45,7 @@ Desktop.ini
 # Específicos del Proyecto (AP-GUI)
 # ==========================================
 .agent/
+.agents/
 pushover_data/
 outputs/
 debug_reactions.csv

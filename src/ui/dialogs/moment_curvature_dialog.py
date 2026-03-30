@@ -277,32 +277,39 @@ class MomentCurvatureWidget(QWidget):
         else:
             self.lbl_step.setText(f"Paso: {self.current_step_val} / {max_steps}")
 
-        # 1. Determinar Índice de columna para fuerza (Y Axis)
+        # 1. Determinar Índices de columna y etiquetas (X e Y)
         y_type = self.y_axis_combo.currentIndex()
         if y_type == 0: # Momento (Mz)
-            comp_offset_f = 2
+            comp_offset_f = 1
+            comp_offset_d = 1
             unit_type = UnitType.MOMENT
-            label_base = "Momento"
+            label_base_y = "Momento"
+            label_base_x = "Curvatura"
+            len_factor = u_man.to_base(1.0, UnitType.LENGTH) 
+            unit_label_x = f"rad/{u_man.get_current_unit(UnitType.LENGTH)}"
         elif y_type == 1: # Axial (P)
             comp_offset_f = 0
+            comp_offset_d = 0
             unit_type = UnitType.FORCE
-            label_base = "Axial"
+            label_base_y = "Axial"
+            label_base_x = "Def. Axial"
+            len_factor = 1.0
+            unit_label_x = f"{u_man.get_current_unit(UnitType.LENGTH)}/{u_man.get_current_unit(UnitType.LENGTH)}"
         else: # Cortante (Vy)
-            comp_offset_f = 1
+            comp_offset_f = 2
+            comp_offset_d = 2
             unit_type = UnitType.FORCE
-            label_base = "Cortante"
+            label_base_y = "Cortante"
+            label_base_x = "Def. Cortante"
+            len_factor = 1.0
+            unit_label_x = f"{u_man.get_current_unit(UnitType.LENGTH)}/{u_man.get_current_unit(UnitType.LENGTH)}"
+
         unit_label_y = u_man.get_current_unit(unit_type)
-        y_axis_text = f"{label_base} ({unit_label_y})"
+        y_axis_text = f"{label_base_y} ({unit_label_y})"
+        x_axis_text = f"{label_base_x} ({unit_label_x})"
 
-
-        
-        # 2. Determina indice de columna para deformación
-        comp_offset_d = 1
-        len_factor = u_man.to_base(1.0, UnitType.LENGTH) 
-
-        unit_label_x = f"rad/{u_man.get_current_unit(UnitType.LENGTH)}" 
-
-        self.plot_widget.setLabel('bottom', f"Curvatura ({unit_label_x})")
+        # 2. Asignar etiquetas
+        self.plot_widget.setLabel('bottom', x_axis_text)
         self.plot_widget.setLabel('left', y_axis_text)
 
         # Iterar sobre secciones marcadas y graficar
@@ -383,7 +390,7 @@ class MomentCurvatureWidget(QWidget):
             # Acumular información de la curva en el texto (con su color)
             if x_plot and y_plot:
                 c_hex = color.name()
-                info_lines.append(f"<span style='color:{c_hex};'>&#9632;</span> <b>Sección {sec_num}</b><br>Curvatura: {x_plot[-1]:.6f} {unit_label_x} | Momento: {y_plot[-1]:.2f} {y_axis_text}")
+                info_lines.append(f"<span style='color:{c_hex};'>&#9632;</span> <b>Sección {sec_num}</b><br>{label_base_x}: {x_plot[-1]:.6f} {unit_label_x} | {label_base_y}: {y_plot[-1]:.2f} {y_axis_text}")
                 
         # Escribir el bloque de texto
         self.lbl_plot_info.setText("<br><br>".join(info_lines))

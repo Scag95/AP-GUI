@@ -30,6 +30,7 @@ class PushoverSolver:
             "base_shear": [],
             "steps": [],
             "node_displacements": [],
+            "element_forces_history": [],
             "failed_floors": [],
             "floors": {}
         }
@@ -205,7 +206,7 @@ class PushoverSolver:
                 forces = ops.eleResponse(col.tag, 'section', sec_idx, 'force')
 
                 if forces and len(forces) >= 3:
-                    shear_total += float(forces[1]) #El cortante se encuentra en esa posición
+                    shear_total += float(forces[2]) #El cortante se encuentra en esa posición
 
             #2. Clacular Deriva Relativa (U-top - U_bot) de la primera columna como representante
 
