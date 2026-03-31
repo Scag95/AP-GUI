@@ -141,3 +141,54 @@ class FiberSection(Section):
                 total_mass += area * mat.rho
 
         return total_mass
+
+class AggregatorSection(Section):
+    __slots__ = ['base_section_tag', 'materials']
+    
+    def __init__(self, tag, name, base_section_tag=None):
+        super().__init__(tag, name)
+        # ID de la sección base opcional
+        self.base_section_tag = base_section_tag
+        # Lista de diccionarios: [{"mat_tag": 2, "dof": "Vy"}, ...]
+        self.materials = []
+
+    def add_material(self, mat_tag: int, dof: str):
+        self.materials.append({"mat_tag": mat_tag, "dof": dof})
+
+    def get_opensees_commands(self):
+        # Sintaxis: section Aggregator $secTag $matTag1 $dof1 $matTag2 $dof2 ... <-section $baseSecTag>
+        cmd = f"section Aggregator {self.tag}"
+        
+        for m in self.materials:
+            cmd += f" {m['mat_tag']} {m['dof']}"
+            
+        if self.base_section_tag is not None and self.base_section_tag > 0:
+            cmd += f" -section {self.base_section_tag}"
+            
+        return [cmd]
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "AggregatorSection"
+        data["base_section_tag"] = self.base_section_tag
+        data["materials"] = self.materials
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        new_sec = cls(
+            tag=data["tag"],
+            name=data["name"],
+            base_section_tag=data.get("base_section_tag")
+        )
+        new_sec.materials = data.get("materials", [])
+        return new_sec
+
+    def get_mass_per_length(self, material_manager):
+        # La masa de esta sección compuesta depende puramente de su núcleo original
+        if self.base_section_tag:
+            from src.analysis.manager import ProjectManager
+            base_sec = ProjectManager.instance().get_section(self.base_section_tag)
+            if base_sec and hasattr(base_sec, 'get_mass_per_length'):
+                return base_sec.get_mass_per_length(material_manager)
+        return 0.0

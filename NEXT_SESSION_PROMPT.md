@@ -301,16 +301,62 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 - Añadir visualización en el `model_debug.py` si hay errores de convergencia persistentes con `fix`.
 - Mejora UI: refactorizar `QMdiArea` → `QSplitter`/`QDockWidget`.
 
+---
+
+### Session 27 (2026-03-30) - Force Diagrams en Pushover + Nodo de Control Adaptativo (COMPLETED)
+
+#### 1. Diagramas de Fuerza Animados en Pushover — COMPLETADO
+- **Objetivo**: Visualizar diagramas M/V/P en cada paso del slider del pushover, igual que se ven las deformaciones.
+- **Diagnóstico**: Las fuerzas seccionales no estaban capturadas paso a paso en memoria (solo en archivos `.out`). Los desplazamientos nodales sí tenían su lista `node_displacements[]` por paso.
+- **Solución (Opción A — Captura en memoria)**:
+  - `PushoverSolver._initialize_results_structure()`: Añadida clave `element_forces_history: []`.
+  - `PushoverSolver._get_all_element_forces()`: Nuevo método que itera todos los elementos y captura `ops.eleResponse(..., 'section', i, 'force')` y `ops.sectionLocation()` para cada punto de integración.
+  - `PushoverSolver._capture_step_state()`: Llamada al nuevo método para capturar fuerzas en cada paso junto a los desplazamientos.
+  - `PushoverSolver._merge_results()`: Añadido `.extend()` de `element_forces_history` para el pushover adaptativo.
+  - `AnimationToolbar._on_slider_changed()`: Extrae `step_forces = forces_history[value]` y lo pasa a `sync_animation_step(step_forces=step_forces)`.
+  - `MainWindow.sync_animation_step()`: Nuevo parámetro `step_forces=None`. Cuando recorre los `StructureInteractor`, llama `widget.draw_kinematic_forces_step(step_forces)` si hay datos.
+  - `StructureInteractor.draw_kinematic_forces_step()`: Nuevo método análogo a `draw_kinematic_step()`. Verifica `show_diagrams` y `current_diagram_type`, luego delega a `renderer_forces.draw_diagrams()`. **No modifica `ForceDiagramRenderer`** (ya era compatible).
+
+#### 2. Reasignación Adaptativa del Nodo de Control — COMPLETADO
+- **Problema**: En el Pushover Adaptativo, si la planta del nodo de control (normalmente el techo) falla y se congela, la siguiente ronda no puede converger porque OpenSees no puede aplicar `DisplacementControl` sobre un nodo restringido.
+- **Solución**:
+  - `PushoverDialog`: Añadido checkbox `chk_adaptive_control` ("Reasignar nodo de control si su planta falla"), visible solo cuando el análisis adaptativo está activo. Activo por defecto.
+  - `OpenSeesTranslator.run_adaptive_pushover()`: Añadido parámetro `adaptive_control=False` y propagado al solver. Corregida indentación (el método estaba accidentalmente fuera de la clase).
+  - `PushoverSolver.run_adaptative_pushover()`: Añadido parámetro `adaptive_control=False`. Al final de cada ronda, tras congelar pisos:
+    - Si `adaptive_control=True`: busca la cota Y del nodo de control actual, y si está en `frozen_floors`, recorre los pisos de arriba a abajo buscando el primero no congelado y toma su `nodes[0]` como nuevo `control_node_tag`. Si no quedan pisos libres, termina el análisis.
+    - Si `adaptive_control=False`: comportamiento original (detiene si la última planta falla).
+- **Bugs corregidos en el proceso**:
+  - Nombre inconsistente `adaptative_control` vs `adaptive_control` unificado a `adaptive_control`.
+  - Indentación del método en `opensees_translator.py` corregida (fue sacado accidentalmente del scope de la clase).
+
+### Session 28 (2026-03-31) - Load Patterns & Aggregator Section (COMPLETED)
+1. **Multi-Pattern Load Architecture**:
+   - Transitioned from a single flat load list to a hierarchical `LoadPattern` system.
+   - Refactored `ProjectManager` and JSON persistence securely to maintain the pattern groups.
+   - Updated `model_builder` to iterate over patterns dynamically, generating `timeSeries Linear` and `pattern Plain` with UI-customized scale factors.
+2. **UI Updates for Loads**:
+   - Created `PatternDialog` (Define -> Patrones de Carga) for CRUD control.
+   - Integrated `QComboBox` pattern selectors into `NodalLoadsDialog`, `ElementLoadsDialog`, and `SelfWeightDialog`.
+   - Hardcoded 9.81 m/s² for Self Weight gravity, abstracting it from the user.
+3. **Advanced Plasticity - AggregatorSection**:
+   - Implemented `AggregatorSection` explicitly to manage aggregated materials on dedicated DOFs (Vy, Mz, P).
+   - Upgraded `SectionDialog` UI to feature dual `QTabWidget` panels separating purely fiber sections from aggregated sections.
+   - Implemented a two-pass generation algorithm in `model_builder._build_sections` ensuring dependency mapping holds strictly.
+
 ## Pending Tasks (Priority Order)
 
 ### 1. Evaluar el desempeño del método "Fix" (Congelamiento) — [PRIORITY]
 -   **Contexto**: El flag `USE_ORIGINAL_COORDS` y los `zeroLength` fueron descartados lógicamente para usar restricciones puntuales exclusivas (`sp`) consolidadas en sus propios patrones de carga constantes (impidiendo su borrado y el latigazo regresivo del piso).
 -   **Siguiente paso**: Correr Pushover Adaptativo eligiendo el método "Fix" y confirmar la desaparición de los estallidos matemáticos hacia el infinito.
 
-### 2. Mejora UI: QMdiArea → QSplitter/QDockWidget
+### 2. Probar Reasignación de Nodo de Control
+-   **Contexto**: Implementada en Session 27 pero no validada con un caso real donde la última planta falle primero.
+-   **Siguiente paso**: Ejecutar un modelo donde la última planta sea la más débil, activar el checkbox, y confirmar que el log muestra `🔄 Nodo de control reasignado` y el análisis continúa.
+
+### 3. Mejora UI: QMdiArea → QSplitter/QDockWidget
 -   Refactorizar `QMdiArea` en `MainWindow` a un sistema de paneles acoplables que se redimensionen solidariamente con la ventana principal (estilo SAP2000/VSCode).
 
 ## Technical Context for Next Session
--   **Estado actual**: Solucionado el bug visual de desplazamientos 50x. Diagnosticado y corregido el "latigazo de resorte" paramétrico que causaba cortantes elásticos infinitos en plantas no falladas al usar `zeroLength`. Se opta por el método de congelamiento `Fix`.
--   **Archivos más activos**: `src/analysis/solvers/pushover_solver.py`, `src/analysis/model_builder.py`, `src/analysis/solvers/failure_detector.py`.
--   **Primer paso siguiente sesión**: Ejecutar el análisis adaptativo utilizando el método "Fix" que ahora está contenido en su propia capa de carga segura, y evaluar el renderizado de la curva final de capacidad integral.
+-   **Estado actual**: Sistema gravitacional operando bajo `LoadPatterns`. La `AggregatorSection` está implementada en Backend y UI, enlazable y graficable.
+-   **Archivos más activos**: `loads.py`, `sections.py`, `manager.py`, `model_builder.py`, `section_dialog.py`, `pattern_dialog.py`, `self_weight_dialog.py`, `element_loads_dialog.py`.
+-   **Primer paso siguiente sesión**: Retomar el flujo de análisis verificando cómo se interponen los múltiples LoadPatterns en el Setup del Pushover y testear el `AggregatorSection` como rótula a cortante para validación de resultados inelásticos.

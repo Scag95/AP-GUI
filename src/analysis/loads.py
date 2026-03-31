@@ -63,3 +63,50 @@ class ElementLoad(Load):
             wx=data.get("wx", 0.0),
             wy=data.get("wy", 0.0)
         )   
+
+class LoadPattern:
+    __slots__ = ['tag', 'name', 'factor', 'loads']
+
+    def __init__(self, tag: int, name:str, factor: float = 1.0):
+        self.tag = tag
+        self.name = name
+        self.factor = factor
+        self.loads = []  #Lista que guardatrá objetor generícos Load (NodalLoad o ElementLoad)
+
+    def add_load(self, load_obj: Load):
+        """ Añade un fuernza a este LoadPattern """
+        self.loads.append(load_obj)
+
+    def remove_load(self, load_tag: int):
+        """ Elimina una fuerza de este LoadPattern """
+        self.loads = [L for L in self.loads if L.tag != load_tag]
+
+    def to_dict(self):
+        return {
+            "type": "LoadPattern",
+            "tag": self.tag,
+            "name": self.name,
+            "factor": self.factor,
+            "loads": [L.to_dict() for L in self.loads]
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        #1. Crear el patrón base vacío
+        pattern = cls(
+            tag = data["tag"],
+            name = data.get("name", f"Pattern_{data['tag']}"),
+            factor=data.get("factor", 1.0)
+        )
+
+        #2. Rellenar las fuerzas que tenía aninadas
+        for l_data in data.get("loads", []):
+            tipo = l_data.get("type")
+            if tipo == "NodalLoad":
+                pattern.add_load(NodalLoad.from_dict(l_data))
+            elif tipo == "ElementLoad":
+                pattern.add_load(ElementLoad.from_dict(l_data))
+
+        return pattern
+
+        

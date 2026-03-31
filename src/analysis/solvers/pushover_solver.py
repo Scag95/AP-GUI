@@ -97,6 +97,7 @@ class PushoverSolver:
 
         #2.
         results_dict["node_displacements"].append(self._get_all_node_displacements())
+        results_dict["element_forces_history"].append(self._get_all_element_forces())
 
         #3. Estado de Meacanismos por planta
         self._capture_floor_data(results_dict)
@@ -178,6 +179,28 @@ class PushoverSolver:
             step_disp[n.tag] = ops.nodeDisp(n.tag)
 
         return step_disp
+
+    def _get_all_element_forces(self) -> dict:
+        """Captura fuerzas internas (P, M, V) de todos los elementos en el paso actual"""
+        forces = {}
+        for ele in self.manager.get_all_elements():
+            try:
+                n_pts = int(getattr(ele, 'integration_points', 0) or 0)
+                sections_data = []
+                for i in range(1, n_pts + 1 ):
+                    sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
+                    loc = ops.sectionLocation(ele.tag, i)
+                    sections_data.append({
+                        "i": i,
+                        "P": sec_forces[0],
+                        "M": sec_forces[1],
+                        "V": sec_forces[2],
+                        "loc": loc  
+                    })
+                forces[ele.tag] = sections_data
+            except Exception as e:
+                print(f"[Pushover] Error capturando fuerzas elemento {ele.tag}: {e}")
+        return forces
 
     def _capture_floor_data(self, results_dict):
         """Calcula el drift y el contante de cada planta y lo guarda"""
@@ -278,6 +301,7 @@ class PushoverSolver:
         consolidated["roof_disp"].extend(new_res["roof_disp"])
         consolidated["base_shear"].extend(new_res["base_shear"])
         consolidated.setdefault("node_displacements",[]).extend(new_res.get("node_displacements",[]))
+        consolidated.setdefault("element_forces_history",[]).extend(new_res.get("element_forces_history", []))
 
         count = len(new_res["roof_disp"])
         consolidated["cycle_id"].extend([cycle_idx] * count)
@@ -329,7 +353,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity = None, freeze_method="spring", max_drift = None):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity = None, freeze_method="spring", max_drift = None, adaptive_control = False):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -416,10 +440,38 @@ class PushoverSolver:
                 frozen_floors.add(y_fail)
                 consolidated["failed_floors"].append(y_fail)
 
-            # Check fatal: Si el fallo incluyó el techo supremo, la estructura es irreparable.
-            if sorted_ys[-1] in nuevos_fallos:
-                 print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
-                 break
+            # --- Reasignar nodo de control si su planta fue congelada ---
+            if adaptive_control:
+                floor_data = self.manager.get_floor_data()
+                # Buscar la cota Y del nodo de control actual
+                control_y = None
+                for y, data in floor_data.items():
+                    for node in data["nodes"]:
+                        if node.tag == control_node_tag:
+                            control_y = y
+                            break
+                    if control_y is not None:
+                        break
+                
+                # Si la planta del nodo de control fue congelada, buscar la siguiente
+                if control_y is not None and control_y in frozen_floors:
+                    base_y = min(floor_data.keys())
+                    new_control = None
+                    for y in sorted(floor_data.keys(), reverse=True):
+                        if y > base_y and y not in frozen_floors:
+                            new_control = floor_data[y]["nodes"][0].tag
+                            print(f"[Adaptive] 🔄 Nodo de control reasignado: {control_node_tag} → {new_control} (Planta Y={y})")
+                            control_node_tag = new_control
+                            break
+                    
+                    if new_control is None:
+                        print("[Adaptive] ❌ No quedan plantas libres para asignar nodo de control. Colapso Total.")
+                        break
+            else:
+                # Comportamiento original: si la última planta falla, parar
+                if sorted_ys[-1] in nuevos_fallos:
+                    print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
+                    break
                  
         ops.remove('recorders')
         print("[Adaptive] Análisis Finalizado Exitosamente.")

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox, QCheckBox
+from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox, QCheckBox, QVBoxLayout, QTabWidget
 from src.ui.widgets.unit_spinbox import UnitSpinBox 
 from src.utils.units import UnitType
 
@@ -254,3 +254,286 @@ class SteelForm(QWidget):
                 }
                 
         return data
+
+
+class ElasticForm(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QFormLayout(self)
+
+        # Densidad
+        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho.setDecimals(0)
+        self.spin_rho.setRange(0, 1e6)
+        self.spin_rho.set_value_base(7850) # Por defecto como acero
+        layout.addRow("Densidad [rho]:", self.spin_rho)
+
+        # Módulo de elasticidad E
+        self.spin_E = UnitSpinBox(UnitType.STRESS)
+        self.spin_E.setDecimals(0)
+        self.spin_E.setRange(0, 1e12)
+        self.spin_E.set_value_base(200*1e9) # 200 GPa
+        layout.addRow("Módulo Elástico [E]:", self.spin_E)
+
+    def set_data(self, material):
+        if not material: return
+        self.spin_rho.set_value_base(material.rho)
+        self.spin_E.set_value_base(material.E)
+
+    def get_data(self):
+        return {
+            "rho": self.spin_rho.get_value_base(),
+            "E": self.spin_E.get_value_base()
+        }
+
+class HystereticForm(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout(self)
+
+        # Densidad
+        form_rho = QFormLayout()
+        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho.setDecimals(1)
+        self.spin_rho.setRange(0, 1e6)
+        form_rho.addRow("Densidad [rho]:", self.spin_rho)
+        layout.addLayout(form_rho)
+
+        # Tabs para envolventes y evitar interfaz kilométrica
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+
+        self.tab_pos = QWidget()
+        self.tab_neg = QWidget()
+        self.tab_hys = QWidget()
+
+        self.tabs.addTab(self.tab_pos, "Env. Positiva (+)")
+        self.tabs.addTab(self.tab_neg, "Env. Negativa (-)")
+        self.tabs.addTab(self.tab_hys, "Histéresis")
+
+        # Configurar Tab Positiva
+        pos_layout = QFormLayout(self.tab_pos)
+        self.spin_s1p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e1p = QDoubleSpinBox(); self.spin_e1p.setDecimals(6); self.spin_e1p.setRange(0, 10.0); self.spin_e1p.setSingleStep(0.001)
+        self.spin_s2p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e2p = QDoubleSpinBox(); self.spin_e2p.setDecimals(6); self.spin_e2p.setRange(0, 10.0); self.spin_e2p.setSingleStep(0.001)
+        self.spin_s3p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e3p = QDoubleSpinBox(); self.spin_e3p.setDecimals(6); self.spin_e3p.setRange(0, 10.0); self.spin_e3p.setSingleStep(0.001)
+        
+        for spin in [self.spin_s1p, self.spin_s2p, self.spin_s3p]:
+            spin.setRange(-1e15, 1e15)
+            
+        pos_layout.addRow("Esfuerzo 1 [s1p]:", self.spin_s1p)
+        pos_layout.addRow("Deformación 1 [e1p]:", self.spin_e1p)
+        pos_layout.addRow("Esfuerzo 2 [s2p]:", self.spin_s2p)
+        pos_layout.addRow("Deformación 2 [e2p]:", self.spin_e2p)
+        pos_layout.addRow("Esfuerzo 3 [s3p]:", self.spin_s3p)
+        pos_layout.addRow("Deformación 3 [e3p]:", self.spin_e3p)
+
+        # Configurar Tab Negativa
+        neg_layout = QFormLayout(self.tab_neg)
+        self.spin_s1n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e1n = QDoubleSpinBox(); self.spin_e1n.setDecimals(6); self.spin_e1n.setRange(-10.0, 0); self.spin_e1n.setSingleStep(0.001)
+        self.spin_s2n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e2n = QDoubleSpinBox(); self.spin_e2n.setDecimals(6); self.spin_e2n.setRange(-10.0, 0); self.spin_e2n.setSingleStep(0.001)
+        self.spin_s3n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e3n = QDoubleSpinBox(); self.spin_e3n.setDecimals(6); self.spin_e3n.setRange(-10.0, 0); self.spin_e3n.setSingleStep(0.001)
+        
+        for spin in [self.spin_s1n, self.spin_s2n, self.spin_s3n]:
+            spin.setRange(-1e15, 1e15)
+
+        neg_layout.addRow("Esfuerzo 1 [s1n]:", self.spin_s1n)
+        neg_layout.addRow("Deformación 1 [e1n]:", self.spin_e1n)
+        neg_layout.addRow("Esfuerzo 2 [s2n]:", self.spin_s2n)
+        neg_layout.addRow("Deformación 2 [e2n]:", self.spin_e2n)
+        neg_layout.addRow("Esfuerzo 3 [s3n]:", self.spin_s3n)
+        neg_layout.addRow("Deformación 3 [e3n]:", self.spin_e3n)
+
+        # Configurar Tab Histéresis
+        hys_layout = QFormLayout(self.tab_hys)
+        self.spin_pinch_x = QDoubleSpinBox(); self.spin_pinch_x.setRange(0, 1.0); self.spin_pinch_x.setDecimals(3); self.spin_pinch_x.setSingleStep(0.1)
+        self.spin_pinch_y = QDoubleSpinBox(); self.spin_pinch_y.setRange(0, 1.0); self.spin_pinch_y.setDecimals(3); self.spin_pinch_y.setSingleStep(0.1)
+        self.spin_damage1 = QDoubleSpinBox(); self.spin_damage1.setRange(0, 1.0); self.spin_damage1.setDecimals(3); self.spin_damage1.setSingleStep(0.1)
+        self.spin_damage2 = QDoubleSpinBox(); self.spin_damage2.setRange(0, 1.0); self.spin_damage2.setDecimals(3); self.spin_damage2.setSingleStep(0.1)
+        
+        self.chk_beta = QCheckBox("Definir degradación de descarga (beta)")
+        self.spin_beta = QDoubleSpinBox(); self.spin_beta.setRange(0, 1.0); self.spin_beta.setDecimals(3); self.spin_beta.setSingleStep(0.1)
+        self.spin_beta.setEnabled(False)
+        self.chk_beta.toggled.connect(self.spin_beta.setEnabled)
+
+        hys_layout.addRow("Pinch X (e):", self.spin_pinch_x)
+        hys_layout.addRow("Pinch Y (F):", self.spin_pinch_y)
+        hys_layout.addRow("Daño 1 (ductilidad):", self.spin_damage1)
+        hys_layout.addRow("Daño 2 (energía):", self.spin_damage2)
+        hys_layout.addRow(self.chk_beta)
+        hys_layout.addRow("Valor Beta:", self.spin_beta)
+
+    def set_data(self, material):
+        if not material: return
+        self.spin_rho.set_value_base(material.rho)
+        self.spin_s1p.set_value_base(material.s1p); self.spin_e1p.setValue(material.e1p)
+        self.spin_s2p.set_value_base(material.s2p); self.spin_e2p.setValue(material.e2p)
+        self.spin_s3p.set_value_base(material.s3p); self.spin_e3p.setValue(material.e3p)
+
+        self.spin_s1n.set_value_base(material.s1n); self.spin_e1n.setValue(material.e1n)
+        self.spin_s2n.set_value_base(material.s2n); self.spin_e2n.setValue(material.e2n)
+        self.spin_s3n.set_value_base(material.s3n); self.spin_e3n.setValue(material.e3n)
+
+        self.spin_pinch_x.setValue(material.pinch_x)
+        self.spin_pinch_y.setValue(material.pinch_y)
+        self.spin_damage1.setValue(material.damage1)
+        self.spin_damage2.setValue(material.damage2)
+
+        if material.beta is not None:
+            self.chk_beta.setChecked(True)
+            self.spin_beta.setValue(material.beta)
+        else:
+            self.chk_beta.setChecked(False)
+
+    def get_data(self):
+        return {
+            "rho": self.spin_rho.get_value_base(),
+            "s1p": self.spin_s1p.get_value_base(), "e1p": self.spin_e1p.value(),
+            "s2p": self.spin_s2p.get_value_base(), "e2p": self.spin_e2p.value(),
+            "s3p": self.spin_s3p.get_value_base(), "e3p": self.spin_e3p.value(),
+            "s1n": self.spin_s1n.get_value_base(), "e1n": self.spin_e1n.value(),
+            "s2n": self.spin_s2n.get_value_base(), "e2n": self.spin_e2n.value(),
+            "s3n": self.spin_s3n.get_value_base(), "e3n": self.spin_e3n.value(),
+            "pinch_x": self.spin_pinch_x.value(),
+            "pinch_y": self.spin_pinch_y.value(),
+            "damage1": self.spin_damage1.value(),
+            "damage2": self.spin_damage2.value(),
+            "beta": self.spin_beta.value() if self.chk_beta.isChecked() else None
+        }
+
+class HystereticSMForm(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout(self)
+
+        # Densidad
+        form_rho = QFormLayout()
+        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho.setDecimals(1)
+        self.spin_rho.setRange(0, 1e6)
+        form_rho.addRow("Densidad [rho]:", self.spin_rho)
+        layout.addLayout(form_rho)
+
+        # Tabs para envolventes y evitar interfaz kilométrica
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+
+        self.tab_pos = QWidget()
+        self.tab_neg = QWidget()
+        self.tab_hys = QWidget()
+
+        self.tabs.addTab(self.tab_pos, "Env. Positiva (+)")
+        self.tabs.addTab(self.tab_neg, "Env. Negativa (-)")
+        self.tabs.addTab(self.tab_hys, "Histéresis")
+
+        # Configurar Tab Positiva (4 puntos)
+        pos_layout = QFormLayout(self.tab_pos)
+        self.spin_s1p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e1p = QDoubleSpinBox(); self.spin_e1p.setDecimals(6); self.spin_e1p.setRange(0, 10.0); self.spin_e1p.setSingleStep(0.001)
+        self.spin_s2p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e2p = QDoubleSpinBox(); self.spin_e2p.setDecimals(6); self.spin_e2p.setRange(0, 10.0); self.spin_e2p.setSingleStep(0.001)
+        self.spin_s3p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e3p = QDoubleSpinBox(); self.spin_e3p.setDecimals(6); self.spin_e3p.setRange(0, 10.0); self.spin_e3p.setSingleStep(0.001)
+        self.spin_s4p = UnitSpinBox(UnitType.STRESS)
+        self.spin_e4p = QDoubleSpinBox(); self.spin_e4p.setDecimals(6); self.spin_e4p.setRange(0, 10.0); self.spin_e4p.setSingleStep(0.001)
+        
+        for spin in [self.spin_s1p, self.spin_s2p, self.spin_s3p, self.spin_s4p]:
+            spin.setRange(-1e15, 1e15)
+            
+        pos_layout.addRow("Esfuerzo 1 [s1p]:", self.spin_s1p)
+        pos_layout.addRow("Deformación 1 [e1p]:", self.spin_e1p)
+        pos_layout.addRow("Esfuerzo 2 [s2p]:", self.spin_s2p)
+        pos_layout.addRow("Deformación 2 [e2p]:", self.spin_e2p)
+        pos_layout.addRow("Esfuerzo 3 [s3p]:", self.spin_s3p)
+        pos_layout.addRow("Deformación 3 [e3p]:", self.spin_e3p)
+        pos_layout.addRow("Esfuerzo 4 [s4p]:", self.spin_s4p)
+        pos_layout.addRow("Deformación 4 [e4p]:", self.spin_e4p)
+
+        # Configurar Tab Negativa (4 puntos)
+        neg_layout = QFormLayout(self.tab_neg)
+        self.spin_s1n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e1n = QDoubleSpinBox(); self.spin_e1n.setDecimals(6); self.spin_e1n.setRange(-10.0, 0); self.spin_e1n.setSingleStep(0.001)
+        self.spin_s2n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e2n = QDoubleSpinBox(); self.spin_e2n.setDecimals(6); self.spin_e2n.setRange(-10.0, 0); self.spin_e2n.setSingleStep(0.001)
+        self.spin_s3n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e3n = QDoubleSpinBox(); self.spin_e3n.setDecimals(6); self.spin_e3n.setRange(-10.0, 0); self.spin_e3n.setSingleStep(0.001)
+        self.spin_s4n = UnitSpinBox(UnitType.STRESS)
+        self.spin_e4n = QDoubleSpinBox(); self.spin_e4n.setDecimals(6); self.spin_e4n.setRange(-10.0, 0); self.spin_e4n.setSingleStep(0.001)
+        
+        for spin in [self.spin_s1n, self.spin_s2n, self.spin_s3n, self.spin_s4n]:
+            spin.setRange(-1e15, 1e15)
+
+        neg_layout.addRow("Esfuerzo 1 [s1n]:", self.spin_s1n)
+        neg_layout.addRow("Deformación 1 [e1n]:", self.spin_e1n)
+        neg_layout.addRow("Esfuerzo 2 [s2n]:", self.spin_s2n)
+        neg_layout.addRow("Deformación 2 [e2n]:", self.spin_e2n)
+        neg_layout.addRow("Esfuerzo 3 [s3n]:", self.spin_s3n)
+        neg_layout.addRow("Deformación 3 [e3n]:", self.spin_e3n)
+        neg_layout.addRow("Esfuerzo 4 [s4n]:", self.spin_s4n)
+        neg_layout.addRow("Deformación 4 [e4n]:", self.spin_e4n)
+
+        # Configurar Tab Histéresis
+        hys_layout = QFormLayout(self.tab_hys)
+        self.spin_pinch_x = QDoubleSpinBox(); self.spin_pinch_x.setRange(0, 1.0); self.spin_pinch_x.setDecimals(3); self.spin_pinch_x.setSingleStep(0.1)
+        self.spin_pinch_y = QDoubleSpinBox(); self.spin_pinch_y.setRange(0, 1.0); self.spin_pinch_y.setDecimals(3); self.spin_pinch_y.setSingleStep(0.1)
+        self.spin_damage1 = QDoubleSpinBox(); self.spin_damage1.setRange(0, 1.0); self.spin_damage1.setDecimals(3); self.spin_damage1.setSingleStep(0.1)
+        self.spin_damage2 = QDoubleSpinBox(); self.spin_damage2.setRange(0, 1.0); self.spin_damage2.setDecimals(3); self.spin_damage2.setSingleStep(0.1)
+        
+        self.chk_beta = QCheckBox("Definir degradación de descarga (beta)")
+        self.spin_beta = QDoubleSpinBox(); self.spin_beta.setRange(0, 1.0); self.spin_beta.setDecimals(3); self.spin_beta.setSingleStep(0.1)
+        self.spin_beta.setEnabled(False)
+        self.chk_beta.toggled.connect(self.spin_beta.setEnabled)
+
+        hys_layout.addRow("Pinch X (e):", self.spin_pinch_x)
+        hys_layout.addRow("Pinch Y (F):", self.spin_pinch_y)
+        hys_layout.addRow("Daño 1 (ductilidad):", self.spin_damage1)
+        hys_layout.addRow("Daño 2 (energía):", self.spin_damage2)
+        hys_layout.addRow(self.chk_beta)
+        hys_layout.addRow("Valor Beta:", self.spin_beta)
+
+    def set_data(self, material):
+        if not material: return
+        self.spin_rho.set_value_base(material.rho)
+        self.spin_s1p.set_value_base(material.s1p); self.spin_e1p.setValue(material.e1p)
+        self.spin_s2p.set_value_base(material.s2p); self.spin_e2p.setValue(material.e2p)
+        self.spin_s3p.set_value_base(material.s3p); self.spin_e3p.setValue(material.e3p)
+        self.spin_s4p.set_value_base(material.s4p); self.spin_e4p.setValue(material.e4p)
+
+        self.spin_s1n.set_value_base(material.s1n); self.spin_e1n.setValue(material.e1n)
+        self.spin_s2n.set_value_base(material.s2n); self.spin_e2n.setValue(material.e2n)
+        self.spin_s3n.set_value_base(material.s3n); self.spin_e3n.setValue(material.e3n)
+        self.spin_s4n.set_value_base(material.s4n); self.spin_e4n.setValue(material.e4n)
+
+        self.spin_pinch_x.setValue(material.pinch_x)
+        self.spin_pinch_y.setValue(material.pinch_y)
+        self.spin_damage1.setValue(material.damage1)
+        self.spin_damage2.setValue(material.damage2)
+
+        if material.beta is not None:
+            self.chk_beta.setChecked(True)
+            self.spin_beta.setValue(material.beta)
+        else:
+            self.chk_beta.setChecked(False)
+
+    def get_data(self):
+        return {
+            "rho": self.spin_rho.get_value_base(),
+            "s1p": self.spin_s1p.get_value_base(), "e1p": self.spin_e1p.value(),
+            "s2p": self.spin_s2p.get_value_base(), "e2p": self.spin_e2p.value(),
+            "s3p": self.spin_s3p.get_value_base(), "e3p": self.spin_e3p.value(),
+            "s4p": self.spin_s4p.get_value_base(), "e4p": self.spin_e4p.value(),
+            "s1n": self.spin_s1n.get_value_base(), "e1n": self.spin_e1n.value(),
+            "s2n": self.spin_s2n.get_value_base(), "e2n": self.spin_e2n.value(),
+            "s3n": self.spin_s3n.get_value_base(), "e3n": self.spin_e3n.value(),
+            "s4n": self.spin_s4n.get_value_base(), "e4n": self.spin_e4n.value(),
+            "pinch_x": self.spin_pinch_x.value(),
+            "pinch_y": self.spin_pinch_y.value(),
+            "damage1": self.spin_damage1.value(),
+            "damage2": self.spin_damage2.value(),
+            "beta": self.spin_beta.value() if self.chk_beta.isChecked() else None
+        }
