@@ -1,11 +1,11 @@
 import math
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
-                             QListWidget, QPushButton,QListWidgetItem, QMessageBox)
+                             QListWidget, QPushButton,QListWidgetItem, QMessageBox, QTabWidget)
 from PyQt6.QtCore import Qt
 
 from src.analysis.manager import ProjectManager
-from src.ui.widgets.section_forms import SectionForm
-from src.analysis.sections import FiberSection, RectPatch, LayerStraight
+from src.ui.widgets.section_forms import SectionForm, AggregatorForm
+from src.analysis.sections import FiberSection, RectPatch, LayerStraight, AggregatorSection
 from src.ui.widgets.section_preview import SectionPreview
 
 class SectionDialog(QDialog):
@@ -41,10 +41,17 @@ class SectionDialog(QDialog):
 
         #Añadimos el Panel derecho al layout principal
         self.right_panel_layout = QVBoxLayout()
+        
+        self.tabs = QTabWidget()
         self.form_section = SectionForm()
-        self.right_panel_layout.addWidget(self.form_section)
+        self.tabs.addTab(self.form_section, "Sección de Fibras")
+        
+        self.form_aggregator = AggregatorForm()
+        self.tabs.addTab(self.form_aggregator, "Sección Agregada")
 
-        #Añadimos el panel derefcho a layout principal
+        self.right_panel_layout.addWidget(self.tabs)
+
+        #Añadimos el panel derecho a layout principal
         self.main_layout.addLayout(self.right_panel_layout, stretch=2)
 
         #Añadimos el panel de previsualización de la sección.
@@ -60,6 +67,8 @@ class SectionDialog(QDialog):
 
         #conectamos la señal para actualizar los campos
         self.sections_list.itemClicked.connect(self.on_section_selected)
+        self.tabs.currentChanged.connect(self.on_tab_changed)
+
         #cargar secciones existentes
         self.load_sections()
 
@@ -87,7 +96,12 @@ class SectionDialog(QDialog):
         for sig in combos: sig.connect(self.update_preview)
         
         # Primera llamada para que no salga vacío al abrir
-        self.update_preview()      
+        self.update_preview()
+        self.on_tab_changed()
+
+    def on_tab_changed(self):
+        if self.tabs.currentIndex() == 1:
+            self.form_aggregator.populate(ProjectManager.instance())
 
     def _setup_section_geometry(self, section, data):
         """
@@ -186,31 +200,30 @@ class SectionDialog(QDialog):
             ))
 
     def add_section(self):
-        # 1. Recolectar la información
-        data = self.form_section.get_data()
-
-        # Validamos materiales
-        if data['concrete'] is None or data['steel'] is None:
-            QMessageBox.warning(self, "Error", "Debes seleccionar materiales válidos.")
-            return
-        
-        # 2. Configurar Tag y Nombre
         manager = ProjectManager.instance()
         tag = manager.get_next_section_tag()
-        
-        name = self.form_section.textbox_name.text()
-        if not name:
-            name = f"Sec_{data['b']}x{data['h']}"
 
-        section = FiberSection(tag, name)
-
-        # 3. Construir geometría (Usa el Helper)
-        self._setup_section_geometry(section, data)
+        if self.tabs.currentIndex() == 0:
+            # 1. Recolectar la información Fibras
+            data = self.form_section.get_data()
+            if data['concrete'] is None or data['steel'] is None:
+                QMessageBox.warning(self, "Error", "Debes seleccionar materiales válidos.")
+                return
+            name = self.form_section.textbox_name.text() or f"Sec_{data['b']}x{data['h']}"
+            section = FiberSection(tag, name)
+            self._setup_section_geometry(section, data)
+        else:
+            # 2. Recolectar información Aggregator
+            data = self.form_aggregator.get_data()
+            name = data["name"] or f"Aggregator_{tag}"
+            section = AggregatorSection(tag, name, data["base_section_tag"])
+            for m in data["materials"]:
+                section.add_material(m["mat_tag"], m["dof"])
 
         # 4. Guardar y Actualizar UI
         manager.add_section(section)
         
-        display_text = f"{tag}-{name}"
+        display_text = f"[{'F' if isinstance(section, FiberSection) else 'A'}] {tag}-{section.name}"
         item=QListWidgetItem(display_text)
         item.setData(Qt.ItemDataRole.UserRole, tag)
         self.sections_list.addItem(item)
@@ -227,31 +240,36 @@ class SectionDialog(QDialog):
         
         manager = ProjectManager.instance()
         section = manager.get_section(tag)
-
         if not section: return
 
-        # 2. Recolectar nuevos datos
-        data = self.form_section.get_data()
-        
-        if data['concrete'] is None or data['steel'] is None:
-             QMessageBox.warning(self, "Error", "Faltan materiales.")
-             return
-
-        # 3. Actualizar propiedades báscias
-        if data['name']:
-            section.name = data['name']
-        
-        # 4. Reconstruir geometría (Esto borra lo viejo y pone lo nuevo)
-        self._setup_section_geometry(section, data)
+        if isinstance(section, FiberSection):
+            if self.tabs.currentIndex() != 0:
+                QMessageBox.warning(self, "Error", "Selecciona la pestaña de Fibras para modificar esta sección.")
+                return
+            data = self.form_section.get_data()
+            if data['concrete'] is None or data['steel'] is None:
+                QMessageBox.warning(self, "Error", "Faltan materiales.")
+                return
+            if data['name']: section.name = data['name']
+            self._setup_section_geometry(section, data)
+            self.update_preview()
+            
+        elif isinstance(section, AggregatorSection):
+            if self.tabs.currentIndex() != 1:
+                QMessageBox.warning(self, "Error", "Selecciona la pestaña 'Sección Agregada' para modificar esto.")
+                return
+            data = self.form_aggregator.get_data()
+            if data['name']: section.name = data['name']
+            section.base_section_tag = data["base_section_tag"]
+            section.materials = []
+            for m in data["materials"]:
+                section.add_material(m["mat_tag"], m["dof"])
 
         # 5. Refrescar Lista UI
-        display_text = f"{section.tag}-{section.name}"
+        display_text = f"[{'F' if isinstance(section, FiberSection) else 'A'}] {section.tag}-{section.name}"
         item.setText(display_text)
         
         print(f"[DEBUG] Sección Modificada: {section.name}")
-        
-        # Refrescar preview
-        self.update_preview()
 
     def delete_section(self):
         current_row = self.sections_list.currentRow()
@@ -270,8 +288,8 @@ class SectionDialog(QDialog):
         manager = ProjectManager.instance()
         sections = manager.get_all_sections()
 
-        for  section in sections:
-            display_text = f"{section.tag}-{section.name}"
+        for section in sections:
+            display_text = f"[{'F' if isinstance(section, FiberSection) else 'A'}] {section.tag}-{section.name}"
             item=QListWidgetItem(display_text)
             item.setData(Qt.ItemDataRole.UserRole, section.tag)
             self.sections_list.addItem(item)
@@ -304,6 +322,20 @@ class SectionDialog(QDialog):
         manager = ProjectManager.instance()
         section = manager.get_section(tag)
         
+        if hasattr(self.preview_widget, 'scene') and self.preview_widget.scene():
+            self.preview_widget.scene().clear()
+
         if section and isinstance(section, FiberSection):
+            self.tabs.setCurrentIndex(0)
             self.form_section.set_data(section)
             self.update_preview()
+            
+        elif section and isinstance(section, AggregatorSection):
+            self.tabs.setCurrentIndex(1)
+            self.form_aggregator.populate(manager)
+            self.form_aggregator.set_data(section, manager)
+            # Dibujar preview visual del Core Fibras si lo hay
+            if section.base_section_tag:
+                base_sec = manager.get_section(section.base_section_tag)
+                if isinstance(base_sec, FiberSection):
+                    self.preview_widget.plot_section(base_sec)

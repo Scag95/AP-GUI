@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                              QComboBox,QStackedWidget,QListWidgetItem)
 from PyQt6.QtCore import Qt
 
-from src.ui.widgets.material_forms import ConcreteForm, SteelForm
-from src.analysis.materials import Concrete01, Steel01
+from src.ui.widgets.material_forms import ConcreteForm, SteelForm, ElasticForm, HystereticForm, HystereticSMForm
+from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM
 from src.analysis.manager import ProjectManager
 
 class MaterialDialog(QDialog):
@@ -29,7 +29,7 @@ class MaterialDialog(QDialog):
 
         #Selector de tipo de material
         self.combo_type =QComboBox()
-        self.combo_type.addItems(["Concrete01","Steel01"])
+        self.combo_type.addItems(["Concrete01", "Steel01", "Elastic", "Hysteretic", "HystereticSM"])
         self.left_panel_layout.addWidget(self.combo_type)
 
         #Botones de control
@@ -51,10 +51,16 @@ class MaterialDialog(QDialog):
         #Creamos instancias en los formularios
         self.form_concrete = ConcreteForm()
         self.form_steel = SteelForm()
+        self.form_elastic = ElasticForm()
+        self.form_hysteretic = HystereticForm()
+        self.form_hysteretic_sm = HystereticSMForm()
 
         #Los añadimos a la pila
-        self.form_stack.addWidget(self.form_concrete)       #Indice 0
-        self.form_stack.addWidget(self.form_steel)          #Indice 1
+        self.form_stack.addWidget(self.form_concrete)         # Índice 0: Concrete01
+        self.form_stack.addWidget(self.form_steel)            # Índice 1: Steel01
+        self.form_stack.addWidget(self.form_elastic)          # Índice 2: Elastic
+        self.form_stack.addWidget(self.form_hysteretic)       # Índice 3: Hysteretic
+        self.form_stack.addWidget(self.form_hysteretic_sm)    # Índice 4: HystereticSM
 
         self.right_panel_layout.addWidget(self.form_stack)
         #Añadimos el panel derefcho a layout principal
@@ -83,13 +89,23 @@ class MaterialDialog(QDialog):
         if material_type == "Concrete01":
             data = self.form_concrete.get_data()
             name = f"Mat_Concreto_{next_tag}"
-            
-            material = Concrete01(next_tag, name,**data)
-
+            material = Concrete01(next_tag, name, **data)
         elif material_type == "Steel01":
             data = self.form_steel.get_data()
             name = f"Mat_Acero_{next_tag}"
-            material = Steel01(next_tag,name,**data)
+            material = Steel01(next_tag, name, **data)
+        elif material_type == "Elastic":
+            data = self.form_elastic.get_data()
+            name = f"Mat_Elastico_{next_tag}"
+            material = Elastic(next_tag, name, **data)
+        elif material_type == "Hysteretic":
+            data = self.form_hysteretic.get_data()
+            name = f"Mat_Hysteretic_{next_tag}"
+            material = Hysteretic(next_tag, name, **data)
+        elif material_type == "HystereticSM":
+            data = self.form_hysteretic_sm.get_data()
+            name = f"Mat_HystereticSM_{next_tag}"
+            material = HystereticSM(next_tag, name, **data)
         else:
             return 
 
@@ -144,12 +160,26 @@ class MaterialDialog(QDialog):
                 if index >= 0:
                     self.combo_type.setCurrentIndex(index)
                     self.form_concrete.set_data(material)
-            
             elif isinstance(material, Steel01):
                 index = self.combo_type.findText("Steel01")
-                if index>= 0:
+                if index >= 0:
                     self.combo_type.setCurrentIndex(index)
                     self.form_steel.set_data(material)
+            elif isinstance(material, Elastic):
+                index = self.combo_type.findText("Elastic")
+                if index >= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_elastic.set_data(material)
+            elif isinstance(material, Hysteretic):
+                index = self.combo_type.findText("Hysteretic")
+                if index >= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_hysteretic.set_data(material)
+            elif isinstance(material, HystereticSM):
+                index = self.combo_type.findText("HystereticSM")
+                if index >= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_hysteretic_sm.set_data(material)
 
     def update_material(self):
         current_row = self.materials_list.currentRow()
@@ -172,10 +202,27 @@ class MaterialDialog(QDialog):
                            
         elif isinstance(material,Steel01):
             new_data = self.form_steel.get_data()
-
             for key, value in new_data.items():
                 if hasattr(material, key):
                     setattr(material,key, value)
+        
+        elif isinstance(material, Elastic):
+            new_data = self.form_elastic.get_data()
+            for key, value in new_data.items():
+                if hasattr(material, key):
+                    setattr(material, key, value)
+                    
+        elif isinstance(material, Hysteretic):
+            new_data = self.form_hysteretic.get_data()
+            for key, value in new_data.items():
+                if hasattr(material, key):
+                    setattr(material, key, value)
+                    
+        elif isinstance(material, HystereticSM):
+            new_data = self.form_hysteretic_sm.get_data()
+            for key, value in new_data.items():
+                if hasattr(material, key):
+                    setattr(material, key, value)
                     
         display_text = f"{material.tag}-{material.name}({material.__class__.__name__})"
         item.setText(display_text)

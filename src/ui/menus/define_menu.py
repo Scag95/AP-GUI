@@ -6,6 +6,7 @@ from src.ui.dialogs.material_dialog import MaterialDialog
 from src.ui.dialogs.section_dialog import SectionDialog
 
 from src.ui.dialogs.geometry_dialog import GeometryDialog 
+from src.ui.dialogs.pattern_dialog import PatternDialog
 
 
 class DefineMenu(QMenu):
@@ -31,6 +32,11 @@ class DefineMenu(QMenu):
         self.action_geometry.triggered.connect(self.open_geometry_dialog)
         self.addAction(self.action_geometry)     
 
+        # Patrones de Carga
+        self.action_patterns = QAction("Patrones de Carga", self)
+        self.action_patterns.triggered.connect(self.open_pattern_dialog)
+        self.addAction(self.action_patterns)
+
 
     def open_material_dialog(self):
         dlg = MaterialDialog(self)
@@ -42,6 +48,10 @@ class DefineMenu(QMenu):
 
     def open_geometry_dialog(self):
         dlg = GeometryDialog(self)
+        dlg.exec()
+
+    def open_pattern_dialog(self):
+        dlg = PatternDialog(self)
         dlg.exec()
 
     

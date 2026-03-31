@@ -23,7 +23,7 @@ class ProjectManager(QObject):
         self.section = {}
         self.node = {}
         self.element = {}
-        self.load = {}
+        self.patterns = {}
         
         # Resultados de Análisis
         self.gravity_results = None
@@ -37,7 +37,7 @@ class ProjectManager(QObject):
         self.next_section_tag = 1
         self.next_node_tag = 1
         self.next_element_tag = 1
-        self.next_load_tag = 1
+        self.next_pattern_tag = 1
 
         #Caché de Topología (Pisos)
         self._topology_dirty = True
@@ -257,28 +257,69 @@ class ProjectManager(QObject):
             
         return floor_masses
 
-## Cargas (Loads) ##
-    def add_load(self, load):
-        if load.tag == 0:
-            load.tag = self.next_load_tag
-        self.load[load.tag] = load
-        if load.tag >= self.next_load_tag:
-            self.next_load_tag = load.tag + 1
+## Patrones de Carga ##
+    def add_pattern(self, pattern):
+        self.patterns[pattern.tag] = pattern
+        if pattern.tag >= self.next_pattern_tag:
+            self.next_pattern_tag = pattern.tag + 1
         self.gravity_results = None
         self.pushover_results = None
         self.dataChanged.emit()
-    def get_load(self, tag):
-        return self.load.get(tag)
-    def delete_load(self, tag):
-        if tag in self.load:
-            del self.load[tag]
+
+    def get_pattern(self, tag):
+        return self.patterns.get(tag)
+
+    def get_all_patterns(self):
+        return list(self.patterns.values())
+
+    def delete_pattern(self, tag):
+        if tag in self.patterns:
+            del self.patterns[tag]
             self.gravity_results = None
             self.pushover_results = None
             self.dataChanged.emit()
+
+    def get_next_pattern_tag(self):
+        return self.next_pattern_tag
+
+## Cargas (Loads) anidadas ##
+    def add_load(self, load, pattern_tag: int = 1):
+        # Insertar carga en su respectiva carpeta
+        pattern = self.get_pattern(pattern_tag)
+        if not pattern:
+            print(f"Error: No existe el patrón {pattern_tag}")
+            return
+        if load.tag == 0:
+            load.tag = self.get_next_load_tag()
+        pattern.add_load(load)
+        self.gravity_results = None
+        self.pushover_results = None
+        self.dataChanged.emit()
+
+    def get_load(self, tag):
+        for p in self.patterns.values():
+            for l in p.loads:
+                if l.tag == tag:
+                    return l
+        return None
+
+    def delete_load(self, tag):
+        for p in self.patterns.values():
+            p.remove_load(tag)
+        self.gravity_results = None
+        self.pushover_results = None
+        self.dataChanged.emit()
+
     def get_next_load_tag(self):
-        return self.next_load_tag
+        loads = self.get_all_loads()
+        if not loads: return 1
+        return max(l.tag for l in loads) + 1
+
     def get_all_loads(self):
-        return list(self.load.values())
+        loads = []
+        for p in self.patterns.values():
+            loads.extend(p.loads)
+        return loads
 
 
 
@@ -291,7 +332,7 @@ class ProjectManager(QObject):
             "sections": [s.to_dict() for s in self.get_all_sections()],
             "nodes": [n.to_dict() for n in self.get_all_nodes()],
             "elements": [e.to_dict() for e in self.get_all_elements()],
-            "loads": [l.to_dict() for l in self.get_all_loads()]
+            "patterns": [p.to_dict() for p in self.get_all_patterns()]
         }
 
         try:
@@ -305,11 +346,11 @@ class ProjectManager(QObject):
 
     def load_project(self,filename):
         import json
-        from src.analysis.materials import Concrete01, Steel01
-        from src.analysis.sections import FiberSection
+        from src.analysis.materials import Concrete01, Steel01, Hysteretic, HystereticSM
+        from src.analysis.sections import FiberSection, AggregatorSection
         from src.analysis.node import Node
         from src.analysis.element import ForceBeamColumn
-        from src.analysis.loads import NodalLoad, ElementLoad   
+        from src.analysis.loads import NodalLoad, ElementLoad, LoadPattern   
 
         try:
             with open(filename, 'r') as f:
@@ -324,14 +365,22 @@ class ProjectManager(QObject):
                     mat = Concrete01.from_dict(m_data)
                 elif tipo == "Steel01":
                     mat = Steel01.from_dict(m_data)
+                elif tipo == "Hysteretic":
+                    mat = Hysteretic.from_dict(m_data)
+                elif tipo == "HystereticSM":
+                    mat = HystereticSM.from_dict(m_data)
                 else:
                     continue
                 self.add_material(mat)
 
             #2. Cargar secciones
             for s_data in data.get("sections",[]):
-                if s_data.get("type") == "FiberSection":
+                tipo = s_data.get("type")
+                if tipo == "FiberSection":
                     sec = FiberSection.from_dict(s_data)
+                    self.add_section(sec)
+                elif tipo == "AggregatorSection":
+                    sec = AggregatorSection.from_dict(s_data)
                     self.add_section(sec)
             
             #3. Cargar Nodos
@@ -345,16 +394,11 @@ class ProjectManager(QObject):
                     element = ForceBeamColumn.from_dict(e_data)
                     self.add_element(element)
             
-            # 5. Cargar Cargas (Loads)
-            for l_data in data.get("loads", []):
-                tipo = l_data.get("type")
-                if tipo == "NodalLoad":
-                    load = NodalLoad.from_dict(l_data)
-                elif tipo == "ElementLoad":
-                    load = ElementLoad.from_dict(l_data)
-                else:
-                    continue
-                self.add_load(load)
+            # 5. Cargar Patrones de Carga
+            for p_data in data.get("patterns", []):
+                pattern = LoadPattern.from_dict(p_data)
+                self.add_pattern(pattern)
+
             self.mark_topology_dirty()
 
             print(f"Projecto cargado: {len(self.node)} nodos, {len(self.element)} elementos")
@@ -372,8 +416,7 @@ class ProjectManager(QObject):
         self.section.clear()
         self.node.clear()
         self.element.clear()
-        self.element.clear()
-        self.load.clear()
+        self.patterns.clear()
         
         # Limpiar resultados y temporales
         self.gravity_results = None
@@ -385,7 +428,7 @@ class ProjectManager(QObject):
         self.next_section_tag = 1
         self.next_node_tag = 1
         self.next_element_tag = 1
-        self.next_load_tag = 1
+        self.next_pattern_tag = 1
         
         # Notificar a la UI que todo cambió (se borró)
         self.dataChanged.emit()

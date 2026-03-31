@@ -51,6 +51,25 @@ class NodeForms(QWidget):
         form_layout.addRow("Restricciones:",fix_layout)
 
         main_layout.addLayout(form_layout)
+
+        # --- Masa nodal (opcional) ---
+        self.chk_mass = QCheckBox("Masa nodal")
+        form_layout.addRow(self.chk_mass)
+        self.widget_mass = QWidget()
+        mass_layout = QFormLayout(self.widget_mass)
+        self.widget_mass.setVisible(False)
+        self.spin_mx = UnitSpinBox(UnitType.MASS)
+        self.spin_mx.setDecimals(6)
+        self.spin_my = UnitSpinBox(UnitType.MASS)
+        self.spin_my.setDecimals(6)
+        self.spin_mrz = UnitSpinBox(UnitType.MASS)
+        self.spin_mrz.setDecimals(6)
+        mass_layout.addRow("Masa X:", self.spin_mx)
+        mass_layout.addRow("Masa Y:", self.spin_my)
+        mass_layout.addRow("Masa Rot. Z:", self.spin_mrz)
+        form_layout.addRow(self.widget_mass)
+        self.chk_mass.toggled.connect(self.widget_mass.setVisible)
+
         # Botón de guardar
         self.btn_apply = QPushButton("Aplicar Cambios")
         self.btn_apply.clicked.connect(self.apply_changes)
@@ -81,6 +100,15 @@ class NodeForms(QWidget):
         self.chk_fix_rz.setChecked(bool(fixity[2]))
         self.btn_apply.setEnabled(True)
 
+        # Mostrar masa si el nodo la tiene
+        if node.mass is not None:
+            self.chk_mass.setChecked(True)
+            self.spin_mx.set_value_base(node.mass[0])
+            self.spin_my.set_value_base(node.mass[1])
+            self.spin_mrz.set_value_base(node.mass[2])
+        else:
+            self.chk_mass.setChecked(False)
+
     def apply_changes(self):
         #Guarda cambios en el objetivo y emite señal
         if self.current_node:
@@ -94,6 +122,16 @@ class NodeForms(QWidget):
         ]
             self.current_node.fixity = new_fixity
             self.dataChanged.emit()
+
+        # Guardar masa
+        if self.chk_mass.isChecked():
+            self.current_node.mass = [
+                self.spin_mx.get_value_base(),
+                self.spin_my.get_value_base(),
+                self.spin_mrz.get_value_base()
+            ]
+        else:
+            self.current_node.mass = None
 
     def _on_value_changed(self):
         """Habilita el botón de aplicar cuando hay cambios pendientes."""

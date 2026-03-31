@@ -75,6 +75,17 @@ class PushoverDialog(QDialog):
 
         form_layout.addRow("Método Congelamiento:", freeze_method_layout)
 
+        # --- Checkbox Control Node Adaptativo ---
+        self.chk_adaptive_control = QCheckBox("Reasignar nodo de control si su planta falla")
+        self.chk_adaptive_control.setToolTip(
+            "Si la planta del nodo de control colapsa, automáticamente "
+            "se usará un nodo de la planta inferior no congelada."
+        )
+        self.chk_adaptive_control.setChecked(True)
+        self.chk_adaptive_control.setVisible(False)
+        self.chk_adaptive.toggled.connect(self.chk_adaptive_control.setVisible)
+        form_layout.addRow("Nodo de Control:", self.chk_adaptive_control)
+
         # 3.5 Criterios de Fallo Personalizados
         from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox
         self.chk_custom_failure = QCheckBox("Personalizar Criterios de Fallo")
@@ -174,9 +185,12 @@ class PushoverDialog(QDialog):
                 if idx_method == 0: freeze_method = "spring"
                 elif idx_method == 1: freeze_method = "fix"
                 else: freeze_method = "load"
-                
+
+                adaptive_control = self.chk_adaptive_control.isChecked()
+
                 results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
-                                                           sensitivity=sen, freeze_method=freeze_method, max_drift = drf)
+                                                           sensitivity=sen, freeze_method=freeze_method, max_drift = drf,
+                                                           adaptive_control=adaptive_control)
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
                 results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)

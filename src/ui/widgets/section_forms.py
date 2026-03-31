@@ -1,6 +1,5 @@
-
 from PyQt6.QtWidgets import (QWidget, QFormLayout, QGroupBox, QComboBox,
-                             QSpinBox, QLineEdit)
+                             QSpinBox, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QMessageBox)
 from src.analysis.manager import ProjectManager
 from src.analysis.materials import Concrete01, Steel01
 from src.ui.widgets.unit_spinbox import UnitSpinBox
@@ -237,3 +236,134 @@ class SectionForm(QWidget):
                 elif layer.zStart > 0:
                     self.spin_right_qty.setValue(layer.num_bars)
                     self.spin_right_diam.set_value_base(diam)
+
+
+class AggregatorForm(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout(self)
+
+        # 1. Nombre
+        form_layout = QFormLayout()
+        self.txt_name = QLineEdit()
+        self.txt_name.setPlaceholderText("ej: Columna_Articulada_Vy")
+        form_layout.addRow("Nombre:", self.txt_name)
+
+        # 2. Sección Base (FiberSection)
+        self.combo_base_sec = QComboBox()
+        form_layout.addRow("Sección Base (Opcional):", self.combo_base_sec)
+        
+        layout.addLayout(form_layout)
+
+        # 3. Aggregations (Materials & DOFs)
+        group_agg = QGroupBox("Materiales a Agregar")
+        agg_layout = QVBoxLayout()
+        group_agg.setLayout(agg_layout)
+
+        # Combo de Material y DOF
+        h_layout = QHBoxLayout()
+        self.combo_mat = QComboBox()
+        self.combo_dof = QComboBox()
+        self.combo_dof.addItems(["Vy", "P", "Mz"])
+
+        self.btn_add_mat = QPushButton("Añadir al DOF")
+        self.btn_add_mat.clicked.connect(self.add_aggregation)
+
+        h_layout.addWidget(QLabel("Material:"))
+        h_layout.addWidget(self.combo_mat, stretch=2)
+        h_layout.addWidget(QLabel("DOF:"))
+        h_layout.addWidget(self.combo_dof, stretch=1)
+        h_layout.addWidget(self.btn_add_mat)
+        
+        agg_layout.addLayout(h_layout)
+
+        # Lista visual de agregaciones
+        self.list_agg = QListWidget()
+        
+        # Botón para borrar el seleccionado de la lista
+        self.btn_del_mat = QPushButton("Borrar Seleccionado")
+        self.btn_del_mat.clicked.connect(self.del_aggregation)
+
+        agg_layout.addWidget(self.list_agg)
+        agg_layout.addWidget(self.btn_del_mat)
+
+        layout.addWidget(group_agg)
+
+        # Cache de los mats agregados para luego extraerlos con get_data
+        self.aggregations = [] # list of dicts: {"mat_tag": int, "dof": str, "mat_text": str}
+
+    def populate(self, manager):
+        # Poblar Base Sections
+        self.combo_base_sec.clear()
+        self.combo_base_sec.addItem("Ninguna", None)
+        for sec in manager.get_all_sections():
+            from src.analysis.sections import FiberSection
+            if isinstance(sec, FiberSection):
+                self.combo_base_sec.addItem(f"[{sec.tag}] {sec.name}", sec.tag)
+
+        # Poblar Materiales
+        self.combo_mat.clear()
+        for mat in manager.get_all_materials():
+            self.combo_mat.addItem(f"[{mat.tag}] {mat.name} ({mat.__class__.__name__})", mat.tag)
+
+    def add_aggregation(self):
+        mat_tag = self.combo_mat.currentData()
+        mat_text = self.combo_mat.currentText()
+        dof = self.combo_dof.currentText()
+
+        if mat_tag is None:
+            return
+
+        # Simple validacion de que no se agregó el mismo DOF
+        for a in self.aggregations:
+            if a["dof"] == dof:
+                QMessageBox.warning(self, "Aviso", f"El grado de libertad {dof} ya tiene un material asignado.")
+                return
+
+        self.aggregations.append({"mat_tag": mat_tag, "dof": dof, "mat_text": mat_text})
+        self.refresh_list()
+
+    def del_aggregation(self):
+        row = self.list_agg.currentRow()
+        if row >= 0:
+            del self.aggregations[row]
+            self.refresh_list()
+
+    def refresh_list(self):
+        self.list_agg.clear()
+        for agg in self.aggregations:
+            self.list_agg.addItem(f"DOF: {agg['dof']} <-- Mat: {agg['mat_text']}")
+
+    def get_data(self):
+        base_sec = self.combo_base_sec.currentData()
+        return {
+            "name": self.txt_name.text(),
+            "base_section_tag": base_sec,
+            "materials": [{"mat_tag": a["mat_tag"], "dof": a["dof"]} for a in self.aggregations]
+        }
+
+    def set_data(self, section, manager):
+        self.txt_name.setText(section.name)
+        
+        # Seleccionar base section
+        if section.base_section_tag is None:
+            self.combo_base_sec.setCurrentIndex(0)
+        else:
+            idx = self.combo_base_sec.findData(section.base_section_tag)
+            if idx >= 0:
+                self.combo_base_sec.setCurrentIndex(idx)
+
+        # Reconstruir lista de agregaciones
+        self.aggregations = []
+        for m in section.materials:
+            mat_tag = m["mat_tag"]
+            dof = m["dof"]
+            # Buscar texto del material
+            mat_text = f"Material {mat_tag}"
+            mat = manager.get_material(mat_tag)
+            if mat:
+                 mat_text = f"[{mat.tag}] {mat.name} ({mat.__class__.__name__})"
+            
+            self.aggregations.append({"mat_tag": mat_tag, "dof": dof, "mat_text": mat_text})
+        
+        self.refresh_list()

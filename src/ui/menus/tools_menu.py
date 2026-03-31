@@ -1,7 +1,8 @@
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QMenu, QMessageBox
 from PyQt6.QtGui import QAction
 from src.ui.dialogs.grid_dialog import gridDialog
 from src.ui.dialogs.self_weight_dialog import SelfWeightDialog
+from src.analysis.frame_generator import FrameGenerator
 
 class ToolsMenu(QMenu):
     def __init__(self, parent=None):

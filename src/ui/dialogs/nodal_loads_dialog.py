@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QListWidget, QListWidgetItem, QDoubleSpinBox, 
+                             QListWidget, QListWidgetItem, QComboBox, QDoubleSpinBox,
                              QPushButton, QGroupBox, QFormLayout, QMessageBox, QLineEdit, QCheckBox)
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
@@ -44,6 +44,11 @@ class NodalLoadsDialog(QDialog):
         # --- Panel Derecho: Configuración de Carga ---
         right_layout = QVBoxLayout()
 
+        right_layout.addWidget(QLabel("Patrón de Carga Destino:"))
+        self.combo_pattern = QComboBox()
+        self.combo_pattern.currentIndexChanged.connect(self.populate_nodes)
+        right_layout.addWidget(self.combo_pattern)
+
         self.load_group = QGroupBox("Fuerzas y Momentos")
         form_layout = QFormLayout()
 
@@ -87,7 +92,15 @@ class NodalLoadsDialog(QDialog):
             self.chk_show_tags.setChecked(is_visible)
 
         # Inicializar
+        self.populate_patterns()
         self.populate_nodes()
+
+    def populate_patterns(self):
+        self.combo_pattern.blockSignals(True)
+        self.combo_pattern.clear()
+        for p in self.manager.get_all_patterns():
+            self.combo_pattern.addItem(f"[{p.tag}] {p.name}", p.tag)
+        self.combo_pattern.blockSignals(False)
 
     def toggle_tags(self, checked):
         if self.parent() and hasattr(self.parent(), "viz_widget"):
@@ -96,13 +109,16 @@ class NodalLoadsDialog(QDialog):
     def populate_nodes(self):
         self.node_list.clear()
         nodes = self.manager.get_all_nodes()
-        loads = self.manager.get_all_loads()
 
         # Mapa rápido {node_tag: load_obj}
         node_load_map = {}
-        for load in loads:
-            if isinstance(load, NodalLoad):
-                node_load_map[load.node_tag] = load
+        if self.combo_pattern.count() > 0:
+            active_pattern_tag = self.combo_pattern.currentData()
+            pattern = self.manager.get_pattern(active_pattern_tag)
+            if pattern:
+                for load in pattern.loads:
+                    if isinstance(load, NodalLoad):
+                        node_load_map[load.node_tag] = load
 
         for n in nodes:
             # Filtro: Solo mostrar si tiene carga asignada
@@ -151,6 +167,10 @@ class NodalLoadsDialog(QDialog):
         return list(ids)
 
     def apply_loads(self):
+        if self.combo_pattern.count() == 0:
+            QMessageBox.warning(self, "Aviso", "No hay Patrones de Carga. Crea uno en el Gestor de Patrones.")
+            return
+
         target_ids = self._parse_input(self.txt_nodes.text())
         if not target_ids:
             selected_items = self.node_list.selectedItems()
@@ -178,7 +198,9 @@ class NodalLoadsDialog(QDialog):
             # Nueva carga
             new_tag = self.manager.get_next_load_tag()
             load = NodalLoad(new_tag, node_tag, fx, fy, mz)
-            self.manager.add_load(load)
+            
+            pattern_tag = self.combo_pattern.currentData()
+            self.manager.add_load(load, pattern_tag)
             count += 1
         self.populate_nodes()
         print(f"fx:{fx}, fy:{fy}, mz:{mz}")
@@ -199,8 +221,12 @@ class NodalLoadsDialog(QDialog):
         self.populate_nodes()
 
     def _remove_load_for_node(self, node_tag):
-        loads = self.manager.get_all_loads()
-        for load in loads:
+        if self.combo_pattern.count() == 0: return
+        pattern_tag = self.combo_pattern.currentData()
+        pattern = self.manager.get_pattern(pattern_tag)
+        if not pattern: return
+        
+        for load in list(pattern.loads):
             if isinstance(load, NodalLoad) and load.node_tag == node_tag:
                 self.manager.delete_load(load.tag)
 
@@ -211,12 +237,15 @@ class NodalLoadsDialog(QDialog):
         item = selected_items[0]
         node_tag = item.data(Qt.ItemDataRole.UserRole)
         
-        loads = self.manager.get_all_loads()
         found_load = None
-        for load in loads:
-            if isinstance(load, NodalLoad) and load.node_tag == node_tag:
-                found_load = load
-                break
+        if self.combo_pattern.count() > 0:
+            pattern_tag = self.combo_pattern.currentData()
+            pattern = self.manager.get_pattern(pattern_tag)
+            if pattern:
+                for load in pattern.loads:
+                    if isinstance(load, NodalLoad) and load.node_tag == node_tag:
+                        found_load = load
+                        break
         
         # Actualizar UI
         if found_load:

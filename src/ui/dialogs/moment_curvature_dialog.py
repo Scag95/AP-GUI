@@ -347,13 +347,9 @@ class MomentCurvatureWidget(QWidget):
                 raw_y = row_f[col_F]
                 raw_x = row_d[col_C]
 
-                # Absoluto (Opcional, a veces es mejor ver el signo)
-                abs_y = abs(raw_y)
-                abs_x = abs(raw_x)
-
                 # Conversión de unidades
-                vis_y = u_man.from_base(abs_y, unit_type)
-                vis_x = abs_x * len_factor
+                vis_y = u_man.from_base(raw_y, unit_type)
+                vis_x = raw_x * len_factor
 
                 y_values.append(vis_y)
                 x_values.append(vis_x)

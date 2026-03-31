@@ -193,6 +193,25 @@ class StructureInteractor(QWidget):
             disp_dict,
             scale_factor=s_def
         )
+
+    def draw_kinematic_forces_step(self, forces_data):
+        """
+        Dibuja los diagramas de fuerza para un paso específico del pushover.
+        Análoso a draw_kinematic_step pero para M/V/P.
+        """
+
+        if not self.show_diagrams or not self.current_diagram_type:
+            self.renderer_forces.clear(self.plot_widget)
+            return
+        
+        self.renderer_forces.draw_diagrams(
+            self.plot_widget,
+            self.manager,
+            forces_data,
+            type=self.current_diagram_type
+        )
+
+
     def clear_results(self):
         self.current_results = None
         self.renderer_deform.clear(self.plot_widget)

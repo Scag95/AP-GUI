@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QTabWidget, QWidget,
-    QListWidget, QListWidgetItem, QLabel, QDoubleSpinBox, QSpinBox, QComboBox, QPushButton, QHBoxLayout, QFormLayout
+    QListWidget, QListWidgetItem, QLabel, QDoubleSpinBox, QSpinBox, QComboBox, QPushButton, QHBoxLayout, QFormLayout, QCheckBox
 )
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
@@ -72,6 +72,33 @@ class GeometryDialog(QDialog):
        
         right_panel.addLayout(form_layout)
 
+        # --- Checkbox de masa ---
+        self.chk_mass = QCheckBox("Asignar masa nodal")
+        form_layout.addRow(self.chk_mass)
+
+        #--- Campos de masa ---
+        self.widget_mass = QWidget()
+        mass_layout = QFormLayout(self.widget_mass)
+        self.widget_mass.setVisible(False)
+
+        self.spin_mx = UnitSpinBox(UnitType.MASS)
+        self.spin_mx.setRange(0.0, 999999.0)
+        self.spin_mx.setDecimals(6)
+        self.spin_my = UnitSpinBox(UnitType.MASS)
+        self.spin_my.setRange(0.0, 999999.0)
+        self.spin_my.setDecimals(6)
+        self.spin_mrz = UnitSpinBox(UnitType.MASS)
+        self.spin_mrz.setRange(0.0, 999999.0)
+        self.spin_mrz.setDecimals(6)
+        
+        mass_layout.addRow("Masa X:", self.spin_mx)
+        mass_layout.addRow("Masa Y:", self.spin_my)
+        mass_layout.addRow("Masa Rot. Z:", self.spin_mrz)
+
+        form_layout.addRow(self.widget_mass)
+
+        self.chk_mass.toggled.connect(self.widget_mass.setVisible)
+
         # Botones de acción
         self.btn_add_node = QPushButton("Añadir Nodo")
         self.btn_mod_node = QPushButton("Modificar Nodo")
@@ -102,12 +129,23 @@ class GeometryDialog(QDialog):
         y_val = self.spin_y.get_value_base()
 
 
+        #Leer masa si el checkbox está activado
+        if self.chk_mass.isChecked():
+            mass = [
+                self.spin_mx.get_value_base(),
+                self.spin_my.get_value_base(),
+                self.spin_mrz.get_value_base()
+            ]
+
+        else:
+            mass = None
+
         # Le pedimos al Manager el siguiente tag del nodo
         manager = ProjectManager.instance()
         next_tag = manager.get_next_node_tag()
 
         #Creamos el nodo 
-        new_node = Node(next_tag, x_val, y_val)
+        new_node = Node(next_tag, x_val, y_val, mass=mass)
 
         #Se lo pasamos al manager para que lo almacene
         manager.add_node(new_node)
@@ -116,7 +154,13 @@ class GeometryDialog(QDialog):
         #Limpiamos los spinbox
         self.spin_x.set_value_base(0.0)
         self.spin_y.set_value_base(0.0)
+        self.chk_mass.setChecked(False)
+        self.spin_mx.set_value_base(0.0)
+        self.spin_my.set_value_base(0.0)
+        self.spin_mrz.set_value_base(0.0)
         self.spin_x.setFocus()
+        self.refresh_node_list()
+
 
     def refresh_node_list(self):
         """ Función auxiliar que limpia la lista y vuelve a cargar todos los nodos creados """
@@ -129,12 +173,25 @@ class GeometryDialog(QDialog):
             self.list_nodes.addItem(item)
 
     def on_node_selected(self, item):
+        """ Rellena el formulario al seleccionar un nodo de la lista """
         tag = item.data(Qt.ItemDataRole.UserRole)
         manager = ProjectManager.instance()
         node = manager.get_node(tag)
-        if node:
-            self.spin_x.set_value_base(node.x)
-            self.spin_y.set_value_base(node.y)
+        
+        if not node:
+            return
+            
+        self.spin_x.set_value_base(node.x)
+        self.spin_y.set_value_base(node.y)
+
+        # Rellenar masa si el nodo la tiene
+        if node.mass is not None:
+            self.chk_mass.setChecked(True)      #Esto dispara setVisible(true) automáticamente.
+            self.spin_mx.set_value_base(node.mass[0])
+            self.spin_my.set_value_base(node.mass[1])
+            self.spin_mrz.set_value_base(node.mass[2])
+        else:
+            self.chk_mass.setChecked(False)  #Oculta el wifget_mass automáticamente
 
     def delete_node(self):
         current_row = self.list_nodes.currentRow()
@@ -158,18 +215,29 @@ class GeometryDialog(QDialog):
         manager = ProjectManager.instance()
         node = manager.get_node(tag_to_modify)
 
-        if node:
-            node.x = self.spin_x.get_value_base()
-            node.y = self.spin_y.get_value_base()
-            manager.dataChanged.emit()
-            self.refresh_node_list()
+        if not node: return
+
+        node.x = self.spin_x.get_value_base()
+        node.y = self.spin_y.get_value_base()
+
+        if self.chk_mass.isChecked():
+            node.mass = [
+                self.spin_mx.get_value_base(),
+                self.spin_my.get_value_base(),
+                self.spin_mrz.get_value_base()
+            ]
+        else:
+            node.mass = None
+
+        manager.dataChanged.emit()
+        self.refresh_node_list()
             
-            # Restaurar la selección
-            for i in range(self.list_nodes.count()):
-                list_item = self.list_nodes.item(i)
-                if list_item.data(Qt.ItemDataRole.UserRole) == tag_to_modify:
-                    self.list_nodes.setCurrentItem(list_item)
-                    break
+        # Restaurar la selección
+        for i in range(self.list_nodes.count()):
+            list_item = self.list_nodes.item(i)
+            if list_item.data(Qt.ItemDataRole.UserRole) == tag_to_modify:
+                self.list_nodes.setCurrentItem(list_item)
+                break
 
     def setup_elements_tab(self):
         """ Configura la interfaz de la pestaña de los elementos """

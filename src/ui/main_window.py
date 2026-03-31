@@ -201,7 +201,7 @@ class MainWindow(QMainWindow):
             for viz in self._viewports:
                 viz.renderer_deform.clear(viz.plot_widget)
 
-    def sync_animation_step(self, step_index, step_data, sync_graphs=True):
+    def sync_animation_step(self, step_index, step_data, sync_graphs=True, step_forces=None):
         """ Recibe una señal temporal de la barra de animación y la distribuye a 
             todoas las subventanas (3D y Gráfcicos) que están escuchando."""
         
@@ -216,6 +216,8 @@ class MainWindow(QMainWindow):
             # --- 1. a los visores 3D les mandamos datos geográficos ---
             if isinstance(widget, StructureInteractor):
                 widget.draw_kinematic_step(step_data)
+                if step_forces is not None:
+                    widget.draw_kinematic_forces_step(step_forces)
 
             # --- 2. A los g´raficos de resultados les mandamos el índice del Slider ---
             elif sync_graphs:

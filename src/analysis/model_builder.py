@@ -1,6 +1,6 @@
 import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
-from src.analysis.materials import Concrete01, Steel01, Elastic
+from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM
 from src.analysis.sections import FiberSection
 from src.analysis.element import ForceBeamColumn
 from src.analysis.loads import NodalLoad, ElementLoad
@@ -72,6 +72,10 @@ class ModelBuilder:
         for node in self.manager.get_all_nodes():
             self.log_command('node', node.tag, node.x, node.y)
             
+            # Aplicar masas nodales si están definidas
+            if node.mass is not None:
+                self.log_command('mass', node.tag, *node.mass)
+
             # Aplicar restricciones (Fixity)
             if any(f != 0 for f in node.fixity):
                 self.log_command('fix', node.tag, *node.fixity)
@@ -136,6 +140,14 @@ class ModelBuilder:
                 if self.debug_file: self.debug_file.write(f"# Section Aggregator {sec.tag} wrapping {fiber_tag_internal}\n")
                 self.log_command('section', 'Aggregator', sec.tag, shear_mat_tag, 'Vy', '-section', fiber_tag_internal)
 
+        # 2. Las AggregatorSection explícitas (después de las bases para respetar dependencias)
+        from src.analysis.sections import AggregatorSection
+        for sec in self.manager.get_all_sections():
+            if isinstance(sec, AggregatorSection):
+                cmds = sec.get_opensees_commands()
+                for cmd in cmds:
+                    self.log_command(cmd)
+
     def _build_elements(self):
         if self.debug_file: self.debug_file.write("\n# --- Elements ---\n")
         transf_tag = 1 # Usamos la transformación definida en build_model
@@ -172,16 +184,21 @@ class ModelBuilder:
     def _build_patterns(self):
         if self.debug_file: self.debug_file.write("\n# --- Patterns ---\n")
         
-        ts_tag = 1
-        pattern_tag = 1
-        self.log_command('timeSeries', 'Linear', ts_tag)
-        self.log_command('pattern', 'Plain', pattern_tag, ts_tag)
-        
-        for load in self.manager.get_all_loads():
-            if isinstance(load, NodalLoad):
-                self.log_command('load', load.node_tag, load.fx, load.fy, load.mz)
-            elif isinstance(load, ElementLoad):
-                self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
+        for pattern in self.manager.get_all_patterns():
+            # Creamos una TimeSeries para este patrón. Por simplicidad usamos Linear.
+            # Usamos el propio tag del patrón como tag de la TimeSeries para evitar colisiones
+            ts_tag = pattern.tag
+            self.log_command('timeSeries', 'Linear', ts_tag)
+            
+            # Inicializamos el patrón Plain inyectándole su factor dinámico
+            self.log_command('pattern', 'Plain', pattern.tag, ts_tag, '-fact', pattern.factor)
+            
+            # Anidamos sus cargas correspondientes
+            for load in pattern.loads:
+                if isinstance(load, NodalLoad):
+                    self.log_command('load', load.node_tag, load.fx, load.fy, load.mz)
+                elif isinstance(load, ElementLoad):
+                    self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
                 
 
 

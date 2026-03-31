@@ -56,8 +56,11 @@ class AnimationToolbar(QToolBar):
         self.step_label.setText(f"Paso de Animación: ({value})")
         if hasattr(self.manager, 'pushover_results') and self.manager.pushover_results:
             node_disps = self.manager.pushover_results.get("node_displacements", [])
+            forces_history = self.manager.pushover_results.get("element_forces_history", [])
+            
             if 0 <= value < len(node_disps):
                 step_data = node_disps[value]
+                step_forces = forces_history[value] if value < len(forces_history) else None
 
                 # Enviar solo a la ventana activa
                 if self.parent_window and hasattr(self.parent_window, 'viz_widget'):
@@ -67,5 +70,7 @@ class AnimationToolbar(QToolBar):
                 
                 # Le pedimos al MainWindow que se encargue de sincronizar a todos sus hijos
                 if self.parent_window and hasattr(self.parent_window, 'sync_animation_step'):
-                    self.parent_window.sync_animation_step(value, step_data, self.chk_sync.isChecked())
+                    self.parent_window.sync_animation_step(value, step_data, self.chk_sync.isChecked(), step_forces=step_forces)
+
+
                     
