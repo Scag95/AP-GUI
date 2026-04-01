@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
 from src.analysis.node import Node
-from src.analysis.element import ForceBeamColumn
+from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
 from src.ui.widgets.unit_spinbox import UnitSpinBox
 from src.utils.units import UnitType
 
@@ -82,13 +82,13 @@ class GeometryDialog(QDialog):
         self.widget_mass.setVisible(False)
 
         self.spin_mx = UnitSpinBox(UnitType.MASS)
-        self.spin_mx.setRange(0.0, 999999.0)
+        self.spin_mx.setRange(0.0, 99999999.0)
         self.spin_mx.setDecimals(6)
         self.spin_my = UnitSpinBox(UnitType.MASS)
-        self.spin_my.setRange(0.0, 999999.0)
+        self.spin_my.setRange(0.0, 99999999.0)
         self.spin_my.setDecimals(6)
         self.spin_mrz = UnitSpinBox(UnitType.MASS)
-        self.spin_mrz.setRange(0.0, 999999.0)
+        self.spin_mrz.setRange(0.0, 99999999.0)
         self.spin_mrz.setDecimals(6)
         
         mass_layout.addRow("Masa X:", self.spin_mx)
@@ -252,13 +252,33 @@ class GeometryDialog(QDialog):
         right_panel = QVBoxLayout()
         form_layout = QFormLayout()
 
-        #Comboboxes para quee lusuaurio selecciones los recursos existentes
-
+# --- Comboboxes para seleccionar recursos existentes ---
+        self.cb_element_type = QComboBox()
+        self.cb_element_type.addItems(["ForceBeamColumn", "ForceBeamColumnHinge"])
+        self.cb_element_type.currentTextChanged.connect(self.on_element_type_changed)
         self.cb_node_i = QComboBox()
         self.cb_node_j = QComboBox()
-        self.cb_section = QComboBox()
+        self.cb_section = QComboBox() # Será la sección Estandar o Elástica
 
-        # Spinbox para los parámetros de análisis de Opensees
+        # --- Bloque oculto para HingeRadau ---
+        self.widget_hinge = QWidget()
+        hinge_layout = QFormLayout(self.widget_hinge)
+        
+        self.cb_section_i = QComboBox()
+        self.cb_section_j = QComboBox()
+        self.spin_lp_i = QDoubleSpinBox()
+        self.spin_lp_i.setDecimals(4)
+        self.spin_lp_i.setRange(0.0001, 999.0)
+        self.spin_lp_j = QDoubleSpinBox()
+        self.spin_lp_j.setDecimals(4)
+        self.spin_lp_j.setRange(0.0001, 999.0)
+        hinge_layout.addRow("Sección Rótula I:", self.cb_section_i)
+        hinge_layout.addRow("Longitud Rótula I (lp_i):", self.spin_lp_i)
+        hinge_layout.addRow("Sección Rótula J:", self.cb_section_j)
+        hinge_layout.addRow("Longitud Rótula J (lp_j):", self.spin_lp_j)
+        self.widget_hinge.setVisible(False)
+
+        # --- Spinboxes de OpenSees ---
         self.spin_transf = QSpinBox()
         self.spin_transf.setRange(1,999)
         self.spin_transf.setValue(1)
@@ -267,10 +287,16 @@ class GeometryDialog(QDialog):
         self.spin_int_pts.setRange(1,10)
         self.spin_int_pts.setValue(5)
 
+        # --- Añadir al Layout Principal del panel ---
+        form_layout.addRow("Tipo de Elemento", self.cb_element_type)
         form_layout.addRow("Nodo Inicial", self.cb_node_i)
         form_layout.addRow("Nodo Final", self.cb_node_j)
-        form_layout.addRow("Sección Transversal", self.cb_section)
-        form_layout.addRow("Tag Transformación Geometríca", self.spin_transf)
+        
+        self.lbl_section = QLabel("Sección Transversal")
+        form_layout.addRow(self.lbl_section, self.cb_section)
+        
+        form_layout.addRow(self.widget_hinge) # Agregamos el sub-formulario oculto
+        form_layout.addRow("Tag Transf. Geométrica", self.spin_transf)
         form_layout.addRow("Puntos de Integración", self.spin_int_pts)
 
         right_panel.addLayout(form_layout)
@@ -299,16 +325,17 @@ class GeometryDialog(QDialog):
 
     def load_data(self):
         """ Llena los comboboxes leyendo los datos del ProjectManager """
-        #Limpiar po si se llama múltiples veces
+# Limpiar por si se llama múltiples veces
         self.cb_node_i.clear()
         self.cb_node_j.clear()
         self.cb_section.clear()
+        self.cb_section_i.clear()
+        self.cb_section_j.clear()
         self.list_elements.clear() 
 
         manager = ProjectManager.instance()
         
         #Leer los nodos existentes y cargar los combos
-
         for node in manager.get_all_nodes():
             display_text = f"Nodo {node.tag} (x:{node.x:.2f}, y:{node.y:.2f})"
             self.cb_node_i.addItem(display_text, node.tag)
@@ -318,6 +345,8 @@ class GeometryDialog(QDialog):
         for sec in manager.get_all_sections():
             display_text = f"Sección {sec.tag} - {sec.name}"
             self.cb_section.addItem(display_text, sec.tag)
+            self.cb_section_i.addItem(display_text, sec.tag)
+            self.cb_section_j.addItem(display_text, sec.tag)
 
         #Rellenar la Lista Visual de Elementos
         for ele in manager.get_all_elements():
@@ -354,25 +383,38 @@ class GeometryDialog(QDialog):
         manager = ProjectManager.instance()
         next_tag = manager.get_next_element_tag()
 
-        #Intansiamos el objetor elemento usando la clase ForceBeamColumn
+        # Intanciamos el objeto elemento usando la clase seleccionada en la UI
+        element_type = self.cb_element_type.currentText()
+        if element_type == "ForceBeamColumnHinge":
+            new_element = ForceBeamColumnHinge(
+                tag = next_tag,
+                node_i = i_node_tag,
+                node_j = j_node_tag,
+                transf_tag = transf_tag,
+                section_i_tag = self.cb_section_i.currentData(),
+                lp_i = self.spin_lp_i.value(),
+                section_j_tag = self.cb_section_j.currentData(),
+                lp_j = self.spin_lp_j.value(),
+                section_e_tag = sec_tag,
+                mass_density = 0.0
+            )
+        else:
+            new_element = ForceBeamColumn(
+                tag = next_tag,
+                node_i = i_node_tag,
+                node_j = j_node_tag,
+                section_tag = sec_tag,
+                transf_tag = transf_tag,
+                integration_points = int_pts,
+                mass_density = 0.0
+            )
 
-        new_element = ForceBeamColumn(
-
-            tag = next_tag,
-            node_i = i_node_tag,
-            node_j = j_node_tag,
-            section_tag = sec_tag,
-            transf_tag = transf_tag,
-            integration_points = int_pts,
-            mass_density = 0.0
-        )
-
-        #Asignamos la masa automatic consultale a la sección
+        # Asignamos la masa automatica consultale a la sección
         section = manager.get_section(sec_tag)
         if section:
             new_element.mass_density = section.get_mass_per_length(manager)
 
-        #Pasamos el elementos al manager para que lo guarde
+        # Pasamos el elemento al manager para que lo guarde
         manager.add_element(new_element)
         manager.dataChanged.emit()
         self.load_data()
@@ -381,18 +423,39 @@ class GeometryDialog(QDialog):
         tag = item.data(Qt.ItemDataRole.UserRole)
         manager = ProjectManager.instance()
         ele = manager.get_element(tag)
-        if ele:
-            idx_i = self.cb_node_i.findData(ele.node_i)
-            if idx_i >= 0: self.cb_node_i.setCurrentIndex(idx_i)
+        if not ele: return
+        
+        idx_i = self.cb_node_i.findData(ele.node_i)
+        if idx_i >= 0: self.cb_node_i.setCurrentIndex(idx_i)
+        
+        idx_j = self.cb_node_j.findData(ele.node_j)
+        if idx_j >= 0: self.cb_node_j.setCurrentIndex(idx_j)
+        
+        if isinstance(ele, ForceBeamColumnHinge):
+            self.cb_element_type.setCurrentText("ForceBeamColumnHinge")
             
-            idx_j = self.cb_node_j.findData(ele.node_j)
-            if idx_j >= 0: self.cb_node_j.setCurrentIndex(idx_j)
+            idx_sec_e = self.cb_section.findData(ele.section_e_tag)
+            if idx_sec_e >= 0: self.cb_section.setCurrentIndex(idx_sec_e)
             
+            idx_sec_i = self.cb_section_i.findData(ele.section_i_tag)
+            if idx_sec_i >= 0: self.cb_section_i.setCurrentIndex(idx_sec_i)
+            
+            idx_sec_j = self.cb_section_j.findData(ele.section_j_tag)
+            if idx_sec_j >= 0: self.cb_section_j.setCurrentIndex(idx_sec_j)
+            
+            self.spin_lp_i.setValue(ele.lp_i)
+            self.spin_lp_j.setValue(ele.lp_j)
+            
+            self.spin_int_pts.setEnabled(False) # Las rótulas no usan este parámetro
+        else:
+            self.cb_element_type.setCurrentText("ForceBeamColumn")
             idx_sec = self.cb_section.findData(ele.section_tag)
             if idx_sec >= 0: self.cb_section.setCurrentIndex(idx_sec)
             
-            self.spin_transf.setValue(ele.transf_tag)
-            self.spin_int_pts.setValue(ele.integration_points)
+            self.spin_int_pts.setEnabled(True)
+            self.spin_int_pts.setValue(getattr(ele, 'integration_points', 5))
+        
+        self.spin_transf.setValue(ele.transf_tag)
 
     def delete_element(self):
         current_row = self.list_elements.currentRow()
@@ -416,26 +479,56 @@ class GeometryDialog(QDialog):
         manager = ProjectManager.instance()
         ele = manager.get_element(tag_to_modify)
 
-        if ele:
-            ele.node_i = self.cb_node_i.currentData()
-            ele.node_j = self.cb_node_j.currentData()
-            ele.section_tag = self.cb_section.currentData()
-            ele.transf_tag = self.spin_transf.value()
-            ele.integration_points = self.spin_int_pts.value()
+        if not ele: return
 
-            section = manager.get_section(ele.section_tag)
-            if section:
-                ele.mass_density = section.get_mass_per_length(manager)
+        i_node_tag = self.cb_node_i.currentData()
+        j_node_tag = self.cb_node_j.currentData()
+        sec_tag = self.cb_section.currentData()
+        transf_tag = self.spin_transf.value()
+        int_pts = self.spin_int_pts.value()
 
-            manager.dataChanged.emit()
-            self.load_data()
+        # Instanciamos un elemento nuevo para permitir cambiar el tipo al vuelo
+        element_type = self.cb_element_type.currentText()
+        if element_type == "ForceBeamColumnHinge":
+            new_ele = ForceBeamColumnHinge(
+                tag = tag_to_modify,  # Mismo tag original
+                node_i = i_node_tag,
+                node_j = j_node_tag,
+                transf_tag = transf_tag,
+                section_i_tag = self.cb_section_i.currentData(),
+                lp_i = self.spin_lp_i.value(),
+                section_j_tag = self.cb_section_j.currentData(),
+                lp_j = self.spin_lp_j.value(),
+                section_e_tag = sec_tag,
+                mass_density = 0.0
+            )
+        else:
+            new_ele = ForceBeamColumn(
+                tag = tag_to_modify,
+                node_i = i_node_tag,
+                node_j = j_node_tag,
+                section_tag = sec_tag,
+                transf_tag = transf_tag,
+                integration_points = int_pts,
+                mass_density = 0.0
+            )
+
+        section = manager.get_section(sec_tag)
+        if section:
+            new_ele.mass_density = section.get_mass_per_length(manager)
+
+        # Sustituimos el elemento antiguo de forma limpia en el diccionario interno
+        manager.elements[tag_to_modify] = new_ele
+
+        manager.dataChanged.emit()
+        self.load_data()
             
-            # Restaurar la selección
-            for i in range(self.list_elements.count()):
-                list_item = self.list_elements.item(i)
-                if list_item.data(Qt.ItemDataRole.UserRole) == tag_to_modify:
-                    self.list_elements.setCurrentItem(list_item)
-                    break
+        # Restaurar la selección
+        for i in range(self.list_elements.count()):
+            list_item = self.list_elements.item(i)
+            if list_item.data(Qt.ItemDataRole.UserRole) == tag_to_modify:
+                self.list_elements.setCurrentItem(list_item)
+                break
 
 
     def on_tab_changed(self, index):
@@ -444,6 +537,12 @@ class GeometryDialog(QDialog):
         if index == 1:
             self.load_data()
 
-    
+    def on_element_type_changed(self, text):
+        if text == "ForceBeamColumnHinge":
+            self.lbl_section.setText("Sección Tramo Central (e):")
+            self.widget_hinge.setVisible(True)
+        else:
+            self.lbl_section.setText("Sección Transversal:")
+            self.widget_hinge.setVisible(False)    
     
 

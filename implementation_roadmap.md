@@ -217,7 +217,7 @@ Crear un concepto de **`LoadPattern`** o **`LoadCase`** que agrupe cargas:
 
 ---
 
-## Fase 3: Material `HystereticSM` 🟠 Media
+## ✅ Fase 3: Material `HystereticSM` — COMPLETADA
 
 ### ¿Por qué?
 Las secciones del modelo de calibración definen **leyes Momento-Curvatura** directamente como materiales `HystereticSM`. Este material es parecido al `Hysteretic` pero con una envolvente de **4 puntos** por rama (en vez de 3) y parámetros adicionales de "smooth" y daño.
@@ -399,7 +399,7 @@ args = sec.get_opensees_args()  # o verificar en model_debug.py
 
 ---
 
-## Fase 5: Integración `HingeRadau` en `ForceBeamColumn` 🔴 Compleja
+## ✅ Fase 5: Integración `HingeRadau` en `ForceBeamColumn` — COMPLETADA
 
 ### ¿Por qué?
 Todos los elementos del modelo de calibración usan `HingeRadau`:
@@ -503,7 +503,7 @@ ele = ForceBeamColumnHinge(
 
 ---
 
-## Fase 6: Integración Final y Script de Calibración 🟣
+## ✅ Fase 6: Integración Final y Script de Calibración — COMPLETADA
 
 ### ¿Por qué?
 Una vez implementadas las fases 1-5, necesitas un mecanismo para **cargar** el modelo TCL de calibración en tu programa. Hay dos opciones:
@@ -539,10 +539,10 @@ Crear un script Python (`create_calibration_model.py`) que:
 | ~~1. Masas Nodales~~ | ✅ **COMPLETADA** | `node.py`, `model_builder.py`, `geometry_dialog.py`, `properties_forms.py`, `units.py` | — |
 | ~~2. Material Hysteretic~~ | ✅ **COMPLETADA** | `materials.py`, `model_builder.py`, `manager.py` | — |
 | ~~2b. Patrones de Carga~~ | ✅ **COMPLETADA** | 3 | Ninguna |
-| 3. Material HystereticSM | 🟠 Media | 3 | Ninguna |
-| ~~4. Sección Aggregator Pura~~ | ✅ **COMPLETADA** | 3 | Fases 2+3 |
-| 5. Integración HingeRadau | 🔴 Compleja | 3 | Fase 4 |
-| 6. Integración Final | 🟡 Media | 1-2 | Todas |
+| ~~3. Material HystereticSM~~ | ✅ **COMPLETADA** | `materials.py`, `model_builder.py`, `manager.py` | Ninguna |
+| ~~4. Sección Aggregator Pura~~ | ✅ **COMPLETADA** | `sections.py`, `model_builder.py`, `manager.py` | Fases 2+3 |
+| ~~5. Integración HingeRadau~~ | ✅ **COMPLETADA** | `element.py`, `model_builder.py`, `manager.py` | Fase 4 |
+| ~~6. Integración Final~~ | ✅ **COMPLETADA** | `create_calibration_model.py` | Todas |
 
 ### Orden recomendado de implementación
 ```

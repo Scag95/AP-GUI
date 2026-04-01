@@ -338,10 +338,27 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
    - Created `PatternDialog` (Define -> Patrones de Carga) for CRUD control.
    - Integrated `QComboBox` pattern selectors into `NodalLoadsDialog`, `ElementLoadsDialog`, and `SelfWeightDialog`.
    - Hardcoded 9.81 m/s² for Self Weight gravity, abstracting it from the user.
-3. **Advanced Plasticity - AggregatorSection**:
    - Implemented `AggregatorSection` explicitly to manage aggregated materials on dedicated DOFs (Vy, Mz, P).
    - Upgraded `SectionDialog` UI to feature dual `QTabWidget` panels separating purely fiber sections from aggregated sections.
    - Implemented a two-pass generation algorithm in `model_builder._build_sections` ensuring dependency mapping holds strictly.
+
+### Session 29 (2026-04-01) - HingeRadau & Automated Calibration (COMPLETED)
+1. **ForceBeamColumnHinge Implementation**:
+   - Added `ForceBeamColumnHinge` class in `element.py` to support concentrated plasticity using HingeRadau integration.
+   - Updated `ModelBuilder` to generate the three-section OpenSees command (i, j, e) with their respective plastic hinge lengths (Lp).
+2. **Polymorphic UI Enhancements**:
+   - Updated `GeometryDialog` and `PropertiesPanel` to dynamically adapt the form when a Hinge element is selected (show/hide Lp and multi-section fields).
+   - Integrated `UnitSpinBox` for `lp_i` and `lp_j` to handle length conversions (mm to m) automatically via the UI.
+   - Fixed `AttributeError` by adding `integration_points` guards and disabling irrelevant fields for hinge elements.
+3. **Automated Calibration Script**:
+   - Created `create_calibration_model.py` for full migration from legacy TCL project files.
+   - Implemented automated conversion for:
+     - Coordinates (mm -> m) and Nodal Masses (T -> kg).
+     - Material stresses (MPa -> Pa) and Hysteretic laws.
+     - Moment-Curvature laws (N-mm -> N-m and 1/mm -> 1/m) into `AggregatorSection`.
+   - **Bug Fix**: Corrected column symmetry mapping (C13/C14) to ensure Axes 2/3 (Interior) and 1/4 (Exterior) share correct stiffness properties.
+
+---
 
 ## Pending Tasks (Priority Order)
 

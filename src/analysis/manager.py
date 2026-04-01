@@ -349,7 +349,7 @@ class ProjectManager(QObject):
         from src.analysis.materials import Concrete01, Steel01, Hysteretic, HystereticSM
         from src.analysis.sections import FiberSection, AggregatorSection
         from src.analysis.node import Node
-        from src.analysis.element import ForceBeamColumn
+        from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
         from src.analysis.loads import NodalLoad, ElementLoad, LoadPattern   
 
         try:
@@ -392,6 +392,9 @@ class ProjectManager(QObject):
             for e_data in data.get("elements", []):
                 if e_data.get("type") == "ForceBeamColumn":
                     element = ForceBeamColumn.from_dict(e_data)
+                    self.add_element(element)
+                elif e_data.get("type") == "ForceBeamColumnHinge":
+                    element = ForceBeamColumnHinge.from_dict(e_data)
                     self.add_element(element)
             
             # 5. Cargar Patrones de Carga

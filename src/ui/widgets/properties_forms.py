@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 from src.ui.widgets.unit_spinbox import UnitSpinBox
 from src.utils.units import UnitType
 
+
 class NodeForms(QWidget):
     dataChanged = pyqtSignal()
     def __init__(self, parent = None):
@@ -59,10 +60,13 @@ class NodeForms(QWidget):
         mass_layout = QFormLayout(self.widget_mass)
         self.widget_mass.setVisible(False)
         self.spin_mx = UnitSpinBox(UnitType.MASS)
+        self.spin_mx.setRange(0.0, 99999999.0)
         self.spin_mx.setDecimals(6)
         self.spin_my = UnitSpinBox(UnitType.MASS)
+        self.spin_my.setRange(0.0, 99999999.0)
         self.spin_my.setDecimals(6)
         self.spin_mrz = UnitSpinBox(UnitType.MASS)
+        self.spin_mrz.setRange(0.0, 99999999.0)
         self.spin_mrz.setDecimals(6)
         mass_layout.addRow("Masa X:", self.spin_mx)
         mass_layout.addRow("Masa Y:", self.spin_my)
@@ -160,10 +164,38 @@ class ElementForm(QWidget):
         #Section (Editable - ComboBox)
         self.combo_section = QComboBox()
         self.combo_section.currentIndexChanged.connect(self._on_value_changed)
+        
         form.addRow("Tag:", self.lbl_tag)
         form.addRow("Nodo Inicial (I):", self.spin_node_i)
         form.addRow("Nodo Final (J):", self.spin_node_j)
-        form.addRow("Sección:",self.combo_section)
+        
+        self.lbl_sec = QLabel("Sección:")
+        form.addRow(self.lbl_sec, self.combo_section)
+        
+        # --- Bloque Gesto Hinge ---
+        self.widget_hinge = QWidget()
+        hinge_layout = QFormLayout(self.widget_hinge)
+        
+        self.cb_sec_i = QComboBox()
+        self.cb_sec_i.currentIndexChanged.connect(self._on_value_changed)
+        self.cb_sec_j = QComboBox()
+        self.cb_sec_j.currentIndexChanged.connect(self._on_value_changed)
+        self.spin_lp_i = UnitSpinBox(UnitType.LENGTH)
+        self.spin_lp_i.setDecimals(4)
+        self.spin_lp_i.setRange(0.0001, 999.0)
+        self.spin_lp_i.valueChanged.connect(self._on_value_changed)
+        self.spin_lp_j = UnitSpinBox(UnitType.LENGTH)
+        self.spin_lp_j.setDecimals(4)
+        self.spin_lp_j.setRange(0.0001, 999.0)
+        self.spin_lp_j.valueChanged.connect(self._on_value_changed)
+        
+        hinge_layout.addRow("Sección I:", self.cb_sec_i)
+        hinge_layout.addRow("Lp_i:", self.spin_lp_i)
+        hinge_layout.addRow("Sección J:", self.cb_sec_j)
+        hinge_layout.addRow("Lp_j:", self.spin_lp_j)
+        
+        form.addRow(self.widget_hinge)
+        self.widget_hinge.setVisible(False)
 
         self.layout.addLayout(form)
         
@@ -179,27 +211,47 @@ class ElementForm(QWidget):
     def load_element(self, element):
         self.current_element = element
         self.blockSignals(True)
-
         #Propiedades Básicas
         self.lbl_tag.setText(str(element.tag))
-
         # Cargar id de los nodos conectados
         self.spin_node_i.setValue(int(element.node_i))
         self.spin_node_j.setValue(int(element.node_j))
-
         #cargar secciones disponibles
         self.combo_section.clear()
+        self.cb_sec_i.clear()
+        self.cb_sec_j.clear()
+        
         manager = ProjectManager.instance()
         sections = manager.section
-
         for tag, sec in sections.items():
-            self.combo_section.addItem(f"{tag}: {sec.name}", userData = tag)
-
-        #Seleciona la sección actial
-        if hasattr(element, 'section_tag'):
-            idx = self.combo_section.findData(element.section_tag)
-            if idx>=0: self.combo_section.setCurrentIndex(idx)
-
+            text = f"{tag}: {sec.name}"
+            self.combo_section.addItem(text, userData=tag)
+            self.cb_sec_i.addItem(text, userData=tag)
+            self.cb_sec_j.addItem(text, userData=tag)
+        # Selecciona la sección actual mediante el polimorfismo
+        from src.analysis.element import ForceBeamColumnHinge
+        if isinstance(element, ForceBeamColumnHinge):
+            self.lbl_sec.setText("Sección Central (e):")
+            self.widget_hinge.setVisible(True)
+            
+            idx_e = self.combo_section.findData(element.section_e_tag)
+            if idx_e >= 0: self.combo_section.setCurrentIndex(idx_e)
+            
+            idx_i = self.cb_sec_i.findData(element.section_i_tag)
+            if idx_i >= 0: self.cb_sec_i.setCurrentIndex(idx_i)
+            
+            idx_j = self.cb_sec_j.findData(element.section_j_tag)
+            if idx_j >= 0: self.cb_sec_j.setCurrentIndex(idx_j)
+            
+            self.spin_lp_i.set_value_base(element.lp_i)
+            self.spin_lp_j.set_value_base(element.lp_j)
+        else:
+            self.lbl_sec.setText("Sección Transversal:")
+            self.widget_hinge.setVisible(False)
+            
+            if hasattr(element, 'section_tag'):
+                idx = self.combo_section.findData(element.section_tag)
+                if idx >= 0: self.combo_section.setCurrentIndex(idx)
         self.blockSignals(False)
         self.btn_apply.setEnabled(False)
 
@@ -208,6 +260,7 @@ class ElementForm(QWidget):
         self.btn_apply.setEnabled(True)
 
     def apply_changes(self):
+        from src.analysis.element import ForceBeamColumnHinge
         if not self.current_element: return
         
         # Guardar nueva topología si cambió algún nodo
@@ -221,16 +274,19 @@ class ElementForm(QWidget):
             self.current_element.node_j = new_j
             topology_changed = True
 
-        #Guardar sección
-        idx = self.combo_section.currentIndex()
-        if idx >= 0:
-            sec_tag = self.combo_section.itemData(idx)
-            self.current_element.section_tag = sec_tag
-
+        if isinstance(self.current_element, ForceBeamColumnHinge):
+            self.current_element.section_e_tag = self.combo_section.currentData()
+            self.current_element.section_i_tag = self.cb_sec_i.currentData()
+            self.current_element.section_j_tag = self.cb_sec_j.currentData()
+            self.current_element.lp_i = self.spin_lp_i.get_value_base()
+            self.current_element.lp_j = self.spin_lp_j.get_value_base()
+        else:
+            idx = self.combo_section.currentIndex()
+            if idx >= 0:
+                self.current_element.section_tag = self.combo_section.itemData(idx)
         
         if topology_changed:
             ProjectManager.instance().mark_topology_dirty()
-
         self.dataChanged.emit()
         self.btn_apply.setEnabled(False)
 
