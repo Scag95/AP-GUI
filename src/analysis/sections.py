@@ -156,16 +156,18 @@ class AggregatorSection(Section):
         self.materials.append({"mat_tag": mat_tag, "dof": dof})
 
     def get_opensees_commands(self):
-        # Sintaxis: section Aggregator $secTag $matTag1 $dof1 $matTag2 $dof2 ... <-section $baseSecTag>
-        cmd = f"section Aggregator {self.tag}"
+        # Devolvemos una lista de tuplas de argumentos listos para desempaquetar con *args
+        # Sintaxis OpenSees: section('Aggregator', secTag, matTag1, dof1, ...)
+        args = ['Aggregator', self.tag]
         
         for m in self.materials:
-            cmd += f" {m['mat_tag']} {m['dof']}"
+            args.append(m['mat_tag'])
+            args.append(m['dof'])
             
         if self.base_section_tag is not None and self.base_section_tag > 0:
-            cmd += f" -section {self.base_section_tag}"
+            args.extend(['-section', self.base_section_tag])
             
-        return [cmd]
+        return [tuple(args)]  # Lista de una tupla (una sola llamada a section())
 
     def to_dict(self):
         data = super().to_dict()

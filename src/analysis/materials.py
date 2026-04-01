@@ -132,7 +132,9 @@ class Elastic(Material):
     def from_dict(cls,data):
         return cls(
             tag = data["tag"],
-            E = data["E"]
+            name = data.get("name", "ElasticMaterial"),
+            E = data["E"],
+            rho = data.get("rho", 0.0)
         )
 
 class Hysteretic(Material):

@@ -369,6 +369,9 @@ class ProjectManager(QObject):
                     mat = Hysteretic.from_dict(m_data)
                 elif tipo == "HystereticSM":
                     mat = HystereticSM.from_dict(m_data)
+                elif tipo == "Elastic":
+                    from src.analysis.materials import Elastic
+                    mat = Elastic.from_dict(m_data)
                 else:
                     continue
                 self.add_material(mat)

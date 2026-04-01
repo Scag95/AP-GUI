@@ -221,16 +221,97 @@ def create_model():
         manager.add_element(ele)
 
     # ==========================================
-    # 5. PATRONES DE CARGA (loads.tcl - Fase 2b)
+    # 5. PATRONES DE CARGA (Force Analysis del TCL)
     # ==========================================
-    # Pattern 1 (Gravedad regular, fact 1.0)
-    pat_grav = LoadPattern(tag=1, name="Carga_Gravitatoria", factor=1.0)
-    
-    # Nodal Load en el nodo 12, P_y = -100
-    nl1 = NodalLoad(tag=1, node_tag=12, fx=0.0, fy=-1000.0, mz=0.0)
-    pat_grav.add_load(nl1)
-    
-    manager.add_pattern(pat_grav)
+    # Conversión de unidades de carga distribuida:
+    # El TCL usa el sistema N-mm, por lo que beamUniform está en N/mm.
+    # AP-GUI usa N-m como base, así que hay que convertir: N/mm × 1000 = N/m
+    TCL_TO_SI = 1000.0
+
+    load_tag = 1  # Contador único de tags para cada objeto Load
+
+    # --- PATRÓN 1: Gravedad distribuida (fact=1.0) ---
+    # TCL: pattern Plain 1 1 -fact 1.0 { eleLoad ... }
+    pat1 = LoadPattern(tag=1, name="Gravedad_Distribuida", factor=1.0)
+
+    # Columnas del techo: carga axial wx = -4.16 N/mm (peso del forjado superior)
+    for ele_tag in [43, 60]:
+        pat1.add_load(ElementLoad(tag=load_tag, element_tag=ele_tag,
+                                  wx=-4.16 * TCL_TO_SI, wy=0.0))
+        load_tag += 1
+
+    # Columnas de plantas intermedias superiores: wx = -3.185 N/mm
+    for ele_tag in [44, 45, 46, 47, 48, 55, 56, 57, 58, 59]:
+        pat1.add_load(ElementLoad(tag=load_tag, element_tag=ele_tag,
+                                  wx=-3.185 * TCL_TO_SI, wy=0.0))
+        load_tag += 1
+
+    # Columnas de plantas intermedias inferiores: wx = -2.275 N/mm
+    for ele_tag in [19, 20, 21, 22, 23, 24, 49, 50, 51, 52, 53, 54]:
+        pat1.add_load(ElementLoad(tag=load_tag, element_tag=ele_tag,
+                                  wx=-2.275 * TCL_TO_SI, wy=0.0))
+        load_tag += 1
+
+    # Vigas de todas las plantas: carga transversal wy = -3.51 N/mm (peso propio del forjado)
+    for ele_tag in [1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                    11, 12, 13, 14, 15, 16, 17, 18,
+                    25, 26, 27, 28, 29, 30, 31, 32,
+                    33, 34, 35, 36, 37, 38, 39, 40, 41, 42]:
+        pat1.add_load(ElementLoad(tag=load_tag, element_tag=ele_tag,
+                                  wx=0.0, wy=-3.51 * TCL_TO_SI))
+        load_tag += 1
+
+    manager.add_pattern(pat1)
+
+    # --- PATRÓN 2: Sobrecarga de uso (fact=1.0) ---
+    # TCL: pattern Plain 2 1 -fact 1.0 { eleLoad ... }
+    pat2 = LoadPattern(tag=2, name="Sobrecarga_Uso", factor=1.0)
+
+    # Vigas de todas las plantas: wy = -17.5 N/mm
+    for ele_tag in [1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                    11, 12, 13, 14, 15, 16, 17, 18,
+                    25, 26, 27, 28, 29, 30, 31, 32,
+                    33, 34, 35, 36, 37, 38, 39, 40, 41, 42]:
+        pat2.add_load(ElementLoad(tag=load_tag, element_tag=ele_tag,
+                                  wx=0.0, wy=-17.5 * TCL_TO_SI))
+        load_tag += 1
+
+    manager.add_pattern(pat2)
+
+    # --- PATRÓN 3: Tabiquería / carga variable reducida (fact=0.15) ---
+    # TCL: pattern Plain 3 1 -fact 0.15 { eleLoad ... }
+    pat3 = LoadPattern(tag=3, name="Tabiqueria", factor=0.15)
+
+    # Vigas de todas las plantas: wy = -15.0 N/mm (antes de aplicar el factor 0.15)
+    for ele_tag in [1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                    11, 12, 13, 14, 15, 16, 17, 18,
+                    25, 26, 27, 28, 29, 30, 31, 32,
+                    33, 34, 35, 36, 37, 38, 39, 40, 41, 42]:
+        pat3.add_load(ElementLoad(tag=load_tag, element_tag=ele_tag,
+                                  wx=0.0, wy=-15.0 * TCL_TO_SI))
+        load_tag += 1
+
+    manager.add_pattern(pat3)
+
+    # --- PATRÓN 4: Cargas laterales de Pushover (adimensional, sin conversión) ---
+    # TCL: pattern Plain 4 1 { load nodeTag fx fy mz }
+    # Los valores son proporciones modales (adimensionales), no fuerzas físicas.
+    pat4 = LoadPattern(tag=4, name="Pushover_Lateral", factor=1.0)
+
+    pushover_nodal = [
+        (3,  1.0000),   # Nodo de control (techo)
+        (28, 0.9378),
+        (6,  0.8215),
+        (9,  0.6570),
+        (27, 0.4535),
+        (26, 0.2235),
+    ]
+    for node_tag, fx in pushover_nodal:
+        pat4.add_load(NodalLoad(tag=load_tag, node_tag=node_tag,
+                                fx=fx, fy=0.0, mz=0.0))
+        load_tag += 1
+
+    manager.add_pattern(pat4)
 
     # ==========================================
     # 6. GUARDAR EL JSON

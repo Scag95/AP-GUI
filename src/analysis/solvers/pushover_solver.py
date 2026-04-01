@@ -22,6 +22,31 @@ class PushoverSolver:
         self.failure_detector = FailureDetector()
         self.active_support_nodes = []
 
+    def run_modal_analysis(self, n_modes=1):
+        """Ejecuta un análisis modal sobre el estado actual del modelo en OpenSees."""
+        import math
+        print(f"[Modal] Ejecutando análisis modal ({n_modes} modos)...")
+        try:
+            lambdas = ops.eigen(n_modes)
+            if not lambdas:
+                print("[Modal] ⚠️ No se pudieron calcular los autovalores. Asegúrate de ejecutar el análisis de gravedad primero.")
+                return None
+            
+            periods = []
+            for count, lam in enumerate(lambdas, 1):
+                if lam > 0:
+                    omega = math.sqrt(lam)
+                    T = 2 * math.pi / omega
+                    periods.append(T)
+                    print(f"  -> Modo {count}: T = {T:.4f} s, w = {omega:.2f} rad/s")
+                else:
+                    print(f"  -> Modo {count}: Eigenvalue negativo ({lam})")
+            return periods
+        except Exception as e:
+            print(f"[Modal] Error al ejecutar ops.eigen: {e}")
+            from PyQt6.QtWidgets import QMessageBox
+            # No podemos usar QMessageBox fácil aquí sin parent. Solo imprimimos.
+            return None
 
     def _initialize_results_structure(self):
         """ Helpers para preparar los diccionarios limpios antes de un run."""
@@ -58,7 +83,7 @@ class PushoverSolver:
                 self.active_support_nodes.append(n.tag)
 
 
-    def _apply_load_pattern(self, load_pattern_type: str, pattern_tag: int, precalc_vector=None):
+    def _apply_load_pattern(self, load_pattern_type: str, pattern_tag: int, precalc_vector=None, defined_pattern_tag=None):
         """Helper para delegar la creación del patrón al generador."""
 
         #0. Limpieza preventiva: Evita crasheos si el usuario ejecuta multiples pushover seguidos sobre el mismo modelo
@@ -72,19 +97,33 @@ class PushoverSolver:
         self.builder.log_command('timeSeries', 'Linear', pattern_tag)
         self.builder.log_command('pattern', 'Plain', pattern_tag, pattern_tag)
 
-        #2. Pedirle al generador que haga la matemática (solo si no tenemos vector precalculado)
-        if precalc_vector is None:
-            result_pattern = self.load_generator.generate_pattern(pattern_type=load_pattern_type)
-            force_vector = result_pattern.force_vector
-        else:
+        #2. Resolver el vector de fuerzas según el modo elegido
+        if precalc_vector is not None:
+            # Vector precalculado (rondas adaptativas)
             force_vector = precalc_vector
+        elif load_pattern_type == "Patrón Definido" and defined_pattern_tag is not None:
+            # Leer directamente las NodalLoad.fx del patrón guardado
+            pattern = self.manager.get_pattern(defined_pattern_tag)
+            if pattern:
+                force_vector = {
+                    load.node_tag: load.fx
+                    for load in pattern.loads
+                    if isinstance(load, NodalLoad) and abs(load.fx) > 1e-9
+                }
+                print(f"[Pushover] Usando patrón '{pattern.name}' ({len(force_vector)} nodos con carga Fx)")
+            else:
+                print(f"[Pushover] ⚠️ Patrón {defined_pattern_tag} no encontrado. Usando Modal.")
+                force_vector = self.load_generator.generate_pattern(pattern_type="Modal").force_vector
+        else:
+            # Modal o Uniforme: el generador calcula automáticamente
+            force_vector = self.load_generator.generate_pattern(pattern_type=load_pattern_type).force_vector
 
-        #3. Aplicar las cargas en OpenSees devueltas por el generador (o el vector forzado)
+        #3. Aplicar las cargas en OpenSees y registrarlas para la visualización
         for node_tag, force in force_vector.items():
             if abs(force) > 1e-9:
                 self.builder.log_command('load', node_tag, force, 0.0, 0.0)
 
-                load_pushover = NodalLoad(tag=9000 + node_tag, node_tag=node_tag, fx= force)
+                load_pushover = NodalLoad(tag=9000 + node_tag, node_tag=node_tag, fx=force)
                 self.manager.pushover_loads.append(load_pushover)
 
     def _capture_step_state(self, results_dict, step_idx, control_node_tag, cycle_idx=0):
@@ -187,14 +226,31 @@ class PushoverSolver:
             try:
                 n_pts = int(getattr(ele, 'integration_points', 0) or 0)
                 sections_data = []
+                loc_forces = ops.eleResponse(ele.tag, 'localForce')
+                shear_constant = loc_forces[1] if (loc_forces and len(loc_forces) >= 6) else 0.0
+
                 for i in range(1, n_pts + 1 ):
                     sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
                     loc = ops.sectionLocation(ele.tag, i)
+                    
+                    if not sec_forces:
+                        continue
+                        
+                    p_val = sec_forces[0]
+                    if len(sec_forces) == 2:
+                        m_val = sec_forces[1]
+                        v_val = shear_constant
+                    elif len(sec_forces) >= 3:
+                        m_val = sec_forces[1]
+                        v_val = sec_forces[2]
+                    else:
+                        m_val = v_val = 0.0
+
                     sections_data.append({
                         "i": i,
-                        "P": sec_forces[0],
-                        "M": sec_forces[1],
-                        "V": sec_forces[2],
+                        "P": p_val,
+                        "M": m_val,
+                        "V": v_val,
                         "loc": loc  
                     })
                 forces[ele.tag] = sections_data
@@ -219,17 +275,24 @@ class PushoverSolver:
             #1 calcular cortante de la planta (Sumando cortantes en las columnas)
             shear_total = 0.0
             for col in cols:
-                #Obtenemos nodos de la columna para saber cual es la base y el top
-                node_i = self.manager.get_node(col.node_i)
-                node_j = self.manager.get_node(col.node_j)
-                n_points = int(getattr(col, 'integration_points', 0) or 0)
+                # Obtenemos directamente las fuerzas globales [Fx_i, Fy_i, Mz_i, Fx_j, Fy_j, Mz_j]
+                global_forces = ops.eleResponse(col.tag, 'force')
 
-                # El cortante suele eestar en la sección más baja o alta
-                sec_idx = n_points if node_j.y >= node_i.y else 1
-                forces = ops.eleResponse(col.tag, 'section', sec_idx, 'force')
+                if global_forces and len(global_forces) >= 6:
+                    node_i = self.manager.get_node(col.node_i)
+                    node_j = self.manager.get_node(col.node_j)
+                    
+                    # Identificamos la fuerza X en el nodo que actúe como "base" (el de menor 'y')
+                    if node_i.y <= node_j.y:
+                        fx_bottom = global_forces[0]  # Fx en el nodo I
+                    else:
+                        fx_bottom = global_forces[3]  # Fx en el nodo J
+                        
+                    # Acumulamos la fuerza cruda respetando su signo para el equilibrio del piso
+                    shear_total += fx_bottom
 
-                if forces and len(forces) >= 3:
-                    shear_total += float(forces[2]) #El cortante se encuentra en esa posición
+            # Una vez acumuladas todas las fuerzas del piso, sacamos el módulo total
+            shear_total = abs(shear_total)
 
             #2. Clacular Deriva Relativa (U-top - U_bot) de la primera columna como representante
 
@@ -247,7 +310,7 @@ class PushoverSolver:
             results_dict["floors"][y]["shear"].append(shear_total)
             results_dict["floors"][y]["H"] = h_floor
 
-    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True):
+    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True, defined_pattern_tag=None):
         """
         Ejecución limpia de un Pushover Monotónico estándar.
         """
@@ -268,7 +331,9 @@ class PushoverSolver:
         
 
         #1. Aplicar Cargas 
-        self._apply_load_pattern(load_pattern_type, pattern_tag=pattern_tag, precalc_vector=precalc_vector)
+        self._apply_load_pattern(load_pattern_type, pattern_tag=pattern_tag,
+                                  precalc_vector=precalc_vector,
+                                  defined_pattern_tag=defined_pattern_tag)
 
         #2. Configurar motor matématico
         incr_disp = max_disp/n_steps
@@ -353,7 +418,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity = None, freeze_method="spring", max_drift = None, adaptive_control = False):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, adaptive_control=False, defined_pattern_tag=None):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -381,10 +446,22 @@ class PushoverSolver:
         frozen_floors = set()
         print(f"[Adaptative] Iniciando Pushover Adaptativo ({MAX_ROUND} posibles fallos, Dmax={max_disp})")
 
-        # Novedad: Precalcular y congelar la distribución de carga original
-        print(f"[Adaptive] Precalculando patrón modal original ({load_pattern_type}) intacto.")
-        result_pattern = self.load_generator.generate_pattern(pattern_type=load_pattern_type)
-        base_force_vector = result_pattern.force_vector
+        # Precalcular y congelar la distribución de carga base (antes de cualquier ronda)
+        print(f"[Adaptive] Precalculando distribución de carga ({load_pattern_type})...")
+        if load_pattern_type == "Patrón Definido" and defined_pattern_tag is not None:
+            pattern = self.manager.get_pattern(defined_pattern_tag)
+            if pattern:
+                base_force_vector = {
+                    load.node_tag: load.fx
+                    for load in pattern.loads
+                    if isinstance(load, NodalLoad) and abs(load.fx) > 1e-9
+                }
+                print(f"[Adaptive] Patrón '{pattern.name}' cargado ({len(base_force_vector)} nodos).")
+            else:
+                print(f"[Adaptive] ⚠️ Patrón {defined_pattern_tag} no encontrado. Usando Modal.")
+                base_force_vector = self.load_generator.generate_pattern(pattern_type="Modal").force_vector
+        else:
+            base_force_vector = self.load_generator.generate_pattern(pattern_type=load_pattern_type).force_vector
 
         # --- BUCLE DE RONDAS ADAPTATIVAS ---
         for round_idx in range(MAX_ROUND):
@@ -407,7 +484,8 @@ class PushoverSolver:
                 failure_detector=self.failure_detector,
                 frozen_floors=frozen_floors, pattern_tag=current_pattern_tag,
                 precalc_vector=base_force_vector,
-                setup_recorders=False  # Los recorders ya están configurados antes del bucle
+                setup_recorders=False,
+                defined_pattern_tag=defined_pattern_tag
             )
 
             #4. Fusión de Datos

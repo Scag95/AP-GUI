@@ -146,7 +146,7 @@ class ModelBuilder:
             if isinstance(sec, AggregatorSection):
                 cmds = sec.get_opensees_commands()
                 for cmd in cmds:
-                    self.log_command(cmd)
+                    self.log_command('section', *cmd)
 
     def _build_elements(self):
         if self.debug_file: self.debug_file.write("\n# --- Elements ---\n")
@@ -182,13 +182,18 @@ class ModelBuilder:
                 self.log_command('element', 'forceBeamColumn', *args)
 
             elif isinstance(ele, ForceBeamColumnHinge):
-                # Para HingeRadau, OpenSees pide:
-                # element forceBeamColumn tag iNode jNode transfTag "HingeRadau" secI lpI secJ lpJ secE
+                # Para HingeRadau en OpenSeesPy, debes definir la integración antes:
+                # beamIntegration 'HingeRadau' tag secI lpI secJ lpJ secE
+                integ_tag = next_integ_id
+                next_integ_id += 1
+                
+                self.log_command('beamIntegration', 'HingeRadau', integ_tag,
+                                 ele.section_i_tag, ele.lp_i, 
+                                 ele.section_j_tag, ele.lp_j, 
+                                 ele.section_e_tag)
 
                 args = [
-                    ele.tag, ele.node_i, ele.node_j, ele.transf_tag, "HingeRadau", 
-                    ele.section_i_tag, ele.lp_i, ele.section_j_tag, ele.lp_j,
-                    ele.section_e_tag
+                    ele.tag, ele.node_i, ele.node_j, ele.transf_tag, integ_tag
                 ]
 
                 if ele.mass_density > 0:

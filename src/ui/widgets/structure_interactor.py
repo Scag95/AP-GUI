@@ -59,6 +59,7 @@ class StructureInteractor(QWidget):
         self.show_deformed = True
         self.show_diagrams = True
         self.show_pushover_loads = False
+        self.active_pattern_tag = None  # None = mostrar cargas de todos los patrones
 
         # --- ATAJOS DE TECLADO ---
         self.shortcut_inc = QShortcut(QKeySequence("Ctrl++"), self)
@@ -110,11 +111,12 @@ class StructureInteractor(QWidget):
         # Render Cargas
         s_load = ScaleManager.instance().get_scale('load')
         
-        # 1. Dibujar cargas normales
-        self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load, 
-                                      show_nodes=self.show_loads_nodes, 
+        # 1. Dibujar cargas normales (filtradas por patrón si hay uno activo)
+        self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load,
+                                      show_nodes=self.show_loads_nodes,
                                       show_elements=self.show_loads_elements,
-                                      draw_pushover=False)
+                                      draw_pushover=False,
+                                      pattern_tag=self.active_pattern_tag)
         
         # 2. Si corresponde, sobreescribir con cargas temporales (ej. pushover lateral)    
         #    Hacemos esto habilitando updates para que se dibujen encima de la base                
@@ -220,6 +222,11 @@ class StructureInteractor(QWidget):
     def set_pushover_loads_visible(self, visible):
         """Muestra u oculta exclusivamente las fuerzas del patrón teórico utilizadas en el último Pushover"""
         self.show_pushover_loads = visible
+        self.refresh_viz()
+
+    def set_active_pattern(self, pattern_tag):
+        """Filtra el dibujo de cargas al patrón indicado. None = mostrar todos."""
+        self.active_pattern_tag = pattern_tag
         self.refresh_viz()
 
     # ... (Resto de métodos de escala e interacción sin cambios) ...

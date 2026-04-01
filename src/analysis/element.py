@@ -60,6 +60,11 @@ class ForceBeamColumnHinge(Element):
         'transf_tag', 'section_i_tag', 'lp_i', 'section_j_tag', 'lp_j', 'section_e_tag', 'mass_density'
     ]    
 
+    @property
+    def integration_points(self):
+        # HingeRadau (y por extensión este elemento) garantiza 6 puntos de integración fijos.
+        return 6
+
     def __init__(self, tag, node_i, node_j,
                  transf_tag, section_i_tag, lp_i,    
                  section_j_tag, lp_j, section_e_tag, mass_density = 0.0):

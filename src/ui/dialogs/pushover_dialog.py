@@ -32,7 +32,18 @@ class PushoverDialog(QDialog):
 
         #2. Tipo de fuerzas
         self.combo_load_pattern_type = QComboBox()
-        self.combo_load_pattern_type.addItems(["Modal","Uniforme"])
+        self.combo_load_pattern_type.addItems(["Modal", "Uniforme", "Patrón Definido"])
+        self.combo_load_pattern_type.currentTextChanged.connect(self._on_load_type_changed)
+
+        # Selector de patrón (visible únicamente cuando se elige "Patrón Definido")
+        self.combo_defined_pattern = QComboBox()
+        self.combo_defined_pattern.setMinimumWidth(200)
+        self.combo_defined_pattern.setToolTip("Usa las cargas nodales de este patrón como distribución lateral")
+        for p in self.manager.get_all_patterns():
+            nodal_fx = [l for l in p.loads if hasattr(l, 'fx') and abs(l.fx) > 1e-9]
+            if nodal_fx:  # Solo mostrar patrones que tengan cargas nodales en X
+                self.combo_defined_pattern.addItem(f"Patrón {p.tag}: {p.name}", p.tag)
+        self.combo_defined_pattern.setVisible(False)
 
 
         #2. Desplazamiento Máximo
@@ -52,6 +63,12 @@ class PushoverDialog(QDialog):
         form_layout.addRow("Desplazamiento Máx:", self.spin_drift)
         form_layout.addRow("Número de pasos:", self.spin_steps)
         form_layout.addRow("Modo de aplicación de fuerza", self.combo_load_pattern_type)
+        form_layout.addRow("Patrón lateral a usar:", self.combo_defined_pattern)
+
+        # Guardar referencia al label del combo de patrón para ocultar/mostrar la fila completa
+        self._label_defined_pattern = form_layout.labelForField(self.combo_defined_pattern)
+        if self._label_defined_pattern:
+            self._label_defined_pattern.setVisible(False)
         
         layout.addLayout(form_layout)
 
@@ -134,6 +151,13 @@ class PushoverDialog(QDialog):
 
 
 
+    def _on_load_type_changed(self, text):
+        """Muestra u oculta el selector de patrón según el modo elegido."""
+        is_defined = (text == "Patrón Definido")
+        self.combo_defined_pattern.setVisible(is_defined)
+        if self._label_defined_pattern:
+            self._label_defined_pattern.setVisible(is_defined)
+
     def populate_nodes(self):
         nodes = self.manager.get_all_nodes()
         if not nodes: return
@@ -154,6 +178,15 @@ class PushoverDialog(QDialog):
         control_node = self.combo_node.itemData(idx)
         max_disp = self.spin_drift.get_value_base()
         steps = self.spin_steps.value()
+
+        # Tag del patrón definido (solo relevante cuando load_pattern_type == "Patrón Definido")
+        defined_pattern_tag = None
+        if load_pattern_type == "Patrón Definido":
+            defined_pattern_tag = self.combo_defined_pattern.currentData()
+            if defined_pattern_tag is None:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Aviso", "No hay ningún patrón con cargas laterales disponible.\nCrea primero un patrón con NodalLoad en la dirección X.")
+                return
 
 
         #2. Instacniar Tranaltor y ejecutar
@@ -188,12 +221,18 @@ class PushoverDialog(QDialog):
 
                 adaptive_control = self.chk_adaptive_control.isChecked()
 
-                results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
-                                                           sensitivity=sen, freeze_method=freeze_method, max_drift = drf,
-                                                           adaptive_control=adaptive_control)
+                results = translator.run_adaptive_pushover(
+                    control_node, max_disp, steps, load_pattern_type,
+                    sensitivity=sen, freeze_method=freeze_method, max_drift=drf,
+                    adaptive_control=adaptive_control,
+                    defined_pattern_tag=defined_pattern_tag
+                )
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
-                results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)
+                results = translator.run_pushover_analysis(
+                    control_node, max_disp, steps, load_pattern_type,
+                    defined_pattern_tag=defined_pattern_tag
+                )
 
             if results:
                 # Guardar resultados en el Manager para persistencia

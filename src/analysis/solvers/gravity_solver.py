@@ -48,15 +48,31 @@ class GravitySolver:
                 sections_data = []
                 num_int_pts = getattr(ele,'integration_points')
 
+                loc_forces = ops.eleResponse(ele.tag, 'localForce')
+                shear_constant = loc_forces[1] if (loc_forces and len(loc_forces) >= 6) else 0.0
+
                 for i in range(1, num_int_pts+1):
                     sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
                     loc = ops.sectionLocation(ele.tag, i) #Leemos la ubicación del punto de integración.
                     
+                    if not sec_forces:
+                        continue
+                        
+                    p_val = sec_forces[0]
+                    if len(sec_forces) == 2:
+                        m_val = sec_forces[1]
+                        v_val = shear_constant
+                    elif len(sec_forces) >= 3:
+                        m_val = sec_forces[1]
+                        v_val = sec_forces[2]
+                    else:
+                        m_val = v_val = 0.0
+
                     sections_data.append({
                         "i": i,
-                        "P": sec_forces[0],
-                        "M": sec_forces[1], # M usually 2nd
-                        "V": sec_forces[2],  # V usually 3rd
+                        "P": p_val,
+                        "M": m_val,
+                        "V": v_val,
                         "loc": loc
                     })
 
