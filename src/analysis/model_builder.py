@@ -2,7 +2,7 @@ import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
 from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM
 from src.analysis.sections import FiberSection
-from src.analysis.element import ForceBeamColumn
+from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
 from src.analysis.loads import NodalLoad, ElementLoad
 
 class ModelBuilder:
@@ -179,6 +179,23 @@ class ModelBuilder:
                     args.append(ele.mass_density)
                 args.extend(['-iter', 10, 1e-12])
                 
+                self.log_command('element', 'forceBeamColumn', *args)
+
+            elif isinstance(ele, ForceBeamColumnHinge):
+                # Para HingeRadau, OpenSees pide:
+                # element forceBeamColumn tag iNode jNode transfTag "HingeRadau" secI lpI secJ lpJ secE
+
+                args = [
+                    ele.tag, ele.node_i, ele.node_j, ele.transf_tag, "HingeRadau", 
+                    ele.section_i_tag, ele.lp_i, ele.section_j_tag, ele.lp_j,
+                    ele.section_e_tag
+                ]
+
+                if ele.mass_density > 0:
+                    args.append('-mass')
+                    args.append(ele.mass_density)
+                args.extend(['-iter', 10, 1e-12])
+
                 self.log_command('element', 'forceBeamColumn', *args)
 
     def _build_patterns(self):

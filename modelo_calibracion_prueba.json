@@ -1,0 +1,2141 @@
+{
+    "materials": [
+        {
+            "tag": 1,
+            "name": "Hormigon_Calibrado",
+            "rho": 2500.0,
+            "type": "Concrete01",
+            "fpc": -33000000.0,
+            "epsc0": -0.00247,
+            "fpcu": -33000000.0,
+            "epsu": -0.006,
+            "minmax": null
+        },
+        {
+            "tag": 2,
+            "name": "Acero_Calibrado",
+            "rho": 0.0,
+            "type": "Hysteretic",
+            "s1p": 570000000.0,
+            "e1p": 0.002875,
+            "s2p": 570100000.0,
+            "e2p": 0.055,
+            "s3p": 0.0,
+            "e3p": 0.09,
+            "s1n": -570000000.0,
+            "e1n": -0.002875,
+            "s2n": -570100000.0,
+            "e2n": -0.055,
+            "s3n": 0.0,
+            "e3n": -0.09,
+            "pinch_x": 0.0,
+            "pinch_y": 0.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": null
+        },
+        {
+            "tag": 100,
+            "name": "P_Axial_Comun",
+            "rho": 0.0,
+            "type": "Elastic",
+            "E": 4275303632.0
+        },
+        {
+            "tag": 16,
+            "name": "M_C11",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 30088.475,
+            "e1p": 0.0019,
+            "s2p": 115584.583,
+            "e2p": 0.036206,
+            "s3p": 117943.452,
+            "e3p": 0.369487,
+            "s4p": 0.0,
+            "e4p": 0.819634,
+            "s1n": -30088.475,
+            "e1n": -0.0019,
+            "s2n": -115584.583,
+            "e2n": -0.036206,
+            "s3n": -117943.452,
+            "e3n": -0.369487,
+            "s4n": -0.0,
+            "e4n": -0.819634,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 21,
+            "name": "M_C12",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 101964.142,
+            "e1p": 0.001369,
+            "s2p": 318687.715,
+            "e2p": 0.023612,
+            "s3p": 325191.546,
+            "e3p": 0.225416,
+            "s4p": 0.0,
+            "e4p": 0.462251,
+            "s1n": -101964.142,
+            "e1n": -0.001369,
+            "s2n": -318687.715,
+            "e2n": -0.023612,
+            "s3n": -325191.546,
+            "e3n": -0.225416,
+            "s4n": -0.0,
+            "e4n": -0.462251,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 30,
+            "name": "M_C21",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 27148.361,
+            "e1p": 0.001714,
+            "s2p": 109625.25,
+            "e2p": 0.038391,
+            "s3p": 111862.5,
+            "e3p": 0.394662,
+            "s4p": 0.0,
+            "e4p": 0.843212,
+            "s1n": -27148.361,
+            "e1n": -0.001714,
+            "s2n": -109625.25,
+            "e2n": -0.038391,
+            "s3n": -111862.5,
+            "e3n": -0.394662,
+            "s4n": -0.0,
+            "e4n": -0.843212,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 39,
+            "name": "M_C22",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 71114.076,
+            "e1p": 0.001643,
+            "s2p": 218145.06,
+            "e2p": 0.028206000000000002,
+            "s3p": 222597.0,
+            "e3p": 0.25804400000000005,
+            "s4p": 0.0,
+            "e4p": 0.5370079999999999,
+            "s1n": -71114.076,
+            "e1n": -0.001643,
+            "s2n": -218145.06,
+            "e2n": -0.028206000000000002,
+            "s3n": -222597.0,
+            "e3n": -0.25804400000000005,
+            "s4n": -0.0,
+            "e4n": -0.5370079999999999,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 48,
+            "name": "M_C31",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 24202.394,
+            "e1p": 0.001528,
+            "s2p": 103600.804,
+            "e2p": 0.037725,
+            "s3p": 105715.106,
+            "e3p": 0.398121,
+            "s4p": 0.0,
+            "e4p": 0.833827,
+            "s1n": -24202.394,
+            "e1n": -0.001528,
+            "s2n": -103600.804,
+            "e2n": -0.037725,
+            "s3n": -105715.106,
+            "e3n": -0.398121,
+            "s4n": -0.0,
+            "e4n": -0.833827,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 59,
+            "name": "M_C32",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 61742.592,
+            "e1p": 0.001427,
+            "s2p": 199322.117,
+            "e2p": 0.027482,
+            "s3p": 203389.915,
+            "e3p": 0.262106,
+            "s4p": 0.0,
+            "e4p": 0.528811,
+            "s1n": -61742.592,
+            "e1n": -0.001427,
+            "s2n": -199322.117,
+            "e2n": -0.027482,
+            "s3n": -203389.915,
+            "e3n": -0.262106,
+            "s4n": -0.0,
+            "e4n": -0.528811,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 62,
+            "name": "M_C41",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 21242.464,
+            "e1p": 0.001341,
+            "s2p": 97491.025,
+            "e2p": 0.03704,
+            "s3p": 99480.638,
+            "e3p": 0.401875,
+            "s4p": 0.0,
+            "e4p": 0.824793,
+            "s1n": -21242.464,
+            "e1n": -0.001341,
+            "s2n": -97491.025,
+            "e2n": -0.03704,
+            "s3n": -99480.638,
+            "e3n": -0.401875,
+            "s4n": -0.0,
+            "e4n": -0.824793,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 65,
+            "name": "M_C42",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 52391.094,
+            "e1p": 0.0012109999999999998,
+            "s2p": 180204.94,
+            "e2p": 0.026730999999999998,
+            "s3p": 183882.592,
+            "e3p": 0.266623,
+            "s4p": 0.0,
+            "e4p": 0.5212730000000001,
+            "s1n": -52391.094,
+            "e1n": -0.0012109999999999998,
+            "s2n": -180204.94,
+            "e2n": -0.026730999999999998,
+            "s3n": -183882.592,
+            "e3n": -0.266623,
+            "s4n": -0.0,
+            "e4n": -0.5212730000000001,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 68,
+            "name": "M_C51",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 18269.699,
+            "e1p": 0.001153,
+            "s2p": 91294.044,
+            "e2p": 0.036335,
+            "s3p": 93157.188,
+            "e3p": 0.40592500000000004,
+            "s4p": 0.0,
+            "e4p": 0.81609,
+            "s1n": -18269.699,
+            "e1n": -0.001153,
+            "s2n": -91294.044,
+            "e2n": -0.036335,
+            "s3n": -93157.188,
+            "e3n": -0.40592500000000004,
+            "s4n": -0.0,
+            "e4n": -0.81609,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 71,
+            "name": "M_C52",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 43057.965,
+            "e1p": 0.000995,
+            "s2p": 160754.687,
+            "e2p": 0.025945,
+            "s3p": 164035.395,
+            "e3p": 0.27158899999999997,
+            "s4p": 0.0,
+            "e4p": 0.51431,
+            "s1n": -43057.965,
+            "e1n": -0.000995,
+            "s2n": -160754.687,
+            "e2n": -0.025945,
+            "s3n": -164035.395,
+            "e3n": -0.27158899999999997,
+            "s4n": -0.0,
+            "e4n": -0.51431,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 74,
+            "name": "M_C61",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 15276.771,
+            "e1p": 0.000965,
+            "s2p": 84989.752,
+            "e2p": 0.035604,
+            "s3p": 86724.237,
+            "e3p": 0.410286,
+            "s4p": 0.0,
+            "e4p": 0.8076650000000001,
+            "s1n": -15276.771,
+            "e1n": -0.000965,
+            "s2n": -84989.752,
+            "e2n": -0.035604,
+            "s3n": -86724.237,
+            "e3n": -0.410286,
+            "s4n": -0.0,
+            "e4n": -0.8076650000000001,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 77,
+            "name": "M_C62",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 33753.677,
+            "e1p": 0.0007800000000000001,
+            "s2p": 140950.461,
+            "e2p": 0.025116000000000003,
+            "s3p": 143827.001,
+            "e3p": 0.276989,
+            "s4p": 0.0,
+            "e4p": 0.507814,
+            "s1n": -33753.677,
+            "e1n": -0.0007800000000000001,
+            "s2n": -140950.461,
+            "e2n": -0.025116000000000003,
+            "s3n": -143827.001,
+            "e3n": -0.276989,
+            "s4n": -0.0,
+            "e4n": -0.507814,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 80,
+            "name": "M_V1",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 34296.29,
+            "e1p": 0.000441,
+            "s2p": 151702.441,
+            "e2p": 0.014106,
+            "s3p": 154798.41,
+            "e3p": 0.16576000000000002,
+            "s4p": 0.0,
+            "e4p": 0.296272,
+            "s1n": -34296.29,
+            "e1n": -0.000441,
+            "s2n": -151702.441,
+            "e2n": -0.014106,
+            "s3n": -154798.41,
+            "e3n": -0.16576000000000002,
+            "s4n": -0.0,
+            "e4n": -0.296272,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        },
+        {
+            "tag": 83,
+            "name": "M_V2",
+            "rho": 0.0,
+            "type": "HystereticSM",
+            "s1p": 35915.027,
+            "e1p": 0.000443,
+            "s2p": 227536.561,
+            "e2p": 0.015028999999999999,
+            "s3p": 232180.164,
+            "e3p": 0.168443,
+            "s4p": 0.0,
+            "e4p": 0.307492,
+            "s1n": -35915.027,
+            "e1n": -0.000443,
+            "s2n": -227536.561,
+            "e2n": -0.015028999999999999,
+            "s3n": -232180.164,
+            "e3n": -0.168443,
+            "s4n": -0.0,
+            "e4n": -0.307492,
+            "pinch_x": 1.0,
+            "pinch_y": 1.0,
+            "damage1": 0.0,
+            "damage2": 0.0,
+            "beta": 0.5
+        }
+    ],
+    "sections": [
+        {
+            "tag": 1,
+            "name": "Seccion_C11",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 16,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 2,
+            "name": "Seccion_C12",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 21,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 3,
+            "name": "Seccion_C21",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 30,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 4,
+            "name": "Seccion_C22",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 39,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 5,
+            "name": "Seccion_C31",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 48,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 6,
+            "name": "Seccion_C32",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 59,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 7,
+            "name": "Seccion_C41",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 62,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 8,
+            "name": "Seccion_C42",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 65,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 9,
+            "name": "Seccion_C51",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 68,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 10,
+            "name": "Seccion_C52",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 71,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 11,
+            "name": "Seccion_C61",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 74,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 12,
+            "name": "Seccion_C62",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 77,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 13,
+            "name": "Seccion_V1",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 80,
+                    "dof": "Mz"
+                }
+            ]
+        },
+        {
+            "tag": 14,
+            "name": "Seccion_V2",
+            "type": "AggregatorSection",
+            "base_section_tag": null,
+            "materials": [
+                {
+                    "mat_tag": 100,
+                    "dof": "P"
+                },
+                {
+                    "mat_tag": 83,
+                    "dof": "Mz"
+                }
+            ]
+        }
+    ],
+    "nodes": [
+        {
+            "tag": 1,
+            "x": 12.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7638.9,
+                7638.9,
+                0.0
+            ]
+        },
+        {
+            "tag": 2,
+            "x": 15.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 3,
+            "x": 18.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                3933.0375000000004,
+                3933.0375000000004,
+                0.0
+            ]
+        },
+        {
+            "tag": 4,
+            "x": 12.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 5,
+            "x": 15.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 6,
+            "x": 18.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 7,
+            "x": 12.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 8,
+            "x": 15.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 9,
+            "x": 18.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 10,
+            "x": 6.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 11,
+            "x": 9.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 12,
+            "x": 0.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4391.04,
+                4391.04,
+                0.0
+            ]
+        },
+        {
+            "tag": 13,
+            "x": 3.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 14,
+            "x": 6.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8476.3,
+                8476.3,
+                0.0
+            ]
+        },
+        {
+            "tag": 15,
+            "x": 6.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 16,
+            "x": 9.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 17,
+            "x": 9.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 18,
+            "x": 12.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8476.3,
+                8476.3,
+                0.0
+            ]
+        },
+        {
+            "tag": 19,
+            "x": 6.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 20,
+            "x": 9.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 21,
+            "x": 12.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 22,
+            "x": 0.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                3933.0375000000004,
+                3933.0375000000004,
+                0.0
+            ]
+        },
+        {
+            "tag": 23,
+            "x": 3.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 24,
+            "x": 6.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7638.9,
+                7638.9,
+                0.0
+            ]
+        },
+        {
+            "tag": 25,
+            "x": 18.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ],
+            "mass": [
+                458.0025,
+                458.0025,
+                0.0
+            ]
+        },
+        {
+            "tag": 26,
+            "x": 18.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4391.04,
+                4391.04,
+                0.0
+            ]
+        },
+        {
+            "tag": 27,
+            "x": 18.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 28,
+            "x": 18.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 29,
+            "x": 0.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 30,
+            "x": 3.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 31,
+            "x": 0.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 32,
+            "x": 3.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 33,
+            "x": 6.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 34,
+            "x": 0.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 35,
+            "x": 3.0,
+            "y": 13.7,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 36,
+            "x": 0.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                4309.875,
+                4309.875,
+                0.0
+            ]
+        },
+        {
+            "tag": 37,
+            "x": 3.0,
+            "y": 10.45,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 38,
+            "x": 9.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 39,
+            "x": 12.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                8165.4,
+                8165.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 40,
+            "x": 15.0,
+            "y": 3.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 41,
+            "x": 15.0,
+            "y": 7.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 42,
+            "x": 15.0,
+            "y": 16.95,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 43,
+            "x": 9.0,
+            "y": 20.2,
+            "fixity": [
+                0,
+                0,
+                0
+            ],
+            "mass": [
+                7112.4,
+                7112.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 44,
+            "x": 12.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ],
+            "mass": [
+                837.4,
+                837.4,
+                0.0
+            ]
+        },
+        {
+            "tag": 45,
+            "x": 0.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ],
+            "mass": [
+                458.0025,
+                458.0025,
+                0.0
+            ]
+        },
+        {
+            "tag": 46,
+            "x": 6.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ],
+            "mass": [
+                837.4,
+                837.4,
+                0.0
+            ]
+        }
+    ],
+    "elements": [
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 49,
+            "node_i": 45,
+            "node_j": 12,
+            "transf_tag": 1,
+            "section_i_tag": 1,
+            "lp_i": 0.1765043,
+            "section_j_tag": 1,
+            "lp_j": 0.1765043,
+            "section_e_tag": 1,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 60,
+            "node_i": 46,
+            "node_j": 14,
+            "transf_tag": 1,
+            "section_i_tag": 2,
+            "lp_i": 0.2187773,
+            "section_j_tag": 2,
+            "lp_j": 0.2187773,
+            "section_e_tag": 2,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 43,
+            "node_i": 44,
+            "node_j": 18,
+            "transf_tag": 1,
+            "section_i_tag": 2,
+            "lp_i": 0.2187773,
+            "section_j_tag": 2,
+            "lp_j": 0.2187773,
+            "section_e_tag": 2,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 19,
+            "node_i": 25,
+            "node_j": 26,
+            "transf_tag": 1,
+            "section_i_tag": 1,
+            "lp_i": 0.1765043,
+            "section_j_tag": 1,
+            "lp_j": 0.1765043,
+            "section_e_tag": 1,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 50,
+            "node_i": 12,
+            "node_j": 31,
+            "transf_tag": 1,
+            "section_i_tag": 3,
+            "lp_i": 0.1545362,
+            "section_j_tag": 3,
+            "lp_j": 0.1545362,
+            "section_e_tag": 3,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 59,
+            "node_i": 14,
+            "node_j": 33,
+            "transf_tag": 1,
+            "section_i_tag": 4,
+            "lp_i": 0.18256229999999998,
+            "section_j_tag": 4,
+            "lp_j": 0.18256229999999998,
+            "section_e_tag": 4,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 44,
+            "node_i": 18,
+            "node_j": 39,
+            "transf_tag": 1,
+            "section_i_tag": 4,
+            "lp_i": 0.18256229999999998,
+            "section_j_tag": 4,
+            "lp_j": 0.18256229999999998,
+            "section_e_tag": 4,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 20,
+            "node_i": 26,
+            "node_j": 27,
+            "transf_tag": 1,
+            "section_i_tag": 3,
+            "lp_i": 0.1545362,
+            "section_j_tag": 3,
+            "lp_j": 0.1545362,
+            "section_e_tag": 3,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 51,
+            "node_i": 31,
+            "node_j": 36,
+            "transf_tag": 1,
+            "section_i_tag": 5,
+            "lp_i": 0.1563319,
+            "section_j_tag": 5,
+            "lp_j": 0.1563319,
+            "section_e_tag": 5,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 58,
+            "node_i": 33,
+            "node_j": 15,
+            "transf_tag": 1,
+            "section_i_tag": 6,
+            "lp_i": 0.18604920000000003,
+            "section_j_tag": 6,
+            "lp_j": 0.18604920000000003,
+            "section_e_tag": 6,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 45,
+            "node_i": 39,
+            "node_j": 7,
+            "transf_tag": 1,
+            "section_i_tag": 6,
+            "lp_i": 0.18604920000000003,
+            "section_j_tag": 6,
+            "lp_j": 0.18604920000000003,
+            "section_e_tag": 6,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 21,
+            "node_i": 27,
+            "node_j": 9,
+            "transf_tag": 1,
+            "section_i_tag": 5,
+            "lp_i": 0.1563319,
+            "section_j_tag": 5,
+            "lp_j": 0.1563319,
+            "section_e_tag": 5,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 52,
+            "node_i": 36,
+            "node_j": 34,
+            "transf_tag": 1,
+            "section_i_tag": 7,
+            "lp_i": 0.158136,
+            "section_j_tag": 7,
+            "lp_j": 0.158136,
+            "section_e_tag": 7,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 57,
+            "node_i": 15,
+            "node_j": 10,
+            "transf_tag": 1,
+            "section_i_tag": 8,
+            "lp_i": 0.18952860000000002,
+            "section_j_tag": 8,
+            "lp_j": 0.18952860000000002,
+            "section_e_tag": 8,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 46,
+            "node_i": 7,
+            "node_j": 4,
+            "transf_tag": 1,
+            "section_i_tag": 8,
+            "lp_i": 0.18952860000000002,
+            "section_j_tag": 8,
+            "lp_j": 0.18952860000000002,
+            "section_e_tag": 8,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 22,
+            "node_i": 9,
+            "node_j": 6,
+            "transf_tag": 1,
+            "section_i_tag": 7,
+            "lp_i": 0.158136,
+            "section_j_tag": 7,
+            "lp_j": 0.158136,
+            "section_e_tag": 7,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 53,
+            "node_i": 34,
+            "node_j": 29,
+            "transf_tag": 1,
+            "section_i_tag": 9,
+            "lp_i": 0.159948,
+            "section_j_tag": 9,
+            "lp_j": 0.159948,
+            "section_e_tag": 9,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 56,
+            "node_i": 10,
+            "node_j": 19,
+            "transf_tag": 1,
+            "section_i_tag": 10,
+            "lp_i": 0.1930012,
+            "section_j_tag": 10,
+            "lp_j": 0.1930012,
+            "section_e_tag": 10,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 47,
+            "node_i": 4,
+            "node_j": 21,
+            "transf_tag": 1,
+            "section_i_tag": 10,
+            "lp_i": 0.1930012,
+            "section_j_tag": 10,
+            "lp_j": 0.1930012,
+            "section_e_tag": 10,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 23,
+            "node_i": 6,
+            "node_j": 28,
+            "transf_tag": 1,
+            "section_i_tag": 9,
+            "lp_i": 0.159948,
+            "section_j_tag": 9,
+            "lp_j": 0.159948,
+            "section_e_tag": 9,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 54,
+            "node_i": 29,
+            "node_j": 22,
+            "transf_tag": 1,
+            "section_i_tag": 11,
+            "lp_i": 0.1617723,
+            "section_j_tag": 11,
+            "lp_j": 0.1617723,
+            "section_e_tag": 11,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 55,
+            "node_i": 19,
+            "node_j": 24,
+            "transf_tag": 1,
+            "section_i_tag": 12,
+            "lp_i": 0.196463,
+            "section_j_tag": 12,
+            "lp_j": 0.196463,
+            "section_e_tag": 12,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 48,
+            "node_i": 21,
+            "node_j": 1,
+            "transf_tag": 1,
+            "section_i_tag": 12,
+            "lp_i": 0.196463,
+            "section_j_tag": 12,
+            "lp_j": 0.196463,
+            "section_e_tag": 12,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 24,
+            "node_i": 28,
+            "node_j": 3,
+            "transf_tag": 1,
+            "section_i_tag": 11,
+            "lp_i": 0.1617723,
+            "section_j_tag": 11,
+            "lp_j": 0.1617723,
+            "section_e_tag": 11,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 9,
+            "node_i": 12,
+            "node_j": 13,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 10,
+            "node_i": 13,
+            "node_j": 14,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 13,
+            "node_i": 14,
+            "node_j": 17,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 14,
+            "node_i": 17,
+            "node_j": 18,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 35,
+            "node_i": 18,
+            "node_j": 40,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 36,
+            "node_i": 40,
+            "node_j": 26,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 27,
+            "node_i": 31,
+            "node_j": 32,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 28,
+            "node_i": 32,
+            "node_j": 33,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 33,
+            "node_i": 33,
+            "node_j": 38,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 34,
+            "node_i": 38,
+            "node_j": 39,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 37,
+            "node_i": 39,
+            "node_j": 41,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 38,
+            "node_i": 41,
+            "node_j": 27,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 31,
+            "node_i": 36,
+            "node_j": 37,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 32,
+            "node_i": 37,
+            "node_j": 15,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 11,
+            "node_i": 15,
+            "node_j": 16,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 12,
+            "node_i": 16,
+            "node_j": 7,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 5,
+            "node_i": 7,
+            "node_j": 8,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 6,
+            "node_i": 8,
+            "node_j": 9,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 29,
+            "node_i": 34,
+            "node_j": 35,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 30,
+            "node_i": 35,
+            "node_j": 10,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 7,
+            "node_i": 10,
+            "node_j": 11,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 8,
+            "node_i": 11,
+            "node_j": 4,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 3,
+            "node_i": 4,
+            "node_j": 5,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 4,
+            "node_i": 5,
+            "node_j": 6,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 25,
+            "node_i": 29,
+            "node_j": 30,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 26,
+            "node_i": 30,
+            "node_j": 19,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 15,
+            "node_i": 19,
+            "node_j": 20,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 16,
+            "node_i": 20,
+            "node_j": 21,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 39,
+            "node_i": 21,
+            "node_j": 42,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 40,
+            "node_i": 42,
+            "node_j": 28,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 17,
+            "node_i": 22,
+            "node_j": 23,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 18,
+            "node_i": 23,
+            "node_j": 24,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 41,
+            "node_i": 24,
+            "node_j": 43,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 42,
+            "node_i": 43,
+            "node_j": 1,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 1,
+            "node_i": 1,
+            "node_j": 2,
+            "transf_tag": 1,
+            "section_i_tag": 14,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 14,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 14,
+            "mass_density": 0.0
+        },
+        {
+            "type": "ForceBeamColumnHinge",
+            "tag": 2,
+            "node_i": 2,
+            "node_j": 3,
+            "transf_tag": 1,
+            "section_i_tag": 13,
+            "lp_i": 0.18013900000000002,
+            "section_j_tag": 13,
+            "lp_j": 0.18013900000000002,
+            "section_e_tag": 13,
+            "mass_density": 0.0
+        }
+    ],
+    "patterns": [
+        {
+            "type": "LoadPattern",
+            "tag": 1,
+            "name": "Carga_Gravitatoria",
+            "factor": 1.0,
+            "loads": [
+                {
+                    "type": "NodalLoad",
+                    "tag": 1,
+                    "node_tag": 12,
+                    "fx": 0.0,
+                    "fy": -1000.0,
+                    "mz": 0.0
+                }
+            ]
+        }
+    ]
+}

@@ -17,13 +17,14 @@ class ConcreteForm(QWidget):
         #Campo fpc
         self.spin_fpc = UnitSpinBox(UnitType.STRESS)
         self.spin_fpc.setDecimals(0)
-        self.spin_fpc.setRange(0, 1e10) 
+        self.spin_fpc.setRange(-1e10, 1e10) 
         self.spin_fpc.set_value_base(25*1e6) # 25 MPa
         layout.addRow("Resistencia a la compresión [fpc]",self.spin_fpc)
 
         #Campo epsc0
         self.spin_epsc0 = QDoubleSpinBox()
         self.spin_epsc0.setDecimals(4)
+        self.spin_epsc0.setRange(-1e10, 1e10) 
         self.spin_epsc0.setSingleStep(0.0001)
         self.spin_epsc0.setValue(0.0020)
         layout.addRow("Deformación Unitaria [epsc0]",self.spin_epsc0)
@@ -31,7 +32,7 @@ class ConcreteForm(QWidget):
         #Campo fpcU
         self.spin_fpcU = UnitSpinBox(UnitType.STRESS)
         self.spin_fpcU.setDecimals(0)
-        self.spin_fpcU.setRange(0, 1e10)
+        self.spin_fpcU.setRange(-1e10, 1e10)
         self.spin_fpcU.set_value_base(25*1e6) # 25 MPa
 
         layout.addRow("Resistencia al aplastamiento [fpcU]",self.spin_fpcU)
@@ -39,6 +40,7 @@ class ConcreteForm(QWidget):
         #Campo epscU
         self.spin_epscU = QDoubleSpinBox()
         self.spin_epscU.setDecimals(4)
+        self.spin_epscU.setRange(-1e10, 1e10) 
         self.spin_epscU.setSingleStep(0.0001)
         self.spin_epscU.setValue(0.0035)
         layout.addRow("Deformación última [epscU]",self.spin_epscU)
