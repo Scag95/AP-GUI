@@ -19,7 +19,7 @@ class LoadRenderer:
             plot_widget.removeItem(item)
         self.load_items.clear()
 
-    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True, draw_pushover=False):
+    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True, draw_pushover=False, pattern_tag=None):
         """Dibuja todas las cargas del manager en el plot_widget."""
         # Desactivamos actualizaciones para acelerar la inserción masiva de items
         plot_widget.setUpdatesEnabled(False)
@@ -37,7 +37,12 @@ class LoadRenderer:
                 color_override_nodal = self.color_pushover_load
                 color_override_dist = self.color_pushover_load
             else:
-                all_loads = manager.get_all_loads()
+                # Filtrar por patrón si se especifica uno concreto
+                if pattern_tag is not None:
+                    pattern = manager.get_pattern(pattern_tag)
+                    all_loads = pattern.loads if pattern else []
+                else:
+                    all_loads = manager.get_all_loads()
                 color_override_nodal = self.color_nodal_load
                 color_override_dist = self.color_dist_load
                 

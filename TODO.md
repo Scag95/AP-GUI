@@ -148,4 +148,13 @@ El objetivo es obtener la curva de capacidad completa de todos los pisos, evitan
 ## 🟡 Prioridad 13: Revisión Gráfica Pushover Monotónico y Adaptativo (COMPLETED)
 - [x] **Revisar y corregir la gráfica del Pushover Monotónico**: Solucionado el problema visual donde la estructura se deformaba excesivamente ("como chicle"). El culpable era un `base_scale` de `50.0` hardcodeado en `ScaleManager`, que fue cambiado a `1.0`.
 - [x] **Corregir cargas visuales**: Modificado el `PushoverSolver` para que guarde las cargas generadas en `manager.pushover_loads` como instancias de `NodalLoad`, permitiendo su visualización 3D al activar el checkbox.
-- [ ] **Repunte infinito de capacidad en Adaptativo**: Solucionado el pico numérico anormal de 11000 kN. Implementada la solución arquitectónica para el método de congelamiento `fix`, guardando las restricciones paramétricas (`sp`) dentro de un `loadPattern` estático e intocable (tag 8000+) para evitar que sean eliminadas entre rondas adaptativas.
+- [x] **Repunte infinito de capacidad en Adaptativo**: Solucionado el pico numérico anormal de 11000 kN. Implementada la solución arquitectónica para el método de congelamiento `fix`, guardando las restricciones paramétricas (`sp`) dentro de un `loadPattern` estático e intocable (tag 8000+) para evitar que sean eliminadas entre rondas adaptativas.
+
+## 🔵 Prioridad 14: Depuración de Esfuerzos y Geometría en Rótulas (Session 30) (COMPLETED)
+- [x] **Compatibilidad HingeRadau**: Expuesta propiedad polimórfica `integration_points = 6` para compatibilidad de algoritmos de dibujado de diagramas.
+- [x] **Matriz de Fuerzas en Aggregator**: Solvers actualizados para leer vectores de fuerza adaptativamente (2 o 3 componentes según los DOFs de la sección), extrayendo el cortante faltante desde las fuerzas locales en secciones pura-flexión.
+- [x] **Sumatoria Story Shear**: Reemplazada lógica trivial de suma de valores absolutos seccionales por la sumatoria equilibrada algebraicamente de la componente global $Fx$ (`ops.eleResponse(..., 'force')`) para garantizar absoluta concordancia estática con el Cortante Basal P-Delta general.
+
+## 🟡 Prioridad 15: Evaluación de Resultados y Convergencia (Pendiente)
+- [ ] **Debug Convergencia**: Investigar por qué el Pushover falla en el paso 1118 (Revisar logs de Broken Element 19, 60...).
+- [ ] **Validación de Diagramas**: Revisar visualmente que los diagramas de cortante y flexión se estén dibujando en los componentes HingeRadau de forma estable a lo largo del historial de deformación.

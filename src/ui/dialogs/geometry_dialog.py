@@ -16,7 +16,15 @@ class GeometryDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Añadir Nodos y Elementos")
-        self.resize(400,300)
+        self.resize(800,600)
+
+        #Centrar ventana al centro de la pantalla
+        qr = self.frameGeometry()
+        cp = self.screen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+        self.main_layout = QHBoxLayout(self)
 
         self.manager = ProjectManager.instance()
 

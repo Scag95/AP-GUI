@@ -9,7 +9,14 @@ class PatternDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Gestor de Patrones de Carga")
-        self.resize(500, 350)
+        self.resize(800,600)
+
+        #Centrar ventana al centro de la pantalla
+        qr = self.frameGeometry()
+        cp = self.screen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        
         self.manager = ProjectManager.instance()
 
         layout = QHBoxLayout(self)

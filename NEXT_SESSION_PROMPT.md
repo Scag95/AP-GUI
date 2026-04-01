@@ -360,20 +360,31 @@ You are a Python/PyQt6 architecture assistant acting as a technical instructor. 
 
 ---
 
+### Session 30 (2026-04-01) - Force Retrieval & Equilibrium Tuning (COMPLETED)
+1. **ForceBeamColumnHinge Integration Points**:
+   - Diagnosed `IndexError` and `AttributeError` when the UI renderer requested forces from non-lobatto hinge elements.
+   - Implemented a polymorphic `@property integration_points` in `ForceBeamColumnHinge` returning `6` (HingeRadau's hardcoded internal integration points) to inherently satisfy the renderer algorithms.
+2. **AggregatorSection Force Matrix Alignment**:
+   - Fixed out-of-bounds error `forces[2]` during Pushover data extraction.
+   - Identified that `AggregatorSection` without specified `Vy` DOFs only return `[P, Mz]`.
+   - Tuned `gravity_solver` and `pushover_solver` to safely adapt to variable-length force arrays dynamically, falling back to `ops.eleResponse(..., 'localForce')` to extract missing constant shear `V`.
+3. **P-Delta & Global Base Shear Equilibrium**:
+   - Resolved mathematical discrepancies between Story Shear and Global Capacity Base Shear.
+   - Corrected algorithm in `_capture_floor_data` to sum global $X$ forces `ops.eleResponse(..., 'force')` respecting directional signs instead of arbitrarily summing absolute values.
+
 ## Pending Tasks (Priority Order)
 
-### 1. Evaluar el desempeño del método "Fix" (Congelamiento) — [PRIORITY]
--   **Contexto**: El flag `USE_ORIGINAL_COORDS` y los `zeroLength` fueron descartados lógicamente para usar restricciones puntuales exclusivas (`sp`) consolidadas en sus propios patrones de carga constantes (impidiendo su borrado y el latigazo regresivo del piso).
--   **Siguiente paso**: Correr Pushover Adaptativo eligiendo el método "Fix" y confirmar la desaparición de los estallidos matemáticos hacia el infinito.
+### 1. Revisar Resultados del Pushover y Convergencia — [PRIORITY]
+-   **Contexto**: El pushover monotónico normal completó un gran avance pero falló su convergencia en el paso 1118, rebotando contra todos los algoritmos de contingencia (Broyden, Newton con Búsqueda de línea, KrylovNewton).
+-   **Siguiente paso**: Revisar los diagramas inelásticos de cortante generados, diagnosticar los elementos fallidos del log (`Element 19, 60...`) y refinar las iteraciones/tolerancias.
 
-### 2. Probar Reasignación de Nodo de Control
--   **Contexto**: Implementada en Session 27 pero no validada con un caso real donde la última planta falle primero.
--   **Siguiente paso**: Ejecutar un modelo donde la última planta sea la más débil, activar el checkbox, y confirmar que el log muestra `🔄 Nodo de control reasignado` y el análisis continúa.
+### 2. Evaluar el desempeño del método "Fix" en Análisis Adaptativo
+-   **Contexto**: Queda por contrastar cómo los nuevos Load Patterns dinámicos mejorarán el pushover cíclico congelado.
 
 ### 3. Mejora UI: QMdiArea → QSplitter/QDockWidget
--   Refactorizar `QMdiArea` en `MainWindow` a un sistema de paneles acoplables que se redimensionen solidariamente con la ventana principal (estilo SAP2000/VSCode).
+-   Refactorizar `QMdiArea` en `MainWindow` a un sistema de paneles acoplables que se redimensionen solidariamente con la ventana principal.
 
 ## Technical Context for Next Session
--   **Estado actual**: Sistema gravitacional operando bajo `LoadPatterns`. La `AggregatorSection` está implementada en Backend y UI, enlazable y graficable.
--   **Archivos más activos**: `loads.py`, `sections.py`, `manager.py`, `model_builder.py`, `section_dialog.py`, `pattern_dialog.py`, `self_weight_dialog.py`, `element_loads_dialog.py`.
--   **Primer paso siguiente sesión**: Retomar el flujo de análisis verificando cómo se interponen los múltiples LoadPatterns en el Setup del Pushover y testear el `AggregatorSection` como rótula a cortante para validación de resultados inelásticos.
+-   **Estado actual**: Solvers reestructurados y adaptables matemáticamente a todo tipo de secciones maestras o de parches parciales (`[P, Mz]` o `[P, Vy, Mz]`). Cortantes de piso validados equilibrados (Storey Shear).
+-   **Archivos más activos**: `pushover_solver.py`, `gravity_solver.py`, `element.py`, `model_builder.py`.
+-   **Primer paso siguiente sesión**: Inspeccionar visualmente la curva generada y los diagramas de cortante/momento para localizar a los culpables del fallo de convergencia 1118.
