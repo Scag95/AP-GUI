@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QToolBar, QSlider, QLabel, QWidget, QHBoxLayout, QSizePolicy, QCheckBox, QApplication
+from PyQt6.QtWidgets import QToolBar, QSlider, QLabel, QWidget, QHBoxLayout, QSizePolicy, QCheckBox
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
 
@@ -59,14 +59,19 @@ class AnimationToolbar(QToolBar):
             forces_history = self.manager.pushover_results.get("element_forces_history", [])
             
             if 0 <= value < len(node_disps):
-                step_data = node_disps[value]
+                step_data   = node_disps[value]
                 step_forces = forces_history[value] if value < len(forces_history) else None
+
+                yield_history = self.manager.yield_history or []
+                step_yield    = yield_history[value] if value < len(yield_history) else {}
 
                 # Enviar solo a la ventana activa
                 if self.parent_window and hasattr(self.parent_window, 'viz_widget'):
                     active_viz = self.parent_window.viz_widget
                     if active_viz:
                         active_viz.draw_kinematic_step(step_data)
+                        if hasattr(active_viz, 'draw_kinematic_yield_step'):
+                            active_viz.draw_kinematic_yield_step(step_yield, step_data)
                 
                 # Le pedimos al MainWindow que se encargue de sincronizar a todos sus hijos
                 if self.parent_window and hasattr(self.parent_window, 'sync_animation_step'):

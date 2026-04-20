@@ -11,6 +11,7 @@ from src.ui.visualizers.model_renderer import ModelRenderer
 from src.ui.visualizers.load_renderer import LoadRenderer
 from src.ui.visualizers.deformation_renderer import DeformationRenderer
 from src.ui.visualizers.force_diagram_renderer import ForceDiagramRenderer
+from src.ui.visualizers.yield_renderer import YieldRenderer
 
 class StructureInteractor(QWidget):
     nodeSelected = pyqtSignal(object)
@@ -39,6 +40,7 @@ class StructureInteractor(QWidget):
         self.renderer_load = LoadRenderer()
         self.renderer_deform = DeformationRenderer()
         self.renderer_forces = ForceDiagramRenderer()
+        self.renderer_yield = YieldRenderer()
         self.current_diagram_type = None
         
         # Conectar Señales
@@ -196,6 +198,15 @@ class StructureInteractor(QWidget):
             scale_factor=s_def
         )
 
+    def draw_kinematic_yield_step(self, yield_data, step_displacements):
+        """Pinta los puntos de fluencia del acero sobre la forma deformada del step actual."""
+        if not yield_data:
+            self.renderer_yield.clear(self.plot_widget)
+            return
+        self.renderer_yield.draw_yield_state(
+            self.plot_widget, self.manager, yield_data, step_displacements
+        )
+
     def draw_kinematic_forces_step(self, forces_data):
         """
         Dibuja los diagramas de fuerza para un paso específico del pushover.
@@ -218,6 +229,7 @@ class StructureInteractor(QWidget):
         self.current_results = None
         self.renderer_deform.clear(self.plot_widget)
         self.renderer_forces.clear(self.plot_widget)
+        self.renderer_yield.clear(self.plot_widget)
         
     def set_pushover_loads_visible(self, visible):
         """Muestra u oculta exclusivamente las fuerzas del patrón teórico utilizadas en el último Pushover"""

@@ -5,7 +5,9 @@ from src.analysis.manager import ProjectManager
 from src.analysis.solvers.failure_detector import FailureDetector
 from src.analysis.solvers.load_generator import LoadPushoverGenerator
 from src.analysis.solvers.pushover_configurator import PushoverConfigurator
-from src.analysis.element import ForceBeamColumn
+from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
+from src.analysis.solvers.steel_yield_detector import SteelYieldDetector
+
 
 class PushoverSolver:
     """
@@ -20,6 +22,7 @@ class PushoverSolver:
         self.load_generator = LoadPushoverGenerator(self.builder)
         self.configurator = PushoverConfigurator(self.builder)
         self.failure_detector = FailureDetector()
+        self.yield_detector = SteelYieldDetector()
         self.active_support_nodes = []
 
     def run_modal_analysis(self, n_modes=1):
@@ -57,7 +60,8 @@ class PushoverSolver:
             "node_displacements": [],
             "element_forces_history": [],
             "failed_floors": [],
-            "floors": {}
+            "floors": {},
+            "yield_history": []
         }
 
         floor_data = self.manager.get_floor_data()
@@ -187,6 +191,14 @@ class PushoverSolver:
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+        else:
+            # Purgar archivos de registros anteriores para mantener el estado limpio
+            for filename in os.listdir(output_dir):
+                if filename.endswith(".out"):
+                    try:
+                        os.remove(os.path.join(output_dir, filename))
+                    except Exception as err:
+                        print(f"[Recorders] Aviso: Error limpiando {filename}: {err}")
 
         print(f"[Recorders] Configurando en: {os.path.abspath(output_dir)}")
 
@@ -195,7 +207,7 @@ class PushoverSolver:
 
         count = 0
         for ele in self.manager.get_all_elements():
-            if not isinstance(ele, ForceBeamColumn):
+            if not isinstance(ele, (ForceBeamColumn, ForceBeamColumnHinge)):
                 continue
 
             force_file = os.path.join(output_dir, f"ele_{ele.tag}_force.out")
@@ -223,24 +235,30 @@ class PushoverSolver:
         """Captura fuerzas internas (P, M, V) de todos los elementos en el paso actual"""
         forces = {}
         for ele in self.manager.get_all_elements():
+            if not isinstance(ele, (ForceBeamColumn, ForceBeamColumnHinge)):
+                continue
             try:
                 n_pts = int(getattr(ele, 'integration_points', 0) or 0)
                 sections_data = []
+               
+                #1. Extracción de las fuerzas en los nodos de los elementos.
                 loc_forces = ops.eleResponse(ele.tag, 'localForce')
-                shear_constant = loc_forces[1] if (loc_forces and len(loc_forces) >= 6) else 0.0
 
-                for i in range(1, n_pts + 1 ):
+                #2. Extracción de lo spuntos de integración (Para construir la curva Momentos/Curvatura)
+
+                for i in range(1, n_pts + 1):
                     sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
                     loc = ops.sectionLocation(ele.tag, i)
-                    
+
                     if not sec_forces:
                         continue
-                        
+                    
+                    #Extraemos Axial y Momento.
                     p_val = sec_forces[0]
                     if len(sec_forces) == 2:
                         m_val = sec_forces[1]
-                        v_val = shear_constant
-                    elif len(sec_forces) >= 3:
+                        v_val = 0.0 
+                    elif len(sec_forces) >=3:
                         m_val = sec_forces[1]
                         v_val = sec_forces[2]
                     else:
@@ -251,12 +269,21 @@ class PushoverSolver:
                         "P": p_val,
                         "M": m_val,
                         "V": v_val,
-                        "loc": loc  
+                        "loc": loc                        
                     })
-                forces[ele.tag] = sections_data
+                #3. Empaquetado final separado
+                forces[ele.tag] = {
+                    "localForce": loc_forces,                         # Cortante y fuerzas locales V_I, V_J
+                    "globalForce": ops.eleResponse(ele.tag, 'force'), # Para leer cortante basal de la columna directamente
+                    "sections": sections_data                         # Puntos Radau
+                }
+
             except Exception as e:
                 print(f"[Pushover] Error capturando fuerzas elemento {ele.tag}: {e}")
-        return forces
+
+        return forces                
+
+
 
     def _capture_floor_data(self, results_dict):
         """Calcula el drift y el contante de cada planta y lo guarda"""
@@ -347,6 +374,8 @@ class PushoverSolver:
                 break
 
             self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
+            results["yield_history"].append(self.yield_detector.capture_step())
+
 
             #4. Evaluación paso a paso:
             if failure_detector:
@@ -357,7 +386,8 @@ class PushoverSolver:
                     f = nuevos_fallos[0]
                     print(f"[Pushover] ⚠️ Fallo detectado en piso (Y={f.y_level}) Causa principal: '{f.cause}'. Rompiendo bucle estático.")
                     break
-
+        
+        self.manager.yield_history = results["yield_history"]
         return results
 
 
@@ -367,6 +397,7 @@ class PushoverSolver:
         consolidated["base_shear"].extend(new_res["base_shear"])
         consolidated.setdefault("node_displacements",[]).extend(new_res.get("node_displacements",[]))
         consolidated.setdefault("element_forces_history",[]).extend(new_res.get("element_forces_history", []))
+        consolidated.setdefault("yield_history", []).extend(new_res.get("yield_history", []))
 
         count = len(new_res["roof_disp"])
         consolidated["cycle_id"].extend([cycle_idx] * count)
@@ -377,8 +408,10 @@ class PushoverSolver:
 
         for y, data in new_res["floors"].items():
             # Si el piso ya falló en una ronda anterior, no añadir más datos residuales 
-            if y in consolidated["failed_floors"]:
-                continue
+            # (Restricción desactivada para poder ver todo el historial post-pico)
+            # if y in consolidated["failed_floors"]:
+            #     continue
+                
             if y not in consolidated["floors"]:
                 consolidated["floors"][y] = {"disp":[], "shear": [], "H": data.get("H",0.0)}
 
@@ -418,7 +451,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, adaptive_control=False, defined_pattern_tag=None):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, defined_pattern_tag=None):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -506,53 +539,31 @@ class PushoverSolver:
                 print(f"[Adaptive] ⚠️ Fallo detectado en piso {idx} cota Y={y_fail}. Aplicando Freeze='{freeze_method}'")
 
                 # REFACTOR SRP: Extraermos el estacio espacial de los nodos
-                deformed_state = self._get_deformed_floor_state(y_fail)
-
+                floor_keys = sorted(self.manager.get_floor_data().keys())
+                y_bot = floor_keys[floor_keys.index(y_fail) - 1]
+                
+                floor_state = {
+                    "top": self._get_deformed_floor_state(y_fail),
+                    "bot": self._get_deformed_floor_state(y_bot)
+                }
 
                 # Recibimos los tags de los fantasmas recién anclados a la pared!
-                new_ghosts = self.builder.freeze_floor(deformed_state, freeze_method)
+                new_ghosts = self.builder.freeze_floor(floor_state, freeze_method)
                 
                 # Actualizamos nuestra memoria global de apoyos activos
-                self.active_support_nodes.extend(new_ghosts)
+                if new_ghosts:
+                    self.active_support_nodes.extend(new_ghosts)
                 
                 frozen_floors.add(y_fail)
                 consolidated["failed_floors"].append(y_fail)
 
-            # --- Reasignar nodo de control si su planta fue congelada ---
-            if adaptive_control:
-                floor_data = self.manager.get_floor_data()
-                # Buscar la cota Y del nodo de control actual
-                control_y = None
-                for y, data in floor_data.items():
-                    for node in data["nodes"]:
-                        if node.tag == control_node_tag:
-                            control_y = y
-                            break
-                    if control_y is not None:
-                        break
-                
-                # Si la planta del nodo de control fue congelada, buscar la siguiente
-                if control_y is not None and control_y in frozen_floors:
-                    base_y = min(floor_data.keys())
-                    new_control = None
-                    for y in sorted(floor_data.keys(), reverse=True):
-                        if y > base_y and y not in frozen_floors:
-                            new_control = floor_data[y]["nodes"][0].tag
-                            print(f"[Adaptive] 🔄 Nodo de control reasignado: {control_node_tag} → {new_control} (Planta Y={y})")
-                            control_node_tag = new_control
-                            break
-                    
-                    if new_control is None:
-                        print("[Adaptive] ❌ No quedan plantas libres para asignar nodo de control. Colapso Total.")
-                        break
-            else:
-                # Comportamiento original: si la última planta falla, parar
-                if sorted_ys[-1] in nuevos_fallos:
-                    print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
-                    break
+            # Comportamiento original: si la última planta falla, parar
+            if sorted_ys[-1] in nuevos_fallos:
+                print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
+                break
                  
         ops.remove('recorders')
         print("[Adaptive] Análisis Finalizado Exitosamente.")
 
-
+        self.manager.yield_history = consolidated.get("yield_history", [])
         return consolidated                

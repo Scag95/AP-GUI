@@ -16,6 +16,7 @@ class FailureDetector:
         #sensitivity: Factor multiplicador para considerar "plana" la rigidez tangente frente a la inicial.ProcessLookupError
         self.sensitivity = sensitivity
         self.max_drift = max_drift
+        self.cached_k_ini = {} # Memoria de rigidez elástica global original
 
     def analyze(self, results: Dict[str, Any]) -> List[FloorFailureState]:
         """
@@ -36,12 +37,22 @@ class FailureDetector:
                 continue
 
             #1. Extraemos las magnitudes netas a través de nuestros helpers
-            k_ini = self._calculate_initial_stiffness(disps, shears)
+            if y not in self.cached_k_ini:
+                self.cached_k_ini[y] = self._calculate_initial_stiffness(disps, shears)
+                
+            k_ini = self.cached_k_ini[y]
             k_tan = self._calculate_tangent_stiffness(disps, shears)
             current_drift = disps[-1]
 
-            #2. Evaluacióndel Mecanismo (Curva Plana)
-            is_flat = (k_tan < 0) or (abs(k_tan) < (self.sensitivity * k_ini))
+            # --- MONITOR DE SIGNOS VITALES ---
+            step_actual = len(disps)
+            if step_actual % 50 == 0 or step_actual > 1100:
+                ratio = (k_tan / k_ini) * 100 if k_ini > 0 else 0
+                print(f"[Monitor] Planta Y={y} | Paso: {step_actual} | Deriva: {current_drift:.5f} m | K_tan: {ratio:.2f}% de la inicial")
+            # ----------------------------------------
+
+            #2. Evaluacióndel Mecanismo (Basta con que la rigidez tangente sea menor a la tolerancia elástica)
+            is_flat = k_tan < (self.sensitivity * k_ini)
 
             #3. Evaculación de la deriva.
             is_excessive_drift = False 
@@ -54,10 +65,12 @@ class FailureDetector:
             if is_flat or is_excessive_drift:
                 #Construimos un string dinámico con el motivo exacto del fallo
                 causes = []
+                drift_pct = (abs(current_drift) / H) * 100 if H > 0 else 0
                 if is_flat:
-                    causes.append(f"Caida Rigidiez: {(k_tan/k_ini)*100:.4f}%")
+                    ratio = (k_tan / k_ini) * 100 if k_ini > 0 else 0
+                    causes.append(f"Rigidez ({ratio:.1f}%) | Deriva ({drift_pct:.2f}%)")
                 if is_excessive_drift:
-                    causes.append(f"Deriva de piso límite ({self.max_drift * 100:.1f}%)")
+                    causes.append(f"Deriva Excesiva ({drift_pct:.2f}%)")
         
                 failure_state = FloorFailureState(
                     y_level = y,
@@ -90,8 +103,8 @@ class FailureDetector:
         lineal simple de los últimos 5 puntyos para la estabilidad numérica.
         """
 
-        d_last = disps[-20:]
-        v_last = shears[-20:]
+        d_last = disps[-5:]
+        v_last = shears[-5:]
 
         dq_tan = d_last[-1] - d_last[0]
         dv_tan = v_last[-1] - v_last[0]

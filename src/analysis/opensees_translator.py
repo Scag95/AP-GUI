@@ -39,5 +39,5 @@ class OpenSeesTranslator:
         ops.printModel('-file', filename)
         print(f"[OpenSees] Modelo volcado en: {filename}")
 
-    def run_adaptive_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, max_drift=None, freeze_method="spring", adaptive_control=False, defined_pattern_tag=None):
-        return self.pushover_solver.run_adaptative_pushover(control_node_tag, max_disp, steps, load_pattern_type, sensitivity, freeze_method, max_drift=max_drift, adaptive_control=adaptive_control, defined_pattern_tag=defined_pattern_tag)
+    def run_adaptive_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, max_drift=None, freeze_method="spring", defined_pattern_tag=None):
+        return self.pushover_solver.run_adaptative_pushover(control_node_tag, max_disp, steps, load_pattern_type, sensitivity, freeze_method, max_drift=max_drift, defined_pattern_tag=defined_pattern_tag)

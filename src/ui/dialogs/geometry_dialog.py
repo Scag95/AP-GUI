@@ -24,7 +24,6 @@ class GeometryDialog(QDialog):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-        self.main_layout = QHBoxLayout(self)
 
         self.manager = ProjectManager.instance()
 

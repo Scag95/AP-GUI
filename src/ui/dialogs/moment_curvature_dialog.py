@@ -396,8 +396,8 @@ class MomentCurvatureWidget(QWidget):
             # Configurar rango usando EL MAXIMO GLOBAL DETECTADO
             margin = 1.1
             if all_x_max > 0:
-                self.plot_widget.setXRange(0, all_x_max * margin)
+                self.plot_widget.setXRange(-all_x_max * margin, all_x_max * margin)
             if all_y_max > 0:
-                self.plot_widget.setYRange(0, all_y_max * margin)
+                self.plot_widget.setYRange(-all_y_max * margin, all_y_max * margin)
         else:
             self.plot_widget.setTitle("Seleccione al menos una sección")

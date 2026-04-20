@@ -2,6 +2,11 @@ from PyQt6.QtWidgets import QWidget, QFormLayout, QDoubleSpinBox, QSpinBox, QChe
 from src.ui.widgets.unit_spinbox import UnitSpinBox 
 from src.utils.units import UnitType
 
+import matplotlib
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+
 class ConcreteForm(QWidget):
     def __init__(self):
         super().__init__()
@@ -9,14 +14,14 @@ class ConcreteForm(QWidget):
 
         #Densidad
         self.spin_rho_c = UnitSpinBox(UnitType.DENSITY)
-        self.spin_rho_c.setDecimals(0)
+        self.spin_rho_c.setDecimals(2)
         self.spin_rho_c.setRange(0, 1e6)
         self.spin_rho_c.set_value_base(2500)
         layout.addRow("Densidad [rho]",self.spin_rho_c)
 
         #Campo fpc
         self.spin_fpc = UnitSpinBox(UnitType.STRESS)
-        self.spin_fpc.setDecimals(0)
+        self.spin_fpc.setDecimals(2)
         self.spin_fpc.setRange(-1e10, 1e10) 
         self.spin_fpc.set_value_base(25*1e6) # 25 MPa
         layout.addRow("Resistencia a la compresión [fpc]",self.spin_fpc)
@@ -31,7 +36,7 @@ class ConcreteForm(QWidget):
 
         #Campo fpcU
         self.spin_fpcU = UnitSpinBox(UnitType.STRESS)
-        self.spin_fpcU.setDecimals(0)
+        self.spin_fpcU.setDecimals(2)
         self.spin_fpcU.setRange(-1e10, 1e10)
         self.spin_fpcU.set_value_base(25*1e6) # 25 MPa
 
@@ -370,6 +375,45 @@ class HystereticForm(QWidget):
         hys_layout.addRow(self.chk_beta)
         hys_layout.addRow("Valor Beta:", self.spin_beta)
 
+        # -- Gráfica Matplotlib --
+        self.figure = Figure(figsize=(5, 3))
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.ax = self.figure.add_subplot(111)
+        layout.addWidget(self.canvas)
+
+        # 6 Decimales y conexiones
+        spins = [self.spin_s1p, self.spin_e1p, self.spin_s2p, self.spin_e2p, self.spin_s3p, self.spin_e3p,
+                 self.spin_s1n, self.spin_e1n, self.spin_s2n, self.spin_e2n, self.spin_s3n, self.spin_e3n]
+        
+        for spin in spins:
+            if hasattr(spin, 'setDecimals'):
+                spin.setDecimals(6)
+            spin.valueChanged.connect(self.update_plot)
+            
+        self.update_plot()
+
+    def update_plot(self, *args):
+        self.ax.clear()
+        
+        e_pos = [0, self.spin_e1p.value(), self.spin_e2p.value(), self.spin_e3p.value()]
+        s_pos = [0, self.spin_s1p.value(), self.spin_s2p.value(), self.spin_s3p.value()]
+        
+        e_neg = [self.spin_e3n.value(), self.spin_e2n.value(), self.spin_e1n.value(), 0]
+        s_neg = [self.spin_s3n.value(), self.spin_s2n.value(), self.spin_s1n.value(), 0]
+        
+        self.ax.plot(e_pos, s_pos, 'b-o', markersize=3, label='Positivo (+)')
+        self.ax.plot(e_neg, s_neg, 'r-o', markersize=3, label='Negavito (-)')
+        
+        self.ax.axhline(0, color='black', linewidth=1)
+        self.ax.axvline(0, color='black', linewidth=1)
+        self.ax.grid(True, linestyle='--', alpha=0.6)
+        self.ax.set_xlabel('Deformación')
+        self.ax.set_ylabel('Esfuerzo')
+        self.ax.legend(loc="upper left", fontsize=6)
+        
+        self.figure.tight_layout()
+        self.canvas.draw()
+
     def set_data(self, material):
         if not material: return
         self.spin_rho.set_value_base(material.rho)
@@ -497,6 +541,45 @@ class HystereticSMForm(QWidget):
         hys_layout.addRow("Daño 2 (energía):", self.spin_damage2)
         hys_layout.addRow(self.chk_beta)
         hys_layout.addRow("Valor Beta:", self.spin_beta)
+
+        # -- Gráfica Matplotlib --
+        self.figure = Figure(figsize=(5, 3))
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.ax = self.figure.add_subplot(111)
+        layout.addWidget(self.canvas)
+
+        # 6 Decimales y conexiones
+        spins = [self.spin_s1p, self.spin_e1p, self.spin_s2p, self.spin_e2p, self.spin_s3p, self.spin_e3p, self.spin_s4p, self.spin_e4p,
+                 self.spin_s1n, self.spin_e1n, self.spin_s2n, self.spin_e2n, self.spin_s3n, self.spin_e3n, self.spin_s4n, self.spin_e4n]
+        
+        for spin in spins:
+            if hasattr(spin, 'setDecimals'):
+                spin.setDecimals(6)
+            spin.valueChanged.connect(self.update_plot)
+            
+        self.update_plot()
+
+    def update_plot(self, *args):
+        self.ax.clear()
+        
+        e_pos = [0, self.spin_e1p.value(), self.spin_e2p.value(), self.spin_e3p.value(), self.spin_e4p.value()]
+        s_pos = [0, self.spin_s1p.value(), self.spin_s2p.value(), self.spin_s3p.value(), self.spin_s4p.value()]
+        
+        e_neg = [self.spin_e4n.value(), self.spin_e3n.value(), self.spin_e2n.value(), self.spin_e1n.value(), 0]
+        s_neg = [self.spin_s4n.value(), self.spin_s3n.value(), self.spin_s2n.value(), self.spin_s1n.value(), 0]
+        
+        self.ax.plot(e_pos, s_pos, 'b-o', markersize=4, label='Positivo (+)')
+        self.ax.plot(e_neg, s_neg, 'r-o', markersize=4, label='Negativo (-)')
+        
+        self.ax.axhline(0, color='black', linewidth=1)
+        self.ax.axvline(0, color='black', linewidth=1)
+        self.ax.grid(True, linestyle='--', alpha=0.6)
+        self.ax.set_xlabel('Deformación')
+        self.ax.set_ylabel('Esfuerzo')
+        self.ax.legend(loc="upper left", fontsize=8)
+        
+        self.figure.tight_layout()
+        self.canvas.draw()
 
     def set_data(self, material):
         if not material: return
