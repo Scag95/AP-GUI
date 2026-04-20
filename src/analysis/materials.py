@@ -5,7 +5,10 @@ class Material:
         self.tag = tag
         self.name = name
         self.rho = rho
-    
+
+    def get_yield_strain(self):
+        return None
+
     def to_dict(self):
         return{
             "tag": self.tag,
@@ -73,6 +76,9 @@ class Steel01(Material):
         self.a4 = a4
         self.minmax = minmax
 
+
+    def get_yield_strain(self):
+        return self.Fy / self.E0
 
     def get_opensees_args(self):
         return ["Steel01", self.tag, self.Fy, self.E0, self.b, self.a1, self.a2, self.a3, self.a4]
@@ -167,6 +173,9 @@ class Hysteretic(Material):
         self.damage2  = damage2
         self.beta     = beta  # None = no se pasa a OpenSees
 
+    def get_yield_strain(self):
+        return min(abs(self.e1p), abs(self.e1n))
+
     def get_opensees_args(self):
         args = [
             "Hysteretic", self.tag,
@@ -238,6 +247,9 @@ class HystereticSM(Material):
         self.damage1  = damage1
         self.damage2  = damage2
         self.beta     = beta
+
+    def get_yield_strain(self):
+        return min(abs(self.e1p), abs(self.e1n))
 
     def get_opensees_args(self):
         return [

@@ -28,6 +28,7 @@ class ProjectManager(QObject):
         # Resultados de Análisis
         self.gravity_results = None
         self.pushover_results = None
+        self.yield_history = []
         
         # Almacén Cargas Temporales Pushover
         self.pushover_loads = []
@@ -173,23 +174,22 @@ class ProjectManager(QObject):
                 #La columna pertence al piso de su nodo más alto.
                 y_ceil = max(ni.y, nj.y)
 
-                #Buscar el piso correspondiente
-                for key in floors.keys():
-                    if abs(key - y_ceil) < tolerance:
-                        floors[key]["columns"].append(ele)
+                for floor_key in floors.keys():
+                    if abs(floor_key - y_ceil) < tolerance:
+                        floors[floor_key]["columns"].append(ele)
                         break
 
-                    elif is_beam:
-                        y_beam = ni.y
+            elif is_beam:
+                y_beam = ni.y
 
-                        for key in floors.keys():
-                            if abs(key-y_beam) < tolerance:
-                                floors[key]["beams"].append(ele)
-                                break
+                for floor_key in floors.keys():
+                    if abs(floor_key - y_beam) < tolerance:
+                        floors[floor_key]["beams"].append(ele)
+                        break
 
-            #Gurdamos en caché el diccionario ordenado
-            self._floors_cache = dict(sorted(floors.items()))
-            self._topology_dirty = False
+        #Guardamos en caché el diccionario ordenado
+        self._floors_cache = dict(sorted(floors.items()))
+        self._topology_dirty = False
 
         return self._floors_cache
 
@@ -212,6 +212,12 @@ class ProjectManager(QObject):
         for i, y_floor in enumerate(sorted_ys):
             total_mass_x = 0.0
             elements_dict = floor_data[y_floor]
+
+            # Masas nodales concentradas
+            for node in elements_dict.get("nodes", []):
+                if node.mass is not None and len(node.mass) > 0:
+                    # Asumiendo que buscamos la masa efectiva en la dirección X
+                    total_mass_x += node.mass[0]
 
             # Masa de las vigas
             for beam in elements_dict.get("beams",[]):
@@ -427,6 +433,7 @@ class ProjectManager(QObject):
         # Limpiar resultados y temporales
         self.gravity_results = None
         self.pushover_results = None
+        self.yield_history = []
         self.pushover_loads.clear()
         
         # Reiniciar contadores

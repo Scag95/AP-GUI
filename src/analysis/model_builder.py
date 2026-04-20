@@ -83,9 +83,10 @@ class ModelBuilder:
     def _build_materials(self):
         if self.debug_file: self.debug_file.write("\n# --- Materials ---\n")
 
-        # Material Rígido para futuras Congelaciones (Cruces de San Andrés)
+        # Materiales Rígidos para futuras Congelaciones (Cruces de San Andrés / Muelles)
         if self.debug_file: self.debug_file.write("# Material Elastico Rígido para Congelaciones adaptativas\n")
         self.log_command('uniaxialMaterial', 'Elastic', 99999, 1.0e12)
+        self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
 
         for mat in self.manager.get_all_materials():
             args = list(mat.get_opensees_args())
@@ -221,17 +222,23 @@ class ModelBuilder:
                     self.log_command('load', load.node_tag, load.fx, load.fy, load.mz)
                 elif isinstance(load, ElementLoad):
                     self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
-                
 
 
-    def freeze_floor(self, deformed_state: list, method="spring"):
+    def freeze_floor(self, floor_state, method="spring"):
         """
         Freeze logic SRP: Recibe el estado deformado desde el Solver.
         Inyecta restricciones en el modelo (Opensees) temporalmente.
         """
 
-        if not deformed_state:
+        if not floor_state:
             return
+
+        if isinstance(floor_state, list):
+            deformed_state = floor_state
+            bot_nodes = []
+        else:
+            deformed_state = floor_state.get("top", [])
+            bot_nodes = floor_state.get("bot", [])
 
         print(f"[Adaptative] Congelando piso ({len(deformed_state)} nodos). Método: {method}")
 
@@ -242,12 +249,6 @@ class ModelBuilder:
             # --- FLAG DE PRUEBA: True = nodo fantasma en coordenadas ORIGINALES del nodo real (sin warning)
             #                     False = nodo fantasma en coordenadas DEFORMADAS (comportamiento anterior)
             USE_ORIGINAL_COORDS = True
-
-            # Creamos el material Uniforme 
-            try:
-                self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
-            except:
-                pass
 
             for i, node_data in enumerate(deformed_state):
                 real_tag = node_data["real_node_tag"]
@@ -287,8 +288,26 @@ class ModelBuilder:
                 # 2. Le clavamos una tuerca irrompible exactamente en ese punto
                 self.log_command('sp', real_tag, 1, current_disp_x)
 
-
-        return created_nodes 
-
+        elif method == "crosses":
+            top_sorted = sorted(deformed_state, key=lambda n: n["def_x"])
+            bot_sorted = sorted(bot_nodes, key=lambda n: n["def_x"])
             
+            A = 1000.0
+            mat_tag = 999999
+            
+            for i in range(min(len(top_sorted), len(bot_sorted)) - 1):
+                top_left = top_sorted[i]["real_node_tag"]
+                top_right = top_sorted[i+1]["real_node_tag"]
+                bot_left = bot_sorted[i]["real_node_tag"]
+                bot_right = bot_sorted[i+1]["real_node_tag"]
+                
+                base_ele_tag = 4000000 + top_left * 100 + i * 10
+                
+                self.log_command('element', 'Truss', base_ele_tag + 1, bot_left, top_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 2, bot_right, top_left, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 3, top_left, top_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 4, bot_left, bot_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 5, bot_left, top_left, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 6, bot_right, top_right, A, mat_tag)
 
+        return created_nodes

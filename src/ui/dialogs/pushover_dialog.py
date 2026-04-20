@@ -81,7 +81,7 @@ class PushoverDialog(QDialog):
         from PyQt6.QtWidgets import QHBoxLayout, QLabel
         freeze_method_layout = QHBoxLayout()
         self.freeze_method_combo = QComboBox()
-        self.freeze_method_combo.addItems(["Springs", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)"])
+        self.freeze_method_combo.addItems(["Springs", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)", "Cruces de San Andrés"])
         self.freeze_method_combo.setToolTip("Elige cómo OpenSees tratará cinemáticamente a un piso que acaba de fallar.")
 
         freeze_method_layout.addWidget(self.freeze_method_combo)
@@ -91,17 +91,6 @@ class PushoverDialog(QDialog):
         self.chk_adaptive.toggled.connect(self.freeze_method_combo.setVisible)
 
         form_layout.addRow("Método Congelamiento:", freeze_method_layout)
-
-        # --- Checkbox Control Node Adaptativo ---
-        self.chk_adaptive_control = QCheckBox("Reasignar nodo de control si su planta falla")
-        self.chk_adaptive_control.setToolTip(
-            "Si la planta del nodo de control colapsa, automáticamente "
-            "se usará un nodo de la planta inferior no congelada."
-        )
-        self.chk_adaptive_control.setChecked(True)
-        self.chk_adaptive_control.setVisible(False)
-        self.chk_adaptive.toggled.connect(self.chk_adaptive_control.setVisible)
-        form_layout.addRow("Nodo de Control:", self.chk_adaptive_control)
 
         # 3.5 Criterios de Fallo Personalizados
         from PyQt6.QtWidgets import QDoubleSpinBox, QGroupBox
@@ -118,7 +107,7 @@ class PushoverDialog(QDialog):
         self.spin_sensitivity.setRange(0, 100)
         self.spin_sensitivity.setSingleStep(1)
         self.spin_sensitivity.setDecimals(2)
-        self.spin_sensitivity.setValue(1)
+        self.spin_sensitivity.setValue(3)
         self.spin_sensitivity.setSuffix(" %")
         self.spin_sensitivity.setToolTip("Porcentaje de la rigidez inicial para considerar 'plana' la curva (Mecanismo).")
         failure_layout.addRow("Sensibilidad de Caída (1-100%):", self.spin_sensitivity)
@@ -217,14 +206,12 @@ class PushoverDialog(QDialog):
                 idx_method = self.freeze_method_combo.currentIndex()
                 if idx_method == 0: freeze_method = "spring"
                 elif idx_method == 1: freeze_method = "fix"
-                else: freeze_method = "load"
-
-                adaptive_control = self.chk_adaptive_control.isChecked()
+                elif idx_method == 2: freeze_method = "load"
+                else: freeze_method = "crosses"
 
                 results = translator.run_adaptive_pushover(
                     control_node, max_disp, steps, load_pattern_type,
                     sensitivity=sen, freeze_method=freeze_method, max_drift=drf,
-                    adaptive_control=adaptive_control,
                     defined_pattern_tag=defined_pattern_tag
                 )
             else:
