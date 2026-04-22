@@ -9,6 +9,12 @@ class Material:
     def get_yield_strain(self):
         return None
 
+    def get_sl_strain(self):
+        return None
+
+    def get_nc_strain(self):
+        return None
+
     def to_dict(self):
         return{
             "tag": self.tag,
@@ -32,6 +38,12 @@ class Concrete01(Material):
         self.rho = rho          #Densidad 
         self.minmax = minmax 
 
+
+    def get_sl_strain(self):
+        return 0.75 * 0.0035  # 75 % εcu EC8
+
+    def get_nc_strain(self):
+        return 1.25 * 0.0035  # 125 % εcu EC8
 
     def get_opensees_args(self):
         return["Concrete01",self.tag, self.fpc,self.epsc0,self.fpcu,self.epsu]
@@ -176,6 +188,12 @@ class Hysteretic(Material):
     def get_yield_strain(self):
         return min(abs(self.e1p), abs(self.e1n))
 
+    def get_sl_strain(self):
+        return min(abs(self.e2p), abs(self.e2n))
+
+    def get_nc_strain(self):
+        return min(abs(self.e3p), abs(self.e3n))
+
     def get_opensees_args(self):
         args = [
             "Hysteretic", self.tag,
@@ -250,6 +268,12 @@ class HystereticSM(Material):
 
     def get_yield_strain(self):
         return min(abs(self.e1p), abs(self.e1n))
+
+    def get_sl_strain(self):
+        return min(abs(self.e2p), abs(self.e2n))
+
+    def get_nc_strain(self):
+        return min(abs(self.e3p), abs(self.e3n))
 
     def get_opensees_args(self):
         return [

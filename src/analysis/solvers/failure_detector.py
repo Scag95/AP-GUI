@@ -46,7 +46,7 @@ class FailureDetector:
 
             # --- MONITOR DE SIGNOS VITALES ---
             step_actual = len(disps)
-            if step_actual % 50 == 0 or step_actual > 1100:
+            if step_actual % 50 == 0 or step_actual > 10000:
                 ratio = (k_tan / k_ini) * 100 if k_ini > 0 else 0
                 print(f"[Monitor] Planta Y={y} | Paso: {step_actual} | Deriva: {current_drift:.5f} m | K_tan: {ratio:.2f}% de la inicial")
             # ----------------------------------------
@@ -71,7 +71,6 @@ class FailureDetector:
                     causes.append(f"Rigidez ({ratio:.1f}%) | Deriva ({drift_pct:.2f}%)")
                 if is_excessive_drift:
                     causes.append(f"Deriva Excesiva ({drift_pct:.2f}%)")
-        
                 failure_state = FloorFailureState(
                     y_level = y,
                     cause = " | ".join(causes),

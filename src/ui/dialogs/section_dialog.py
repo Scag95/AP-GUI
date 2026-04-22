@@ -322,8 +322,8 @@ class SectionDialog(QDialog):
         manager = ProjectManager.instance()
         section = manager.get_section(tag)
         
-        if hasattr(self.preview_widget, 'scene') and self.preview_widget.scene():
-            self.preview_widget.scene().clear()
+        # No usar scene().clear() aquí. Destruye los objetos C++ internos (PlotDataItem)
+        # y causa el RuntimeError que acabas de ver. update_preview() sobrescribe los datos solo.
 
         if section and isinstance(section, FiberSection):
             self.tabs.setCurrentIndex(0)

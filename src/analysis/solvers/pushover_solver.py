@@ -7,6 +7,7 @@ from src.analysis.solvers.load_generator import LoadPushoverGenerator
 from src.analysis.solvers.pushover_configurator import PushoverConfigurator
 from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
 from src.analysis.solvers.steel_yield_detector import SteelYieldDetector
+from src.analysis.solvers.code_limit_state_detector import CodeLimitStateDetector
 
 
 class PushoverSolver:
@@ -23,6 +24,7 @@ class PushoverSolver:
         self.configurator = PushoverConfigurator(self.builder)
         self.failure_detector = FailureDetector()
         self.yield_detector = SteelYieldDetector()
+        self.code_detector = CodeLimitStateDetector()
         self.active_support_nodes = []
 
     def run_modal_analysis(self, n_modes=1):
@@ -337,13 +339,19 @@ class PushoverSolver:
             results_dict["floors"][y]["shear"].append(shear_total)
             results_dict["floors"][y]["H"] = h_floor
 
-    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True, defined_pattern_tag=None):
+    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True, defined_pattern_tag=None, reset_detector=True):
         """
         Ejecución limpia de un Pushover Monotónico estándar.
         """
 
         if frozen_floors is None:
             frozen_floors = set()
+
+        if reset_detector:
+            self.code_detector.reset()
+            self.code_detector.capture_baseline()
+            self.yield_detector.reset()
+            self.yield_detector.capture_baseline()
 
         # Asegurarnos de tener los apoyos base si alguien llama a este método directamente
         # (El análisis adaptativo ya los inicializa por fuera para mantener los fantasmas)
@@ -353,7 +361,7 @@ class PushoverSolver:
         # Configurar recorders salvo que el orquestador adaptativo ya lo haya hecho
         if setup_recorders:
             self._setup_recorders()
-            
+
         results = self._initialize_results_structure()
         
 
@@ -375,6 +383,7 @@ class PushoverSolver:
 
             self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
             results["yield_history"].append(self.yield_detector.capture_step())
+            self.code_detector.capture_step(results["roof_disp"][-1])
 
 
             #4. Evaluación paso a paso:
@@ -388,6 +397,7 @@ class PushoverSolver:
                     break
         
         self.manager.yield_history = results["yield_history"]
+        results["limit_states"] = self.code_detector.get_results()
         return results
 
 
@@ -469,8 +479,12 @@ class PushoverSolver:
         
         self._initialize_supports()
         self._setup_recorders()
+        self.code_detector.reset()
+        self.code_detector.capture_baseline()
+        self.yield_detector.reset()
+        self.yield_detector.capture_baseline()
 
-        #2. Diccionario consolidado 
+        #2. Diccionario consolidado
         consolidated = {
             "roof_disp": [], "base_shear": [], "steps": [],
             "cycle_id": [], "node_displacements": [], "floors": {}, "failed_floors": []
@@ -510,15 +524,16 @@ class PushoverSolver:
             
             # 3. Correr un Pushover Estándar (Delegar el Empuje)
             round_results = self.run_pushover(
-                control_node_tag=control_node_tag, 
-                max_disp=disp_per_round, 
-                n_steps=steps, 
+                control_node_tag=control_node_tag,
+                max_disp=disp_per_round,
+                n_steps=steps,
                 load_pattern_type=load_pattern_type,
                 failure_detector=self.failure_detector,
                 frozen_floors=frozen_floors, pattern_tag=current_pattern_tag,
                 precalc_vector=base_force_vector,
                 setup_recorders=False,
-                defined_pattern_tag=defined_pattern_tag
+                defined_pattern_tag=defined_pattern_tag,
+                reset_detector=False
             )
 
             #4. Fusión de Datos
@@ -566,4 +581,5 @@ class PushoverSolver:
         print("[Adaptive] Análisis Finalizado Exitosamente.")
 
         self.manager.yield_history = consolidated.get("yield_history", [])
+        consolidated["limit_states"] = self.code_detector.get_results()
         return consolidated                

@@ -264,7 +264,87 @@ class PushoverResultsWidget(QWidget):
         # Actualizar etiqueta texto multi-línea
         self.lbl_plot_info.setText("<br><br>".join(info_lines))
 
+        # Marcadores de estados límite sobre curvas de planta
+        self._draw_limit_state_markers(curves_data, limit, um)
+
         # Trancar los límites para que no salte el zoom
         margin = 1.1
         if max_limit_x > 0: self.plot_widget.setXRange(0, max_limit_x * margin)
         if max_limit_y > 0: self.plot_widget.setYRange(0, max_limit_y * margin)
+
+    def _draw_limit_state_markers(self, curves_data, slider_limit: int, um):
+        limit_states = self.results.get("limit_states", {})
+        if not limit_states:
+            return
+
+        roof_disp_history = self.results.get("roof_disp", [])
+        if not roof_disp_history:
+            return
+
+        # Índice de búsqueda por roof_disp: mapa valor → primer índice
+        # (el detector guarda el roof_disp exacto capturado en capture_step)
+        rd_lookup = {v: i for i, v in enumerate(roof_disp_history)}
+
+        ls_styles = {
+            "DL": ((220, 180,   0), "t1"),   # triángulo arriba — amarillo
+            "SL": ((230, 100,   0), "s"),    # cuadrado        — naranja
+            "NC": ((210,   0,   0), "o"),    # círculo         — rojo
+        }
+
+        # Tolerancia para buscar la clave float de planta
+        all_ls_keys = list(limit_states.keys())
+
+        for c_data in curves_data:
+            y_key = c_data["key"]
+            if y_key == "global":
+                continue
+
+            # Buscar la clave con tolerancia por si hay imprecisión float
+            matched_key = next(
+                (k for k in all_ls_keys if abs(k - y_key) < 1e-6),
+                None
+            )
+            if matched_key is None:
+                continue
+
+            floor_disp_hist  = self.results["floors"][y_key]["disp"]
+            floor_shear_hist = self.results["floors"][y_key]["shear"]
+            floor_ls         = limit_states[matched_key]
+
+            for ls_name, (color, symbol) in ls_styles.items():
+                ls_roof_disp = floor_ls.get(ls_name)
+                if ls_roof_disp is None:
+                    continue
+
+                # Buscar el índice exacto en el historial
+                step_idx = rd_lookup.get(ls_roof_disp)
+                if step_idx is None:
+                    # Fallback: búsqueda por proximidad
+                    step_idx = next(
+                        (i for i, v in enumerate(roof_disp_history)
+                         if abs(v - ls_roof_disp) < 1e-9),
+                        None
+                    )
+                if step_idx is None:
+                    continue
+
+                # Solo mostrar si el slider ya superó ese step
+                if step_idx >= slider_limit:
+                    continue
+
+                # Acotar al historial de planta (puede ser más corto en pushover adaptativo)
+                idx = min(step_idx, len(floor_disp_hist) - 1, len(floor_shear_hist) - 1)
+                if idx < 0:
+                    continue
+
+                vis_x = um.from_base(floor_disp_hist[idx],  UnitType.LENGTH)
+                vis_y = um.from_base(floor_shear_hist[idx], UnitType.FORCE)
+
+                self.plot_widget.plot(
+                    [vis_x], [vis_y],
+                    pen=None,
+                    symbol=symbol,
+                    symbolBrush=pg.mkBrush(color),
+                    symbolPen=pg.mkPen((255, 255, 255), width=1),
+                    symbolSize=12
+                )
