@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:portwooddigital.com)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "WebFetch(domain:openseespydoc.readthedocs.io)",
+      "WebFetch(domain:opensees.berkeley.edu)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import math
 import pyqtgraph as pg
 from src.utils.scale_manager import ScaleManager
 
@@ -47,18 +48,22 @@ class YieldRenderer:
             xj_def = nj.x + dj[0] * scale_factor
             yj_def = nj.y + dj[1] * scale_factor
 
+            ele_length = math.sqrt((nj.x - ni.x) ** 2 + (nj.y - ni.y) ** 2)
+
             for sec_data in sections.values():
                 ratio = sec_data.get("ratio", 0.0)
                 if ratio < 1.0:
                     continue
 
-                loc   = sec_data.get("loc", 0.5)
-                x_sec = xi_def + loc * (xj_def - xi_def)
-                y_sec = yi_def + loc * (yj_def - yi_def)
+                loc      = sec_data.get("loc", 0.5)
+                loc_frac = (loc / ele_length) if ele_length > 0 else 0.5
+                x_sec    = xi_def + loc_frac * (xj_def - xi_def)
+                y_sec    = yi_def + loc_frac * (yj_def - yi_def)
 
+                ls = sec_data.get("limit_state", "DL")
                 spots.append({
                     'pos':   (x_sec, y_sec),
-                    'brush': pg.mkBrush(*self._ratio_to_color(ratio)),
+                    'brush': pg.mkBrush(*self._ls_to_color(ls)),
                     'pen':   pg.mkPen(None),
                     'size':  10,
                 })
@@ -68,17 +73,10 @@ class YieldRenderer:
             plot_widget.addItem(self.yield_scatter)
             self._in_scene = True
 
-    def _ratio_to_color(self, ratio):
-        # 1.0 → amarillo (255,235,59)  |  1.5 → naranja (255,152,0)  |  ≥2.0 → rojo (244,67,54)
-        ratio = min(ratio, 2.0)
-        if ratio <= 1.5:
-            t = (ratio - 1.0) / 0.5
-            r = 255
-            g = int(235 + t * (152 - 235))
-            b = int(59  + t * (0   - 59))
-        else:
-            t = (ratio - 1.5) / 0.5
-            r = int(255 + t * (244 - 255))
-            g = int(152 + t * (67  - 152))
-            b = int(0   + t * (54  - 0))
-        return (r, g, b, 230)
+    def _ls_to_color(self, ls: str):
+        if ls == "NC":
+            return (210,   0,   0, 230)   # rojo
+        elif ls == "SL":
+            return (230, 100,   0, 230)   # naranja
+        else:                              # DL
+            return (220, 180,   0, 230)   # amarillo
