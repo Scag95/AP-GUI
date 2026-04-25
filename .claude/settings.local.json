@@ -6,7 +6,8 @@
       "WebSearch",
       "WebFetch(domain:openseespydoc.readthedocs.io)",
       "WebFetch(domain:opensees.berkeley.edu)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:opensees.github.io)"
     ]
   }
 }

@@ -479,49 +479,49 @@ class HystereticSMForm(QWidget):
 
         # Configurar Tab Positiva (4 puntos)
         pos_layout = QFormLayout(self.tab_pos)
-        self.spin_s1p = UnitSpinBox(UnitType.STRESS)
+        self.spin_s1p = UnitSpinBox(UnitType.MOMENT)
         self.spin_e1p = QDoubleSpinBox(); self.spin_e1p.setDecimals(6); self.spin_e1p.setRange(0, 10.0); self.spin_e1p.setSingleStep(0.001)
-        self.spin_s2p = UnitSpinBox(UnitType.STRESS)
+        self.spin_s2p = UnitSpinBox(UnitType.MOMENT)
         self.spin_e2p = QDoubleSpinBox(); self.spin_e2p.setDecimals(6); self.spin_e2p.setRange(0, 10.0); self.spin_e2p.setSingleStep(0.001)
-        self.spin_s3p = UnitSpinBox(UnitType.STRESS)
+        self.spin_s3p = UnitSpinBox(UnitType.MOMENT)
         self.spin_e3p = QDoubleSpinBox(); self.spin_e3p.setDecimals(6); self.spin_e3p.setRange(0, 10.0); self.spin_e3p.setSingleStep(0.001)
-        self.spin_s4p = UnitSpinBox(UnitType.STRESS)
+        self.spin_s4p = UnitSpinBox(UnitType.MOMENT)
         self.spin_e4p = QDoubleSpinBox(); self.spin_e4p.setDecimals(6); self.spin_e4p.setRange(0, 10.0); self.spin_e4p.setSingleStep(0.001)
-        
+
         for spin in [self.spin_s1p, self.spin_s2p, self.spin_s3p, self.spin_s4p]:
             spin.setRange(-1e15, 1e15)
-            
-        pos_layout.addRow("Esfuerzo 1 [s1p]:", self.spin_s1p)
-        pos_layout.addRow("Deformación 1 [e1p]:", self.spin_e1p)
-        pos_layout.addRow("Esfuerzo 2 [s2p]:", self.spin_s2p)
-        pos_layout.addRow("Deformación 2 [e2p]:", self.spin_e2p)
-        pos_layout.addRow("Esfuerzo 3 [s3p]:", self.spin_s3p)
-        pos_layout.addRow("Deformación 3 [e3p]:", self.spin_e3p)
-        pos_layout.addRow("Esfuerzo 4 [s4p]:", self.spin_s4p)
-        pos_layout.addRow("Deformación 4 [e4p]:", self.spin_e4p)
+
+        pos_layout.addRow("Momento 1 [s1p]:", self.spin_s1p)
+        pos_layout.addRow("Curvatura 1 [e1p]:", self.spin_e1p)
+        pos_layout.addRow("Momento 2 [s2p]:", self.spin_s2p)
+        pos_layout.addRow("Curvatura 2 [e2p]:", self.spin_e2p)
+        pos_layout.addRow("Momento 3 [s3p]:", self.spin_s3p)
+        pos_layout.addRow("Curvatura 3 [e3p]:", self.spin_e3p)
+        pos_layout.addRow("Momento 4 [s4p]:", self.spin_s4p)
+        pos_layout.addRow("Curvatura 4 [e4p]:", self.spin_e4p)
 
         # Configurar Tab Negativa (4 puntos)
         neg_layout = QFormLayout(self.tab_neg)
-        self.spin_s1n = UnitSpinBox(UnitType.STRESS)
+        self.spin_s1n = UnitSpinBox(UnitType.MOMENT)
         self.spin_e1n = QDoubleSpinBox(); self.spin_e1n.setDecimals(6); self.spin_e1n.setRange(-10.0, 0); self.spin_e1n.setSingleStep(0.001)
-        self.spin_s2n = UnitSpinBox(UnitType.STRESS)
+        self.spin_s2n = UnitSpinBox(UnitType.MOMENT)
         self.spin_e2n = QDoubleSpinBox(); self.spin_e2n.setDecimals(6); self.spin_e2n.setRange(-10.0, 0); self.spin_e2n.setSingleStep(0.001)
-        self.spin_s3n = UnitSpinBox(UnitType.STRESS)
+        self.spin_s3n = UnitSpinBox(UnitType.MOMENT)
         self.spin_e3n = QDoubleSpinBox(); self.spin_e3n.setDecimals(6); self.spin_e3n.setRange(-10.0, 0); self.spin_e3n.setSingleStep(0.001)
-        self.spin_s4n = UnitSpinBox(UnitType.STRESS)
+        self.spin_s4n = UnitSpinBox(UnitType.MOMENT)
         self.spin_e4n = QDoubleSpinBox(); self.spin_e4n.setDecimals(6); self.spin_e4n.setRange(-10.0, 0); self.spin_e4n.setSingleStep(0.001)
-        
+
         for spin in [self.spin_s1n, self.spin_s2n, self.spin_s3n, self.spin_s4n]:
             spin.setRange(-1e15, 1e15)
 
-        neg_layout.addRow("Esfuerzo 1 [s1n]:", self.spin_s1n)
-        neg_layout.addRow("Deformación 1 [e1n]:", self.spin_e1n)
-        neg_layout.addRow("Esfuerzo 2 [s2n]:", self.spin_s2n)
-        neg_layout.addRow("Deformación 2 [e2n]:", self.spin_e2n)
-        neg_layout.addRow("Esfuerzo 3 [s3n]:", self.spin_s3n)
-        neg_layout.addRow("Deformación 3 [e3n]:", self.spin_e3n)
-        neg_layout.addRow("Esfuerzo 4 [s4n]:", self.spin_s4n)
-        neg_layout.addRow("Deformación 4 [e4n]:", self.spin_e4n)
+        neg_layout.addRow("Momento 1 [s1n]:", self.spin_s1n)
+        neg_layout.addRow("Curvatura 1 [e1n]:", self.spin_e1n)
+        neg_layout.addRow("Momento 2 [s2n]:", self.spin_s2n)
+        neg_layout.addRow("Curvatura 2 [e2n]:", self.spin_e2n)
+        neg_layout.addRow("Momento 3 [s3n]:", self.spin_s3n)
+        neg_layout.addRow("Curvatura 3 [e3n]:", self.spin_e3n)
+        neg_layout.addRow("Momento 4 [s4n]:", self.spin_s4n)
+        neg_layout.addRow("Curvatura 4 [e4n]:", self.spin_e4n)
 
         # Configurar Tab Histéresis
         hys_layout = QFormLayout(self.tab_hys)
@@ -574,10 +574,10 @@ class HystereticSMForm(QWidget):
         self.ax.axhline(0, color='black', linewidth=1)
         self.ax.axvline(0, color='black', linewidth=1)
         self.ax.grid(True, linestyle='--', alpha=0.6)
-        self.ax.set_xlabel('Deformación')
-        self.ax.set_ylabel('Esfuerzo')
+        self.ax.set_xlabel('Curvatura')
+        self.ax.set_ylabel('Momento')
         self.ax.legend(loc="upper left", fontsize=8)
-        
+
         self.figure.tight_layout()
         self.canvas.draw()
 

@@ -17,16 +17,19 @@ ProjectManager.instance()
 
 ```python
 ProjectManager
-├── material{}        # tag → Material
-├── section{}        # tag → Section
-├── node{}          # tag → Node
-├── element{}        # tag → Element
-├── patterns{}       # tag → LoadPattern
-├── gravity_results # dict o None
-├── pushover_results # dict o None
-├── yield_history   # list
-├── pushover_loads   # list
-└── _floors_cache  # dict (privado)
+├── material{}             # tag → Material
+├── section{}             # tag → Section
+├── node{}               # tag → Node
+├── element{}             # tag → Element
+├── patterns{}            # tag → LoadPattern
+├── gravity_results       # dict o None
+├── pushover_results      # dict o None
+├── yield_history         # list — estado de fluencia por paso [{ele_tag:{sec_num:{...}}}]
+├── floor_limit_states    # dict — {y_level: {DL, SL, NC}} primer roof_disp de cada LS
+├── pushover_loads        # list
+├── _ls_pre_existing      # set  — (ele_tag, sec_num, ls) activos bajo gravedad
+├── _ls_elem_floor_map    # dict — ele_tag → y_level
+└── _floors_cache         # dict (privado)
 ```
 
 ## Señales
@@ -113,6 +116,40 @@ dataChanged = pyqtSignal()  # Emitido cuando los datos cambian
 | `load_project()` | Carga proyecto desde JSON | bool |
 | `new_project()` | Reinicia estado completo | None |
 
+### Detección de Estados Límite EC8
+
+API pública — llamada por `PushoverSolver`:
+
+| Función | Descripción | Retorna |
+|--------|-------------|---------|
+| `reset_limit_states()` | Reinicia mapas y `floor_limit_states`. Llamar antes de cada análisis | None |
+| `capture_limit_state_baseline()` | Registra estados ya activos bajo gravedad | None |
+| `capture_limit_state_step(roof_disp)` | Una llamada por paso: actualiza `yield_history` y `floor_limit_states` | None |
+| `get_floor_limit_states()` | Retorna copia de `floor_limit_states` | dict |
+
+Helpers privados (prefijo `_ls_`):
+
+| Función | Propósito |
+|--------|-----------|
+| `_ls_build_floor_map()` | Construye mapa ele→planta |
+| `_ls_get_sec_tag()` | Section tag según tipo de elemento |
+| `_ls_get_loc()` | Posición normalizada de la sección |
+| `_ls_fiber_mat_tags()` | Lista mat_tags en orden OpenSees |
+| `_ls_get_mz_mat()` | Material Mz de una AggregatorSection |
+| `_ls_yield_fiber()` | Dato de fluencia de FiberSection (para yield_history) |
+| `_ls_yield_aggregator()` | Dato de fluencia de AggregatorSection con signo correcto |
+| `_ls_check_fiber()` | Actualiza floor_result con umbrales Steel01/Concrete01 |
+| `_ls_check_aggregator()` | Actualiza floor_result con umbrales Hysteretic/HystereticSM |
+
+**Constantes de clase:**
+```python
+EPSC_U    = 0.0035   # deformación última del hormigón (EC8)
+SL_FACTOR = 0.75     # 75% εcu → límite de servicio
+NC_FACTOR = 1.25     # 125% εcu → colapso
+```
+
+**Nota de diseño:** `capture_limit_state_step` hace un solo recorrido de elementos por paso, alimentando simultáneamente `yield_history` (visualización de rótulas) y `floor_limit_states` (curva pushover). Reemplaza a los eliminados `SteelYieldDetector` y `CodeLimitStateDetector`.
+
 ## Cache de Análisis Pushover
 
 ```python
@@ -149,7 +186,9 @@ ProjectManager (Singleton)
 ├── Dialogs ──► Almacenan/leen datos
 ├── OpenSeesTranslator ──► Lee datos para análisis
 ├── ModelBuilder ──► Lee datos para construir modelo
-├── AnimationToolbar ──► Lee pushover_results
+├── PushoverSolver ──► Llama reset/capture_limit_state_*
+├── AnimationToolbar ──► Lee yield_history
+├── PushoverResultsWidget ──► Lee floor_limit_states vía results["limit_states"]
 ├── LoadRenderer ──► Lee pushover_loads
 └── ScaleManager ──► autocalculate_scales()
 ```

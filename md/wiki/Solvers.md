@@ -72,40 +72,6 @@ class FloorFailureState:
     current_drift: float  # Deriva actual
 ```
 
-### SteelYieldDetector
-
-Detecta fluencia en secciones de acero monitoreando strain en fibras.
-
-**Clase:** `SteelYieldDetector`
-
-**Atributos:**
-
-| Atributo | Descripción |
-|----------|-------------|
-| `_baseline` | Set de (ele_tag, sec_num) pre-fluidos por gravedad |
-
-**Funciones:**
-
-| Función | Descripción | Retorna |
-|--------|-------------|---------|
-| `reset()` | Limpia baseline | None |
-| `capture_baseline()` | Registra secciones ya fluidas por gravedad | None |
-| `_get_section_tag()` | Obtiene section_tag según tipo de elemento | int |
-| `_get_loc()` | Obtiene posición de sección | float |
-| `_get_fiber_material_tags()` | Lista mat_tags ordenados como OpenSees | list |
-| `_capture_fiber_section()` | Captura via fiberData de FiberSection | dict |
-| `_capture_aggregator_section()` | Captura via deformation+κ de AggregatorSection | dict |
-| `_capture_raw()` | Captura sin filtrar | dict |
-| `capture_step()` | Captura excluyendo baseline | dict |
-
-**Retorna capture_step():**
-```python
-{ ele_tag: { sec_num: { "ratio": float, "strain": float, "loc": float } } }
-# ratio > 1 indica fluencia
-```
-
-**Relacionado:** [[PushoverSolver]], [[ScaleManager]]
-
 ### LoadPushoverGenerator
 
 Genera vectores de carga lateral.
@@ -150,6 +116,9 @@ PushoverSolver.run_adaptative_pushover()
     │
     ├─► _initialize_supports()
     ├─► _setup_recorders()
+    ├─► manager.yield_history = []
+    ├─► manager.reset_limit_states()
+    ├─► manager.capture_limit_state_baseline()
     ├─► LoadPushoverGenerator.generate_pattern()
     │
     └─► for ronda in MAX_ROUND:
@@ -159,11 +128,16 @@ PushoverSolver.run_adaptative_pushover()
             │   ├─► for step in steps:
             │   │   ├─► PushoverConfigurator.run_static_step_with_fallback()
             │   │   ├─► _capture_step_state()
-            │   │   └─► SteelYieldDetector.capture_step()
+            │   │   └─► manager.capture_limit_state_step(roof_disp)
             │   └─► FailureDetector.analyze()
             ├─► _merge_results()
             └─► if nuevos_fallos:
-                    └─► ModelBuilder.freeze_floor()
+                    ├─► Extraer story_columns de manager.get_floor_data()
+                    ├─► ModelBuilder.freeze_floor(floor_state, freeze_method)
+                    │       retorna (ghost_nodes, cross_pairs)
+                    ├─► consolidated["frozen_columns"][y_fail] = cross_pairs
+                    └─► if freeze_method != "crosses" and last_floor_failed:
+                            break  (con crosses el análisis continúa)
 ```
 
 ## Relaciones
@@ -172,12 +146,13 @@ PushoverSolver.run_adaptative_pushover()
 Solvers
 ├── OpenSeesTranslator ──► Los instancia
 ├── ModelBuilder ──► Acceden al builder
-├── ProjectManager ──► Almacenan/leen resultados
+├── ProjectManager ──► Cerebro: almacena y detecta estados límite
 │   ├─ gravity_results
 │   ├─ pushover_results
-│   ├─ yield_history
+│   ├─ yield_history          ← construido en capture_limit_state_step()
+│   ├─ floor_limit_states     ← DL/SL/NC por planta
 │   └─ pushover_loads
-├── AnimationToolbar ──► Consume resultados
+├── AnimationToolbar ──► Consume manager.yield_history
 └── LoadRenderer ──► Dibuja pushover_loads
 ```
 

@@ -185,13 +185,19 @@ class Hysteretic(Material):
         self.damage2  = damage2
         self.beta     = beta  # None = no se pasa a OpenSees
 
-    def get_yield_strain(self):
+    def get_yield_strain(self, sign=0):
+        if sign > 0: return abs(self.e1p)
+        if sign < 0: return abs(self.e1n)
         return min(abs(self.e1p), abs(self.e1n))
 
-    def get_sl_strain(self):
+    def get_sl_strain(self, sign=0):
+        if sign > 0: return abs(self.e2p)
+        if sign < 0: return abs(self.e2n)
         return min(abs(self.e2p), abs(self.e2n))
 
-    def get_nc_strain(self):
+    def get_nc_strain(self, sign=0):
+        if sign > 0: return abs(self.e3p)
+        if sign < 0: return abs(self.e3n)
         return min(abs(self.e3p), abs(self.e3n))
 
     def get_opensees_args(self):
@@ -266,13 +272,19 @@ class HystereticSM(Material):
         self.damage2  = damage2
         self.beta     = beta
 
-    def get_yield_strain(self):
+    def get_yield_strain(self, sign=0):
+        if sign > 0: return abs(self.e1p)
+        if sign < 0: return abs(self.e1n)
         return min(abs(self.e1p), abs(self.e1n))
 
-    def get_sl_strain(self):
+    def get_sl_strain(self, sign=0):
+        if sign > 0: return abs(self.e2p)
+        if sign < 0: return abs(self.e2n)
         return min(abs(self.e2p), abs(self.e2n))
 
-    def get_nc_strain(self):
+    def get_nc_strain(self, sign=0):
+        if sign > 0: return abs(self.e3p)
+        if sign < 0: return abs(self.e3n)
         return min(abs(self.e3p), abs(self.e3n))
 
     def get_opensees_args(self):

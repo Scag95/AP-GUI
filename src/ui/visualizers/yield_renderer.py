@@ -1,5 +1,6 @@
 import math
 import pyqtgraph as pg
+from PyQt6.QtCore import Qt
 from src.utils.scale_manager import ScaleManager
 
 
@@ -9,11 +10,17 @@ class YieldRenderer:
         self.yield_scatter = pg.ScatterPlotItem(pxMode=True)
         self.yield_scatter.setZValue(200)
         self._in_scene = False
+        self._cross_items: list = []
 
     def clear(self, plot_widget):
         if self._in_scene:
             plot_widget.removeItem(self.yield_scatter)
             self._in_scene = False
+
+    def clear_crosses(self, plot_widget):
+        for item in self._cross_items:
+            plot_widget.removeItem(item)
+        self._cross_items.clear()
 
     def draw_yield_state(self, plot_widget, manager, step_yield_data, step_displacements):
         """
@@ -65,13 +72,44 @@ class YieldRenderer:
                     'pos':   (x_sec, y_sec),
                     'brush': pg.mkBrush(*self._ls_to_color(ls)),
                     'pen':   pg.mkPen(None),
-                    'size':  10,
+                    'size':  5,
                 })
 
         if spots:
             self.yield_scatter.setData(spots=spots)
             plot_widget.addItem(self.yield_scatter)
             self._in_scene = True
+
+    def draw_frozen_floors(self, plot_widget, frozen_floors, frozen_columns,
+                           step_displacements, scale_factor, manager):
+        """Dibuja cruces de San Andrés usando los pares diagonales capturados al freezear."""
+        self.clear_crosses(plot_widget)
+        if not frozen_floors or not frozen_columns:
+            return
+
+        node_map = {n.tag: n for n in manager.get_all_nodes()}
+        pen      = pg.mkPen(color=(180, 30, 30, 210), width=2,
+                            style=Qt.PenStyle.DashLine)
+
+        for y_level in frozen_floors:
+            for (ni_tag, nj_tag) in frozen_columns.get(y_level, []):
+                ni = node_map.get(ni_tag)
+                nj = node_map.get(nj_tag)
+                if not ni or not nj:
+                    continue
+
+                di = step_displacements.get(ni_tag, [0.0, 0.0, 0.0])
+                dj = step_displacements.get(nj_tag, [0.0, 0.0, 0.0])
+
+                xi = ni.x + di[0] * scale_factor
+                yi = ni.y + di[1] * scale_factor
+                xj = nj.x + dj[0] * scale_factor
+                yj = nj.y + dj[1] * scale_factor
+
+                line = pg.PlotDataItem([xi, xj], [yi, yj], pen=pen)
+                line.setZValue(190)
+                plot_widget.addItem(line)
+                self._cross_items.append(line)
 
     def _ls_to_color(self, ls: str):
         if ls == "NC":

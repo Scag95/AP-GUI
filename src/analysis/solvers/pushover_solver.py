@@ -6,8 +6,6 @@ from src.analysis.solvers.failure_detector import FailureDetector
 from src.analysis.solvers.load_generator import LoadPushoverGenerator
 from src.analysis.solvers.pushover_configurator import PushoverConfigurator
 from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
-from src.analysis.solvers.steel_yield_detector import SteelYieldDetector
-from src.analysis.solvers.code_limit_state_detector import CodeLimitStateDetector
 
 
 class PushoverSolver:
@@ -23,8 +21,6 @@ class PushoverSolver:
         self.load_generator = LoadPushoverGenerator(self.builder)
         self.configurator = PushoverConfigurator(self.builder)
         self.failure_detector = FailureDetector()
-        self.yield_detector = SteelYieldDetector()
-        self.code_detector = CodeLimitStateDetector()
         self.active_support_nodes = []
 
     def run_modal_analysis(self, n_modes=1):
@@ -63,7 +59,7 @@ class PushoverSolver:
             "element_forces_history": [],
             "failed_floors": [],
             "floors": {},
-            "yield_history": []
+            "frozen_floors_history": []
         }
 
         floor_data = self.manager.get_floor_data()
@@ -348,10 +344,9 @@ class PushoverSolver:
             frozen_floors = set()
 
         if reset_detector:
-            self.code_detector.reset()
-            self.code_detector.capture_baseline()
-            self.yield_detector.reset()
-            self.yield_detector.capture_baseline()
+            self.manager.yield_history = []
+            self.manager.reset_limit_states()
+            self.manager.capture_limit_state_baseline()
 
         # Asegurarnos de tener los apoyos base si alguien llama a este método directamente
         # (El análisis adaptativo ya los inicializa por fuera para mantener los fantasmas)
@@ -382,8 +377,8 @@ class PushoverSolver:
                 break
 
             self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
-            results["yield_history"].append(self.yield_detector.capture_step())
-            self.code_detector.capture_step(results["roof_disp"][-1])
+            self.manager.capture_limit_state_step(results["roof_disp"][-1])
+            results["frozen_floors_history"].append(frozenset(frozen_floors))
 
 
             #4. Evaluación paso a paso:
@@ -396,8 +391,7 @@ class PushoverSolver:
                     print(f"[Pushover] ⚠️ Fallo detectado en piso (Y={f.y_level}) Causa principal: '{f.cause}'. Rompiendo bucle estático.")
                     break
         
-        self.manager.yield_history = results["yield_history"]
-        results["limit_states"] = self.code_detector.get_results()
+        results["limit_states"] = self.manager.get_floor_limit_states()
         return results
 
 
@@ -407,8 +401,7 @@ class PushoverSolver:
         consolidated["base_shear"].extend(new_res["base_shear"])
         consolidated.setdefault("node_displacements",[]).extend(new_res.get("node_displacements",[]))
         consolidated.setdefault("element_forces_history",[]).extend(new_res.get("element_forces_history", []))
-        consolidated.setdefault("yield_history", []).extend(new_res.get("yield_history", []))
-
+        consolidated.setdefault("frozen_floors_history",[]).extend(new_res.get("frozen_floors_history", []))
         count = len(new_res["roof_disp"])
         consolidated["cycle_id"].extend([cycle_idx] * count)
 
@@ -479,15 +472,15 @@ class PushoverSolver:
         
         self._initialize_supports()
         self._setup_recorders()
-        self.code_detector.reset()
-        self.code_detector.capture_baseline()
-        self.yield_detector.reset()
-        self.yield_detector.capture_baseline()
+        self.manager.yield_history = []
+        self.manager.reset_limit_states()
+        self.manager.capture_limit_state_baseline()
 
         #2. Diccionario consolidado
         consolidated = {
             "roof_disp": [], "base_shear": [], "steps": [],
-            "cycle_id": [], "node_displacements": [], "floors": {}, "failed_floors": []
+            "cycle_id": [], "node_displacements": [], "floors": {}, "failed_floors": [],
+            "frozen_columns": {}   # {y_level: [(ni_tag, nj_tag), ...]}
         }
 
         frozen_floors = set()
@@ -557,29 +550,43 @@ class PushoverSolver:
                 floor_keys = sorted(self.manager.get_floor_data().keys())
                 y_bot = floor_keys[floor_keys.index(y_fail) - 1]
                 
+                # Extraer conectividad real de columnas: [(bot_tag, top_tag), ...]
+                floor_cols  = self.manager.get_floor_data().get(y_fail, {}).get("columns", [])
+                story_columns = []
+                for col in floor_cols:
+                    ni = self.manager.get_node(col.node_i)
+                    nj = self.manager.get_node(col.node_j)
+                    if not ni or not nj:
+                        continue
+                    if ni.y > nj.y:
+                        story_columns.append((col.node_j, col.node_i))  # (bot, top)
+                    else:
+                        story_columns.append((col.node_i, col.node_j))  # (bot, top)
+
                 floor_state = {
-                    "top": self._get_deformed_floor_state(y_fail),
-                    "bot": self._get_deformed_floor_state(y_bot)
+                    "top":           self._get_deformed_floor_state(y_fail),
+                    "bot":           self._get_deformed_floor_state(y_bot),
+                    "story_columns": story_columns,
                 }
 
-                # Recibimos los tags de los fantasmas recién anclados a la pared!
-                new_ghosts = self.builder.freeze_floor(floor_state, freeze_method)
-                
+                # El builder retorna los nodos fantasma Y los pares diagonales para render
+                new_ghosts, cross_pairs = self.builder.freeze_floor(floor_state, freeze_method)
+                consolidated["frozen_columns"][y_fail] = cross_pairs
+
                 # Actualizamos nuestra memoria global de apoyos activos
                 if new_ghosts:
                     self.active_support_nodes.extend(new_ghosts)
-                
+
                 frozen_floors.add(y_fail)
                 consolidated["failed_floors"].append(y_fail)
 
-            # Comportamiento original: si la última planta falla, parar
-            if sorted_ys[-1] in nuevos_fallos:
+            # Con "crosses" la última planta queda arriostrada y el análisis puede continuar
+            if freeze_method != "crosses" and sorted_ys[-1] in nuevos_fallos:
                 print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
                 break
                  
         ops.remove('recorders')
         print("[Adaptive] Análisis Finalizado Exitosamente.")
 
-        self.manager.yield_history = consolidated.get("yield_history", [])
-        consolidated["limit_states"] = self.code_detector.get_results()
+        consolidated["limit_states"] = self.manager.get_floor_limit_states()
         return consolidated                

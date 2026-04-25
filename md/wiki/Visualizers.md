@@ -104,18 +104,46 @@ Dibuja diagramas de fuerzas (Momento, Cortante, Axial).
 
 ## YieldRenderer
 
-Dibuja estado de fluencia en secciones.
+Dibuja estado de fluencia (rótulas) y cruces de San Andrés sobre la forma deformada.
 
 **Clase:** `YieldRenderer`
+
+**Atributos:**
+
+| Atributo | Descripción |
+|----------|-------------|
+| `yield_scatter` | ScatterPlotItem con puntos de rótula (color por estado DL/SL/NC) |
+| `_cross_items` | Lista de PlotDataItem con los segmentos de las cruces |
 
 **Funciones:**
 
 | Función | Descripción |
 |--------|-------------|
-| `draw_yield()` | Dibuja estado de fluencia |
-| `clear()` | Limpia |
+| `draw_yield_state(plot, manager, step_yield_data, step_displacements)` | Dibuja rótulas sobre deformada |
+| `draw_frozen_floors(plot, frozen_floors, frozen_columns, step_displacements, scale, manager)` | Dibuja cruces de San Andrés por vano congelado |
+| `clear(plot)` | Limpia rótulas |
+| `clear_crosses(plot)` | Limpia cruces |
 
-**Relacionado:** [[ScaleManager]], [[SteelYieldDetector]]
+**Flujo de `frozen_columns`:**
+```
+pushover_solver
+  └─► freeze_floor() retorna cross_pairs  [(ni, nj), ...]  — 6 seg/vano
+        ├─► 2 diagonales (X)
+        ├─► borde superior e inferior
+        └─► borde izquierdo y derecho
+  └─► consolidated["frozen_columns"][y_level] = cross_pairs
+        └─► animation_toolbar → structure_interactor → YieldRenderer.draw_frozen_floors()
+```
+
+**Colores de rótulas:**
+
+| Estado | Color |
+|--------|-------|
+| DL | Amarillo `(220,180,0)` |
+| SL | Naranja `(230,100,0)` |
+| NC | Rojo `(210,0,0)` |
+
+**Relacionado:** [[ProjectManager]], [[ScaleManager]]
 
 ## Conexión con ScaleManager
 

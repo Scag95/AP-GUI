@@ -198,13 +198,18 @@ class StructureInteractor(QWidget):
             scale_factor=s_def
         )
 
-    def draw_kinematic_yield_step(self, yield_data, step_displacements):
-        """Pinta los puntos de fluencia del acero sobre la forma deformada del step actual."""
-        if not yield_data:
+    def draw_kinematic_yield_step(self, yield_data, step_displacements, frozen_floors=None, frozen_columns=None):
+        """Pinta rótulas y cruces de San Andrés sobre la forma deformada del step actual."""
+        scale = ScaleManager.instance().get_scale('deformation')
+        if yield_data:
+            self.renderer_yield.draw_yield_state(
+                self.plot_widget, self.manager, yield_data, step_displacements
+            )
+        else:
             self.renderer_yield.clear(self.plot_widget)
-            return
-        self.renderer_yield.draw_yield_state(
-            self.plot_widget, self.manager, yield_data, step_displacements
+        self.renderer_yield.draw_frozen_floors(
+            self.plot_widget, frozen_floors or set(), frozen_columns or {},
+            step_displacements, scale, self.manager
         )
 
     def draw_kinematic_forces_step(self, forces_data):
