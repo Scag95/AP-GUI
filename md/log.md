@@ -17,6 +17,37 @@ Cada entrada sigue el formato:
 - `refactor` - Reestructuración de la wiki
 - `migration` - Movimiento de archivos
 
+### [2026-04-25] fix | Cruces de San Andrés en pushover adaptativo
+
+**Archivos modificados:** `model_builder.py`, `pushover_solver.py`, `yield_renderer.py`, `structure_interactor.py`, `animation_toolbar.py`
+
+**Cambios:**
+
+- `model_builder.py` — `freeze_floor` método `"crosses"`: reescrito para usar conectividad real de columnas (`story_columns`) pasada por el solver. Cada vano genera 6 Truss en OpenSees (2 diagonales + 4 bordes) y retorna `(created_nodes, cross_pairs)` con los mismos 6 pares para el renderer.
+- `pushover_solver.py` — Extrae `story_columns = [(bot_tag, top_tag), ...]` del manager antes de cada freeze y lo inyecta en `floor_state`. Desempaqueta el retorno del builder como `(ghosts, cross_pairs)`. La condición de parada por colapso de última planta se omite cuando `freeze_method == "crosses"`.
+- `yield_renderer.py` — `draw_frozen_floors` simplificado: cada elemento de `cross_pairs` es un segmento directo (diagonal o borde); se dibuja una línea por par sin heurísticas de offset.
+- `structure_interactor.py` / `animation_toolbar.py` — `frozen_columns` se propaga por todo el pipeline desde `pushover_results` hasta el renderer.
+
+**Wiki actualizada:** `Solvers.md`, `Visualizers.md`
+
+---
+
+### [2026-04-25] refactor | Detección de estados límite unificada en ProjectManager
+
+**Archivos modificados:** `manager.py`, `materials.py`, `pushover_solver.py`, `material_forms.py`, `steel_yield_detector.py` (eliminado), `code_limit_state_detector.py` (eliminado)
+
+**Cambios:**
+
+- `materials.py` — `get_yield_strain/sl/nc` de `Hysteretic` y `HystereticSM` aceptan `sign` (+1/-1/0). Con signo correcto compara contra el lado positivo o negativo de la curva M-φ. Sin signo (legacy) retorna el mínimo.
+- `material_forms.py` — `HystereticSMForm` cambia spinboxes de esfuerzo de `UnitType.STRESS` a `UnitType.MOMENT` (kNm). Etiquetas actualizadas: Esfuerzo→Momento, Deformación→Curvatura.
+- `manager.py` — Nueva sección de detección EC8: `reset_limit_states()`, `capture_limit_state_baseline()`, `capture_limit_state_step(roof_disp)`, `get_floor_limit_states()` + helpers privados `_ls_*`. Un único loop por paso reemplaza los dos detectores previos, garantizando sincronización entre rótulas en deformada y puntos en curva pushover.
+- `pushover_solver.py` — Elimina instanciación de `SteelYieldDetector` y `CodeLimitStateDetector`. Delega al manager. `yield_history` ya no se propaga en el dict de resultados.
+- `steel_yield_detector.py` / `code_limit_state_detector.py` — **Eliminados**.
+
+**Wiki actualizada:** `Solvers.md`, `ProjectManager.md`, `Materials.md`
+
+---
+
 ### [2026-04-21] migration | Reorganización de estructura wiki
 
 **Resumen:**

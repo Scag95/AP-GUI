@@ -96,16 +96,36 @@ class HystereticSM(Material):
 |-------|-------|-------------|---------|
 | Material | `to_dict()` | Serializa a diccionario | dict |
 | Material | `from_dict()` | Factory method | Material |
-| Material | `get_yield_strain()` | Deformación de fluencia | None |
+| Material | `get_yield_strain(sign=0)` | Deformación de fluencia | None |
+| Material | `get_sl_strain(sign=0)` | Umbral de servicio | None |
+| Material | `get_nc_strain(sign=0)` | Umbral de colapso | None |
+| Concrete01 | `get_sl_strain()` | 0.75 × 0.0035 | float |
+| Concrete01 | `get_nc_strain()` | 1.25 × 0.0035 | float |
 | Concrete01 | `get_opensees_args()` | Args para OpenSees | list |
 | Steel01 | `get_yield_strain()` | Fy / E0 | float |
 | Steel01 | `get_opensees_args()` | Args para OpenSees | list |
 | Elastic | `get_opensees_args()` | Args para OpenSees | list |
 | Elastic | `create_internal()` | Crea material interno | Elastic |
-| Hysteretic | `get_yield_strain()` | min(e1p, e1n) | float |
+| Hysteretic | `get_yield_strain(sign)` | sign>0→e1p, sign<0→e1n, 0→min | float |
+| Hysteretic | `get_sl_strain(sign)` | idem con e2 | float |
+| Hysteretic | `get_nc_strain(sign)` | idem con e3 | float |
 | Hysteretic | `get_opensees_args()` | Args para OpenSees | list |
-| HystereticSM | `get_yield_strain()` | min(e1p, e1n) | float |
+| HystereticSM | `get_yield_strain(sign)` | sign>0→e1p, sign<0→e1n, 0→min | float |
+| HystereticSM | `get_sl_strain(sign)` | idem con e2 | float |
+| HystereticSM | `get_nc_strain(sign)` | idem con e3 | float |
 | HystereticSM | `get_opensees_args()` | Args para OpenSees | list |
+
+### Convención de signo en Hysteretic / HystereticSM
+
+Los ejes del material cuando se usa en AggregatorSection son **M (momento)** y **φ (curvatura)**. El parámetro `sign` indica la dirección de la curvatura real:
+
+```
+sign = +1  →  usa e_p (envolvente positiva)
+sign = -1  →  usa e_n (envolvente negativa)
+sign =  0  →  usa min(|e_p|, |e_n|)  ← comportamiento legacy
+```
+
+Esto garantiza que la detección de DL/SL/NC compare la curvatura contra el umbral del lado correcto.
 
 ## Serialización
 
@@ -132,7 +152,7 @@ Material
 ├── ModelBuilder._build_materials() ──► Crea en OpenSees
 ├── FiberSection ──► Usa en patches
 ├── LayerStraight ──► Usa en capas
-├── SteelYieldDetector ──► Lee yield_strain
+├── ProjectManager._ls_* ──► Lee yield_strain, sl_strain, nc_strain
 └── MaterialDialog ──► UI para crear materiales
 ```
 

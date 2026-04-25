@@ -289,25 +289,47 @@ class ModelBuilder:
                 self.log_command('sp', real_tag, 1, current_disp_x)
 
         elif method == "crosses":
-            top_sorted = sorted(deformed_state, key=lambda n: n["def_x"])
-            bot_sorted = sorted(bot_nodes, key=lambda n: n["def_x"])
-            
-            A = 1000.0
+            A       = 1000.0
             mat_tag = 999999
-            
-            for i in range(min(len(top_sorted), len(bot_sorted)) - 1):
-                top_left = top_sorted[i]["real_node_tag"]
-                top_right = top_sorted[i+1]["real_node_tag"]
-                bot_left = bot_sorted[i]["real_node_tag"]
-                bot_right = bot_sorted[i+1]["real_node_tag"]
-                
+
+            # Construir mapa tag → def_x para resolver posiciones deformadas
+            node_x = {n["real_node_tag"]: n["def_x"] for n in deformed_state + bot_nodes}
+
+            # Usar conectividad real de columnas si está disponible
+            story_columns = floor_state.get("story_columns", [])
+            if story_columns:
+                # Ordenar columnas por x del nodo inferior
+                col_sorted = sorted(story_columns, key=lambda p: node_x.get(p[0], 0))
+            else:
+                # Fallback: aparear nodos bot y top por proximidad en x
+                top_sorted = sorted(deformed_state, key=lambda n: n["def_x"])
+                bot_sorted = sorted(bot_nodes,      key=lambda n: n["def_x"])
+                col_sorted = []
+                for bd in bot_sorted:
+                    nearest_top = min(top_sorted, key=lambda n: abs(n["def_x"] - bd["def_x"]))
+                    col_sorted.append((bd["real_node_tag"], nearest_top["real_node_tag"]))
+
+            cross_pairs = []
+            for i in range(len(col_sorted) - 1):
+                bot_left,  top_left  = col_sorted[i]
+                bot_right, top_right = col_sorted[i + 1]
+
                 base_ele_tag = 4000000 + top_left * 100 + i * 10
-                
-                self.log_command('element', 'Truss', base_ele_tag + 1, bot_left, top_right, A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 2, bot_right, top_left, A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 3, top_left, top_right, A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 4, bot_left, bot_right, A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 5, bot_left, top_left, A, mat_tag)
+
+                self.log_command('element', 'Truss', base_ele_tag + 1, bot_left,  top_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 2, bot_right, top_left,  A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 3, top_left,  top_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 4, bot_left,  bot_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 5, bot_left,  top_left,  A, mat_tag)
                 self.log_command('element', 'Truss', base_ele_tag + 6, bot_right, top_right, A, mat_tag)
 
-        return created_nodes
+                cross_pairs.append((bot_left,  top_right))
+                cross_pairs.append((bot_right, top_left))
+                cross_pairs.append((top_left,  top_right))
+                cross_pairs.append((bot_left,  bot_right))
+                cross_pairs.append((bot_left,  top_left))
+                cross_pairs.append((bot_right, top_right))
+
+            return created_nodes, cross_pairs
+
+        return created_nodes, []

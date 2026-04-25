@@ -27,8 +27,7 @@ ENV/
 .vscode/
 .ipynb_checkpoints/
 *.swp
-.claude/
-.agents/
+
 
 # ==========================================
 # Sistemas Operativos
@@ -52,3 +51,5 @@ pushover_data/
 outputs/
 debug_reactions.csv
 Modelo/
+.claude/
+.agents/
