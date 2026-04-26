@@ -26,9 +26,12 @@ ProjectManager
 ├── pushover_results      # dict o None
 ├── yield_history         # list — estado de fluencia por paso [{ele_tag:{sec_num:{...}}}]
 ├── floor_limit_states    # dict — {y_level: {DL, SL, NC}} primer roof_disp de cada LS
+├── fiber_geometry        # dict — {ele_tag: {sec_num: {y, z, area, sec_tag}}} (primera llamada)
+├── fiber_history         # list — [{ele_tag: {sec_num: [strains]}}] por paso
 ├── pushover_loads        # list
 ├── _ls_pre_existing      # set  — (ele_tag, sec_num, ls) activos bajo gravedad
 ├── _ls_elem_floor_map    # dict — ele_tag → y_level
+├── _ls_section_states    # dict — {(ele_tag, sec_num): "DL"|"SL"|"NC"} estado por sección
 └── _floors_cache         # dict (privado)
 ```
 
@@ -116,6 +119,16 @@ dataChanged = pyqtSignal()  # Emitido cuando los datos cambian
 | `load_project()` | Carga proyecto desde JSON | bool |
 | `new_project()` | Reinicia estado completo | None |
 
+### Fibras (Fiber History)
+
+| Función | Descripción | Retorna |
+|--------|-------------|---------|
+| `capture_fiber_step()` | Consulta `fiberData` de OpenSees para todos los elementos FiberSection activos; almacena geometría (primera vez) y strains por paso en `fiber_history` | None |
+
+`fiber_geometry` se popula solo en la primera llamada (estático); `fiber_history` crece un elemento por paso.
+
+---
+
 ### Detección de Estados Límite EC8
 
 API pública — llamada por `PushoverSolver`:
@@ -136,7 +149,7 @@ Helpers privados (prefijo `_ls_`):
 | `_ls_get_loc()` | Posición normalizada de la sección |
 | `_ls_fiber_mat_tags()` | Lista mat_tags en orden OpenSees |
 | `_ls_get_mz_mat()` | Material Mz de una AggregatorSection |
-| `_ls_yield_fiber()` | Dato de fluencia de FiberSection (para yield_history) |
+| `_ls_yield_fiber()` | Dato de fluencia de FiberSection; lee `_ls_section_states` por sección (no floor-level) |
 | `_ls_yield_aggregator()` | Dato de fluencia de AggregatorSection con signo correcto |
 | `_ls_check_fiber()` | Actualiza floor_result con umbrales Steel01/Concrete01 |
 | `_ls_check_aggregator()` | Actualiza floor_result con umbrales Hysteretic/HystereticSM |
@@ -189,6 +202,7 @@ ProjectManager (Singleton)
 ├── PushoverSolver ──► Llama reset/capture_limit_state_*
 ├── AnimationToolbar ──► Lee yield_history
 ├── PushoverResultsWidget ──► Lee floor_limit_states vía results["limit_states"]
+├── FiberStrainDialog ──► Lee fiber_geometry y fiber_history
 ├── LoadRenderer ──► Lee pushover_loads
 └── ScaleManager ──► autocalculate_scales()
 ```
@@ -199,4 +213,5 @@ ProjectManager (Singleton)
 - [[ModelBuilder]] - Construye modelo desde Manager
 - [[Node]] / [[Element]] / [[Materials]] / [[Sections]] / [[Loads]] - Datos almacenados
 - [[AnimationToolbar]] - Consume resultados
+- [[FiberStrainDialog]] - Visualiza fibras por paso
 - [[MainWindow]] - Recibe dataChanged

@@ -15,8 +15,8 @@ Punto único de entrada para todas las operaciones de análisis. Delega la lógi
 | `build_model()` | Construye el modelo OpenSees completo | None | ModelBuilder |
 | `run_gravity_analysis()` | Ejecuta análisis de gravedad | bool (éxito) | GravitySolver |
 | `get_analysis_results()` | Obtiene resultados de gravedad | dict | GravitySolver |
-| `run_pushover_analysis()` | Ejecuta pushover monotónico | dict | PushoverSolver |
-| `run_adaptive_pushover()` | Ejecuta pushover adaptativo con freeze | dict | PushoverSolver |
+| `run_pushover_analysis(..., progress_callback)` | Ejecuta pushover monotónico; pasa callback al solver | dict | PushoverSolver |
+| `run_adaptive_pushover(..., progress_callback)` | Ejecuta pushover adaptativo con freeze; pasa callback al solver | dict | PushoverSolver |
 | `run_modal_analysis()` | Ejecuta análisis modal | list (períodos) | PushoverSolver |
 | `dump_model_to_file()` | Vuelca modelo a archivo | None | OpenSeesPy |
 

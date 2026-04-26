@@ -13,7 +13,7 @@ Clase abstracta base para cargas.
 
 ## Clases
 
-### NodalLoad
+### NodalLoad → [[NodalLoad]]
 
 Carga puntual aplicada en un nodo.
 
@@ -29,7 +29,7 @@ class NodalLoad(Load):
 | `fy` | Fuerza en Y |
 | `mz` | Momento alrededor de Z |
 
-### ElementLoad
+### ElementLoad → [[ElementLoad]]
 
 Carga distribuida uniforme en elemento.
 
@@ -44,7 +44,7 @@ class ElementLoad(Load):
 | `wx` | Carga distribuida en X (axial) |
 | `wy` | Carga distribuida en Y (transversal) |
 
-### LoadPattern
+### LoadPattern → [[LoadPattern]]
 
 Patrón de carga que agrupa múltiples cargas.
 

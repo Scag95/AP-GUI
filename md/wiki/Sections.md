@@ -46,7 +46,7 @@ class Section:
     __slots__ = ['tag', 'name']
 ```
 
-### FiberSection
+### FiberSection → [[FiberSection]]
 
 Sección de fibra con parches de concreto y capas de acero.
 
@@ -55,7 +55,7 @@ class FiberSection(Section):
     __slots__ = ['patches', 'layers']
 ```
 
-### AggregatorSection
+### AggregatorSection → [[AggregatorSection]]
 
 Sección agregada que combina FiberSection con materiales para otros DOFs.
 
@@ -112,7 +112,7 @@ Section
 ├── Manager.get_all_sections() ──► Lista todas
 ├── ModelBuilder._build_sections() ──► Crea en OpenSees
 ├── Element.mass_density ──► Calculado desde sección
-├── SteelYieldDetector ──► Detecta fluencia por sección
+├── ProjectManager._ls_*() ──► Detecta fluencia y estados límite por sección
 └── SectionDialog ──► UI para crear secciones
 ```
 

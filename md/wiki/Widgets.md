@@ -81,24 +81,29 @@ Dock que muestra propiedades del elemento/nodo seleccionado.
 
 ---
 
-## AnimationToolbar
+## AnimationToolbar → [[AnimationToolbar]]
 
-Barra de herramientas para animación de resultados pushover.
+Barra de herramientas para animación paso a paso de resultados pushover.
 
-**Clase:** `AnimationToolbar`
+**Clase:** `AnimationToolbar(QToolBar)`
+
+**Controles:**
+- `step_label` — etiqueta con el paso actual
+- `step_slider` — `QSlider` horizontal (deshabilitado hasta que haya resultados)
+- `chk_sync` — checkbox "Sincronizar gráficas" (sincroniza con `MomentCurvatureWidget` si está abierto)
 
 **Funciones:**
 
 | Función | Descripción |
 |--------|-------------|
-| `load_pushover_results()` | Carga resultados al slider |
-| `_on_slider_changed()` | Sincroniza todos los viewports |
+| `load_pushover_results()` | Lee `manager.pushover_results["node_displacements"]`, fija el máximo del slider y lo habilita; retorna `bool` |
+| `_on_slider_changed(value)` | Extrae `step_data`, `step_forces`, `step_yield`, `step_frozen`, `frozen_columns` del paso `value`; llama `draw_kinematic_step` + `draw_kinematic_yield_step` en el viewport activo; delega sincronización a `parent_window.sync_animation_step()` |
 
-**Relacionado:** [[ProjectManager]], [[MainWindow]]
+**Relacionado:** [[ProjectManager]], [[MainWindow]], [[StructureInteractor]]
 
 ---
 
-## ScalesPanel
+## ScalesPanel → [[ScalesPanel]]
 
 Panel dock para ajustar multiplicadores de escala visual de renderizado.
 
@@ -133,7 +138,7 @@ Panel dock para ajustar multiplicadores de escala visual de renderizado.
 
 ---
 
-## UnitSpinBox
+## UnitSpinBox → [[UnitSpinBox]]
 
 Spinbox especializado que maneja conversión automática de unidades.
 
@@ -167,115 +172,222 @@ Spinbox especializado que maneja conversión automática de unidades.
 
 ---
 
-## SectionPreview
+## SectionPreview → [[SectionPreview]]
 
-Widget que previsualiza secciones de fibra.
+Widget que previsualiza secciones de fibra (hereda de `pg.PlotWidget`).
 
-**Clase:** `SectionPreview`
+**Clase:** `SectionPreview(pg.PlotWidget)`
 
 **Funciones:**
 
 | Función | Descripción |
 |--------|-------------|
-| `plot_section()` | Dibuja sección |
+| `_setup_ui()` | Crea ítems gráficos: contorno (concreto), barras (acero), flechas de ejes Y/Z |
+| `plot_section(fiber_section)` | Dibuja patches de hormigón y capas de barras; ajusta flechas de ejes dinámicamente |
 
-**Relacionado:** [[Sections]]
+**Elementos gráficos:**
+- `concrete_outline` — `PlotDataItem` con contorno de patches (negro)
+- `steel_bars` — `ScatterPlotItem` en `pxMode=False` (tamaño en metros, rojo)
+- `arrow_y` / `arrow_z` — `ArrowItem` para ejes locales Y (azul) / Z (verde)
+- `label_y` / `label_z` — etiquetas de ejes
+
+**Relacionado:** [[Sections]], [[SectionDialog]]
 
 ---
 
-## SectionForm / AggregatorForm
+## SectionForm / AggregatorForm → [[SectionForms]]
 
 Formularios para creación de secciones.
 
 **Clases:** `SectionForm`, `AggregatorForm`
 
-**Funciones:**
+### SectionForm
+
+Formulario para sección de fibra rectangular con refuerzo en 4 caras.
 
 | Función | Descripción |
 |--------|-------------|
-| `get_data()` | Retorna datos del formulario |
-| `set_data()` | Rellena formulario |
-| `populate_materials()` | Pobla combos de materiales |
+| `populate_materials()` | Pobla combos de `Concrete01` y `Steel01` desde el manager |
+| `get_data()` | Retorna dict con: nombre, b, h, materiales, recubrimiento, barras (qty+diam) por cara, subdivisión nIy/nIz |
+| `set_data(section)` | Reconstruye formulario desde `FiberSection`: detecta patches para b/h, layers por posición geométrica |
+
+**Campos:**
+- Nombre, base (b), altura (h), material concreto, material acero, recubrimiento
+- Refuerzo: superior, inferior, izquierdo, derecho (cantidad + diámetro)
+- Discretización: nIy, nIz (subdivisiones de patch)
+
+### AggregatorForm
+
+Formulario para `SectionAggregator` (sección base + materiales por DOF).
+
+| Función | Descripción |
+|--------|-------------|
+| `populate(manager)` | Pobla combo de secciones base (`FiberSection`) y materiales |
+| `add_aggregation()` | Añade par (material, DOF) validando no repetir DOF |
+| `del_aggregation()` | Elimina par seleccionado |
+| `refresh_list()` | Actualiza `QListWidget` con las agregaciones actuales |
+| `get_data()` | Retorna dict con nombre, `base_section_tag`, lista de `{mat_tag, dof}` |
+| `set_data(section, manager)` | Reconstruye formulario desde `SectionAggregator` |
+
+**DOFs disponibles:** Vy, P, Mz
 
 **Relacionado:** [[Sections]], [[Materials]]
 
 ---
 
-## MaterialForms
+## MaterialForms → [[MaterialForms]]
 
-Formularios para creación de materiales.
+Formularios para creación de materiales. Cada clase implementa `get_data()` y `set_data(material)`.
 
 **Clases:** `ConcreteForm`, `SteelForm`, `ElasticForm`, `HystereticForm`, `HystereticSMForm`
+
+### ConcreteForm — Concrete01
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `spin_rho_c` | UnitSpinBox(DENSITY) | Densidad (default 2500 kg/m³) |
+| `spin_fpc` | UnitSpinBox(STRESS) | Resistencia a compresión (default 25 MPa) |
+| `spin_epsc0` | QDoubleSpinBox | Deformación pico (default 0.002) |
+| `spin_fpcU` | UnitSpinBox(STRESS) | Resistencia al aplastamiento |
+| `spin_epscU` | QDoubleSpinBox | Deformación última (default 0.0035) |
+| Opcionales | - | Envolvente MinMax (min/max strain) |
+
+### SteelForm — Steel01
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `spin_rho_s` | UnitSpinBox(DENSITY) | Densidad (default 7850 kg/m³) |
+| `spin_Fy` | UnitSpinBox(STRESS) | Esfuerzo de fluencia (default 500 MPa) |
+| `spin_E0` | UnitSpinBox(STRESS) | Módulo elástico (default 200 GPa) |
+| `spin_b` | QDoubleSpinBox | Ratio de endurecimiento |
+| Opcionales | - | a1–a4 (endurecimiento isotrópico), MinMax |
+
+### ElasticForm — Elastic
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `spin_rho` | UnitSpinBox(DENSITY) | Densidad |
+| `spin_E` | UnitSpinBox(STRESS) | Módulo elástico |
+
+### HystereticForm — Hysteretic
+
+Tres tabs: **Env. Positiva (+)**, **Env. Negativa (-)**, **Histéresis**.
+- 3 puntos (s, e) por envolvente (esfuerzo en UnitSpinBox(STRESS))
+- pinch_x, pinch_y, damage1, damage2, beta (opcional)
+- Gráfica Matplotlib embebida que se actualiza en tiempo real
+
+### HystereticSMForm — HystereticSM
+
+Igual que `HystereticForm` pero con **4 puntos** por envolvente y unidades en `UnitType.MOMENT` (para leyes momento-curvatura).
 
 **Relacionado:** [[Materials]]
 
 ---
 
-## PropertiesForms
+## PropertiesForms → [[PropertiesForms]]
 
-Formularios para editar propiedades de nodos y elementos.
+Formularios para editar propiedades de nodos y elementos en el `PropertiesPanel`.
 
 **Clases:** `NodeForms`, `ElementForm`
+
+### NodeForms
+
+| Función | Descripción |
+|--------|-------------|
+| `load_node(node)` | Rellena formulario con datos del nodo (coords, fixity, masa) |
+| `apply_changes()` | Guarda cambios en el nodo y emite `dataChanged` |
+| `_on_value_changed()` | Habilita botón "Aplicar" al detectar cambio |
+
+**Señales:** `dataChanged`
+
+**Campos:** Tag (read-only), X, Y (`UnitSpinBox(LENGTH)`), restricciones (fix_x, fix_y, fix_rz), masa nodal opcional (mx, my, mrz en `UnitSpinBox(MASS)`)
+
+### ElementForm
+
+| Función | Descripción |
+|--------|-------------|
+| `load_element(element)` | Rellena formulario; muestra bloque hinge si es `ForceBeamColumnHinge` |
+| `apply_changes()` | Guarda cambios; llama `mark_topology_dirty()` si cambian nodos |
+| `_on_value_changed()` | Habilita botón "Aplicar" |
+
+**Señales:** `dataChanged`
+
+**Campos:** Tag (read-only), nodo_i, nodo_j, sección (combo). Para `ForceBeamColumnHinge`: sección_i, sección_j, Lp_i, Lp_j adicionales.
 
 **Relacionado:** [[Node]], [[Element]]
 
 ---
 
-## CommandLineWidget
+## CommandLineWidget → [[CommandLineWidget]]
 
-Widget de consola de comandos CLI.
+Barra de entrada de comandos CLI con historial y selector de unidades.
 
-**Clase:** `CommandLineWidget`
+**Clases:** `HistoryLineEdit(QLineEdit)`, `CommandLineWidget(QWidget)`
 
-**Señales:**
+### HistoryLineEdit
 
-| Señal | Descripción |
-|-------|-------------|
-| `commandEntered` | Comando ingresado |
-
-**Funciones:**
+`QLineEdit` con navegación por historial mediante flechas ↑↓.
 
 | Función | Descripción |
 |--------|-------------|
-| `log_message()` | Registra mensaje |
+| `keyPressEvent(event)` | Navega por historial con Up/Down; resto delega a QLineEdit |
+| `add_history(text)` | Añade texto al historial (máx. 100 entradas) |
+
+### CommandLineWidget
+
+| Función | Descripción |
+|--------|-------------|
+| `_on_enter()` | Emite `commandEntered`, añade al historial, limpia input |
+| `log_message(message, color, bold)` | Imprime a stdout con prefijo `[INFO]`/`[ERROR]` |
+
+**Señales:** `commandEntered(str)`
+
+**Layout:** `HistoryLineEdit` (stretch=1) + `UnitSelectorWidget` (stretch=0), altura fija 40px
 
 **Relacionado:** [[CommandProcessor]], [[UnitManager]]
 
 ---
 
-## UnitSelectorWidget
+## UnitSelectorWidget → [[UnitSelectorWidget]]
 
-Widget selector de unidad con presets predefinidos.
+Combo de presets de unidades embebido en la barra de comandos.
 
-**Clase:** `UnitSelectorWidget`
+**Clase:** `UnitSelectorWidget(QComboBox)`
 
-**Presets:**
-- kN, m
-- N, mm
-- Ton, m
-- kips, ft
+**Presets disponibles:**
+
+| Label | FORCE | LENGTH | SECTION_DIM | MOMENT | STRESS | DIST_FORCE |
+|-------|-------|--------|-------------|--------|--------|------------|
+| kN, m | kN | m | mm | kNm | MPa | kN/m |
+| N, mm | N | mm | mm | Nm | MPa | N/mm |
+| Ton, m | Ton | m | m | Ton-m | — | Ton/m |
+| kips, ft | kips | ft | in | kip-ft | ksi | kips/ft |
 
 **Funciones:**
 
 | Función | Descripción |
 |--------|-------------|
-| `_apply_preset()` | Aplica preset seleccionado al UnitManager |
+| `_apply_preset(index)` | Aplica el preset al `UnitManager`; bloquea señales de `um` durante la iteración y emite `unitsChanged` al final (evita N refrescos) |
 
-**Relacionado:** [[UnitManager]]
+**Relacionado:** [[UnitManager]], [[CommandLineWidget]]
 
 ---
 
-## CommandConsole
+## CommandConsole → [[CommandConsole]]
 
-Widget de consola de comandos CLI.
+Widget combinado de entrada + salida de comandos CLI (con área de texto de log).
 
-**Clase:** `CommandConsole`
+**Clase:** `CommandConsole(QWidget)`
 
 **Señales:**
 
 | Señal | Descripción |
 |-------|-------------|
-| `commandEntered` | Emite comando ingresado |
+| `commandEntered(str)` | Emite comando cuando el usuario pulsa Enter |
+
+**Atributos:**
+- `history` — lista de comandos anteriores
+- `history_index` — posición en el historial
 
 **Relacionado:** [[CommandProcessor]]
 

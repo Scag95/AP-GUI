@@ -1,3 +1,4 @@
+import math
 import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
 
@@ -49,19 +50,29 @@ class GravitySolver:
                 num_int_pts = getattr(ele,'integration_points')
 
                 loc_forces = ops.eleResponse(ele.tag, 'localForce')
-                shear_constant = loc_forces[1] if (loc_forces and len(loc_forces) >= 6) else 0.0
+
+                ni = self.manager.get_node(ele.node_i)
+                nj = self.manager.get_node(ele.node_j)
+                if ni and nj:
+                    L = math.sqrt((nj.x - ni.x)**2 + (nj.y - ni.y)**2)
+                else:
+                    L = 1.0
 
                 for i in range(1, num_int_pts+1):
                     sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
-                    loc = ops.sectionLocation(ele.tag, i) #Leemos la ubicación del punto de integración.
-                    
+                    loc = ops.sectionLocation(ele.tag, i)
+                    loc_rel = loc / L if L > 1e-9 else 0.0
+
                     if not sec_forces:
                         continue
-                        
+
                     p_val = sec_forces[0]
                     if len(sec_forces) == 2:
                         m_val = sec_forces[1]
-                        v_val = shear_constant
+                        if loc_forces and len(loc_forces) >= 6:
+                            v_val = loc_forces[1] * (1 - loc_rel) + (-loc_forces[4]) * loc_rel
+                        else:
+                            v_val = 0.0
                     elif len(sec_forces) >= 3:
                         m_val = sec_forces[1]
                         v_val = sec_forces[2]

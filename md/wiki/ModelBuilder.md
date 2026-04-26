@@ -40,7 +40,7 @@ Método para pushover adaptativo. Recibe estado deformado y aplica restricciones
 - `fix`: Pattern estático con sp
 - `crosses`: Cruces de San Andrés (Truss)
 
-Retorna: lista de tags de nodos fantasmas creados.
+Retorna: `(ghost_nodes: list[int], cross_pairs: list[tuple])` — nodos fantasmas creados y pares de conectividad para el renderer.
 
 ## Relaciones
 

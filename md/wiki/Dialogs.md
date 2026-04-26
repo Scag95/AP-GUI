@@ -2,7 +2,7 @@
 
 Directorio `src/ui/dialogs/` que contiene los diálogos modales de la aplicación.
 
-## MaterialDialog
+## MaterialDialog → [[MaterialDialog]]
 
 Diálogo para definir materiales estructurales.
 
@@ -25,7 +25,7 @@ Diálogo para definir materiales estructurales.
 
 ---
 
-## SectionDialog
+## SectionDialog → [[SectionDialog]]
 
 Diálogo para crear y modificar secciones.
 
@@ -50,7 +50,7 @@ Diálogo para crear y modificar secciones.
 
 ---
 
-## GeometryDialog
+## GeometryDialog → [[GeometryDialog]]
 
 Diálogo para crear y modificar nodos y elementos.
 
@@ -83,7 +83,7 @@ Diálogo para crear y modificar nodos y elementos.
 
 ---
 
-## PatternDialog
+## PatternDialog → [[PatternDialog]]
 
 Gestor de patrones de carga.
 
@@ -103,7 +103,7 @@ Gestor de patrones de carga.
 
 ---
 
-## NodalLoadsDialog
+## NodalLoadsDialog → [[NodalLoadsDialog]]
 
 Diálogo para asignar cargas nodales.
 
@@ -125,17 +125,38 @@ Diálogo para asignar cargas nodales.
 
 ---
 
-## ElementLoadsDialog
+## ElementLoadsDialog → [[ElementLoadsDialog]]
 
-Diálogo para asignar cargas distribuidas a elementos.
+Diálogo para asignar cargas distribuidas uniformes a elementos de barra.
 
 **Clase:** `ElementLoadsDialog`
 
-**Relacionado:** [[ElementLoad]]
+**Funciones:**
+
+| Función | Descripción |
+|--------|-------------|
+| `populate_patterns()` | Pobla combo con patrones disponibles |
+| `populate_elements()` | Lista elementos (opcionalmente solo con carga) |
+| `select_from_text()` | Selecciona en la lista los IDs escritos en el campo de texto |
+| `_parse_input(text)` | Convierte "1,3-5" en lista de IDs |
+| `apply_loads()` | Crea/reemplaza `ElementLoad` en elementos seleccionados |
+| `clear_loads()` | Elimina cargas de elementos seleccionados |
+| `_remove_load_for_element(element_tag)` | Borra la carga de un elemento del patrón activo |
+| `on_element_selected()` | Rellena spinboxes wx/wy al seleccionar en la lista |
+| `toggle_tags(checked)` | Muestra/oculta etiquetas de elementos en el viewport |
+
+**Controles:**
+- Texto "Elementos (coma/rangos)": selección por ID
+- `chk_assigned_only`: filtra lista a solo los que tienen carga
+- `chk_show_tags`: toggle de etiquetas en el viewport
+- Selector de patrón de carga destino
+- `UnitSpinBox` wx y wy (tipo `DISTRIBUTED_FORCE`)
+
+**Relacionado:** [[ElementLoad]], [[LoadPattern]]
 
 ---
 
-## PushoverDialog
+## PushoverDialog → [[PushoverDialog]]
 
 Diálogo de configuración para análisis pushover.
 
@@ -161,7 +182,7 @@ Diálogo de configuración para análisis pushover.
 
 ---
 
-## PushoverResultsWidget
+## PushoverResultsWidget → [[PushoverResultsWidget]]
 
 Widget para visualizar curvas de capacidad pushover.
 
@@ -187,7 +208,45 @@ Widget para visualizar curvas de capacidad pushover.
 
 ---
 
-## MomentCurvatureWidget
+## FiberStrainDialog → [[FiberStrainDialog]]
+
+Widget MDI (anclable) para visualizar la sección transversal de fibras coloreada por strain en cada paso del pushover.
+
+**Clase:** `FiberStrainDialog(QWidget)`  
+**Archivo:** `src/ui/dialogs/fiber_strain_dialog.py`
+
+**Funciones:**
+
+| Función | Descripción |
+|--------|-------------|
+| `_rebuild_section()` | Reconstruye la escena al cambiar elemento o punto de integración |
+| `_build_shapes(sec)` | Crea rectángulos de fibras y puntos de barras de acero usando definición de sección (outer=nIz, inner=nIy) |
+| `_compute_global_scale()` | Calcula escala simétrica global `±amp` sobre todos los pasos |
+| `_setup_labels()` | Crea `pg.TextItem` por fibra para mostrar el valor de strain |
+| `_update_colors()` | Actualiza colores de fibras y labels para el paso actual |
+| `_fiber_color(strain, fiber_idx)` | Retorna color EC8 (DL/SL/NC) o gradiente azul-blanco-rojo |
+| `_strain_color(strain, vmin, vmax)` | Interpolación lineal de color en escala fría-caliente |
+| `connect_to_animation(anim_toolbar)` | Conecta slider propio al `step_slider` del `AnimationToolbar` |
+| `_on_main_step(value)` | Sincroniza slider local cuando cambia el slider del AnimationToolbar |
+
+**Controles:**
+- Selector de elemento (ForceBeamColumn / ForceBeamColumnHinge)
+- Selector de punto de integración
+- Slider de paso
+- Vista `pg.PlotWidget` con `_PatchItem` (rectángulos de fibras) + `pg.ScatterPlotItem` (barras de acero) + `pg.TextItem` (labels de strain)
+
+**Criterios de color EC8:**
+- Steel01: `ε ≥ Fy/E0` → amarillo (DL)
+- Concrete01: `ε ≥ 0.75×εcu` → naranja (SL), `ε ≥ 1.25×εcu` → rojo (NC)
+- Resto: gradiente azul-blanco-rojo según escala global simétrica
+
+**Nota técnica:** `fiberData` devuelve `z=0` en análisis 2D, por lo que las posiciones se extraen de la definición de sección (`patch.zI + (c+0.5)*dz`), no de las coordenadas de OpenSees.
+
+**Relacionado:** [[ProjectManager]], [[FiberSection]], [[AnimationToolbar]], [[AnalyzeMenu]]
+
+---
+
+## MomentCurvatureWidget → [[MomentCurvatureWidget]]
 
 Widget para análisis momento-curvatura de elementos.
 
@@ -212,7 +271,7 @@ Widget para análisis momento-curvatura de elementos.
 
 ---
 
-## RestraintsDialog
+## RestraintsDialog → [[RestraintsDialog]]
 
 Diálogo para definir restricciones nodales (soportes).
 
@@ -234,7 +293,7 @@ Diálogo para definir restricciones nodales (soportes).
 
 ---
 
-## SelfWeightDialog
+## SelfWeightDialog → [[SelfWeightDialog]]
 
 Diálogo para aplicar peso propio a elementos.
 
@@ -257,7 +316,7 @@ Diálogo para aplicar peso propio a elementos.
 
 ---
 
-## GridDialog
+## GridDialog → [[GridDialog]]
 
 Diálogo para generar mallas de nodos/elementos.
 
@@ -289,7 +348,7 @@ Dialogs
 ├── ProjectManager ──► Almacenan/leer datos
 ├── DefineMenu ──► Abre MaterialDialog, SectionDialog, etc.
 ├── AssignMenu ──► Abre NodalLoadsDialog, ElementLoadsDialog, etc.
-├── AnalyzeMenu ──► Abre PushoverDialog
+├── AnalyzeMenu ──► Abre PushoverDialog, FiberStrainDialog
 └── OpenSeesTranslator ──► Ejecuta análisis
 ```
 

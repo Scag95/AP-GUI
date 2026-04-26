@@ -61,6 +61,10 @@ class AnalyzeMenu(QMenu):
         self.section_results.triggered.connect(lambda: self._show_section_results())
         self.results_menu.addAction(self.section_results)
 
+        self.fiber_strains = QAction("Deformaciones de Fibras", self)
+        self.fiber_strains.triggered.connect(self._show_fiber_strains)
+        self.results_menu.addAction(self.fiber_strains)
+
         self.results_menu.addSeparator()
 
         self.act_clear = QAction("Ocultar Resultados", self)
@@ -152,6 +156,13 @@ class AnalyzeMenu(QMenu):
 
 
     def _show_section_results(self):
-        
+
         widget = MomentCurvatureWidget()
         self.parent().add_tool_window(widget, "Análisis de sección: Momento-Curvatura")
+
+    def _show_fiber_strains(self):
+        from src.ui.dialogs.fiber_strain_dialog import FiberStrainDialog
+        widget = FiberStrainDialog()
+        self.parent().add_tool_window(widget, "Deformaciones de Fibras")
+        if hasattr(self.parent(), 'anim_toolbar'):
+            widget.connect_to_animation(self.parent().anim_toolbar)

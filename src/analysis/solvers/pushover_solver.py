@@ -1,3 +1,4 @@
+import math
 from src.analysis.loads import NodalLoad
 import os
 import openseespy.opensees as ops
@@ -242,21 +243,31 @@ class PushoverSolver:
                 #1. Extracción de las fuerzas en los nodos de los elementos.
                 loc_forces = ops.eleResponse(ele.tag, 'localForce')
 
-                #2. Extracción de lo spuntos de integración (Para construir la curva Momentos/Curvatura)
+                ni = self.manager.get_node(ele.node_i)
+                nj = self.manager.get_node(ele.node_j)
+                if ni and nj:
+                    L = math.sqrt((nj.x - ni.x)**2 + (nj.y - ni.y)**2)
+                else:
+                    L = 1.0
 
+                #2. Extracción de los puntos de integración (Para construir la curva Momentos/Curvatura)
                 for i in range(1, n_pts + 1):
                     sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
                     loc = ops.sectionLocation(ele.tag, i)
+                    loc_rel = loc / L if L > 1e-9 else 0.0
 
                     if not sec_forces:
                         continue
-                    
+
                     #Extraemos Axial y Momento.
                     p_val = sec_forces[0]
                     if len(sec_forces) == 2:
                         m_val = sec_forces[1]
-                        v_val = 0.0 
-                    elif len(sec_forces) >=3:
+                        if loc_forces and len(loc_forces) >= 6:
+                            v_val = loc_forces[1] * (1 - loc_rel) + (-loc_forces[4]) * loc_rel
+                        else:
+                            v_val = 0.0
+                    elif len(sec_forces) >= 3:
                         m_val = sec_forces[1]
                         v_val = sec_forces[2]
                     else:
@@ -335,7 +346,7 @@ class PushoverSolver:
             results_dict["floors"][y]["shear"].append(shear_total)
             results_dict["floors"][y]["H"] = h_floor
 
-    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True, defined_pattern_tag=None, reset_detector=True):
+    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True, defined_pattern_tag=None, reset_detector=True, progress_callback=None):
         """
         Ejecución limpia de un Pushover Monotónico estándar.
         """
@@ -378,7 +389,11 @@ class PushoverSolver:
 
             self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
             self.manager.capture_limit_state_step(results["roof_disp"][-1])
+            self.manager.capture_fiber_step()
             results["frozen_floors_history"].append(frozenset(frozen_floors))
+
+            if progress_callback:
+                progress_callback(i, n_steps)
 
 
             #4. Evaluación paso a paso:
@@ -454,7 +469,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, defined_pattern_tag=None):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, defined_pattern_tag=None, progress_callback=None):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -484,6 +499,12 @@ class PushoverSolver:
         }
 
         frozen_floors = set()
+        current_round = [0]
+
+        def _round_callback(step_in_round, total_in_round):
+            if progress_callback:
+                progress_callback(step_in_round, total_in_round, current_round[0], MAX_ROUND)
+
         print(f"[Adaptative] Iniciando Pushover Adaptativo ({MAX_ROUND} posibles fallos, Dmax={max_disp})")
 
         # Precalcular y congelar la distribución de carga base (antes de cualquier ronda)
@@ -505,6 +526,7 @@ class PushoverSolver:
 
         # --- BUCLE DE RONDAS ADAPTATIVAS ---
         for round_idx in range(MAX_ROUND):
+            current_round[0] = round_idx
             print(f"\n[Adaptive] --- Ronda {round_idx + 1}")
 
             if round_idx > 0:
@@ -526,7 +548,8 @@ class PushoverSolver:
                 precalc_vector=base_force_vector,
                 setup_recorders=False,
                 defined_pattern_tag=defined_pattern_tag,
-                reset_detector=False
+                reset_detector=False,
+                progress_callback=_round_callback
             )
 
             #4. Fusión de Datos
@@ -579,6 +602,13 @@ class PushoverSolver:
 
                 frozen_floors.add(y_fail)
                 consolidated["failed_floors"].append(y_fail)
+
+            # Parar si todos los pisos estructurales están congelados
+            base_y = min(sorted_ys)
+            structural_floors = {y for y in sorted_ys if y > base_y}
+            if frozen_floors >= structural_floors:
+                print("[Adaptive] Todos los pisos estructurales congelados. Fin del análisis.")
+                break
 
             # Con "crosses" la última planta queda arriostrada y el análisis puede continuar
             if freeze_method != "crosses" and sorted_ys[-1] in nuevos_fallos:

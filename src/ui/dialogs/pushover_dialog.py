@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import QSpinBox
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
-                             QComboBox, QPushButton, QCheckBox)
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout,
+                             QComboBox, QPushButton, QCheckBox, QProgressBar, QLabel)
+from PyQt6.QtWidgets import QApplication
 from src.analysis.manager import ProjectManager
 from src.ui.widgets.unit_spinbox import UnitSpinBox
-from src.utils.units import UnitManager
 from src.utils.units import UnitType
 
 class PushoverDialog(QDialog):
@@ -132,11 +132,19 @@ class PushoverDialog(QDialog):
         form_layout.addRow("Visualización:", self.chk_show_loads)
 
         # --- BOTONES ---
-        # Run Button
         self.btn_run = QPushButton("Ejecutar Pushover")
         self.btn_run.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;")
         self.btn_run.clicked.connect(self.run_pushover)
         layout.addWidget(self.btn_run)
+
+        # --- PROGRESO ---
+        self.lbl_progress = QLabel("Ejecutando análisis...")
+        self.lbl_progress.setVisible(False)
+        layout.addWidget(self.lbl_progress)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
 
 
 
@@ -158,7 +166,6 @@ class PushoverDialog(QDialog):
     
     def run_pushover(self):
         from src.analysis.opensees_translator import OpenSeesTranslator
-        um = UnitManager.instance()
 
         #1. Obtenner inputs
         idx = self.combo_node.currentIndex()
@@ -190,18 +197,32 @@ class PushoverDialog(QDialog):
 
         print(f"Lanzando Pushover: Node {control_node}, Disp {max_disp}, Pattern {load_pattern_type}")
 
+        # Activar barra de progreso
+        self.btn_run.setEnabled(False)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(True)
+        self.lbl_progress.setVisible(True)
+        QApplication.processEvents()
 
+        def on_progress(current, total, round_idx=0, total_rounds=1):
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+            if total_rounds > 1:
+                self.lbl_progress.setText(f"Ronda {round_idx + 1} de {total_rounds} | Paso {current} / {total}")
+            else:
+                self.lbl_progress.setText(f"Ejecutando análisis... Paso {current} / {total}")
+            QApplication.processEvents()
 
-        try: 
+        try:
             #Ejecutar lógica backend
             results = None
             if self.chk_adaptive.isChecked():
                 print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
-                
+
                 # Extraer parámetros personalizados si aplica
                 sen = self.spin_sensitivity.value() if self.chk_custom_failure.isChecked() else None
                 drf = self.spin_max_drift.value() if self.chk_custom_failure.isChecked() else None
-                
+
                 # Extraer método de congelamiento escogido
                 idx_method = self.freeze_method_combo.currentIndex()
                 if idx_method == 0: freeze_method = "spring"
@@ -212,13 +233,15 @@ class PushoverDialog(QDialog):
                 results = translator.run_adaptive_pushover(
                     control_node, max_disp, steps, load_pattern_type,
                     sensitivity=sen, freeze_method=freeze_method, max_drift=drf,
-                    defined_pattern_tag=defined_pattern_tag
+                    defined_pattern_tag=defined_pattern_tag,
+                    progress_callback=on_progress
                 )
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
                 results = translator.run_pushover_analysis(
                     control_node, max_disp, steps, load_pattern_type,
-                    defined_pattern_tag=defined_pattern_tag
+                    defined_pattern_tag=defined_pattern_tag,
+                    progress_callback=on_progress
                 )
 
             if results:
@@ -239,11 +262,14 @@ class PushoverDialog(QDialog):
                 # Pasamos también el estado inicial del checkbox para que el result_dialog arranque sincronizado
                 widget = PushoverResultsWidget(results, self.chk_show_loads.isChecked())
                 if hasattr(self.parent(), 'add_tool_window'):
-                    self.parent().add_tool_window(widget,"Curva de Capacidad (Pushover)")
-
+                    self.parent().add_tool_window(widget, "Curva de Capacidad (Pushover)")
+                self.accept()
 
         except Exception as e:
             print(f"Error crítico en Pushover: {e}")
             import traceback
             traceback.print_exc()
+            self.btn_run.setEnabled(True)
+            self.progress_bar.setVisible(False)
+            self.lbl_progress.setVisible(False)
 

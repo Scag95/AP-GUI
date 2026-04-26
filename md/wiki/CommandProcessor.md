@@ -17,7 +17,14 @@ CommandProcessor()  # No es singleton, se instancia en MainWindow
 
 | Función | Descripción | Retorna |
 |--------|-------------|---------|
-| `process_command()` | Procesa comando y retorna mensaje/acción | tuple(msg, action) |
+| `process_command(command_str: str)` | Divide en `verb + args`, selecciona rama de comando y retorna resultado | `tuple(msg: str, action: dict\|None)` |
+
+**Firma interna:**
+```python
+parts = command_str.split()
+verb  = parts[0].lower()   # ej. "scale", "show"
+args  = parts[1:]           # ej. ["moment", "0.5"]
+```
 
 ## Comandos Disponibles
 

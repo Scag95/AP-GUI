@@ -17,6 +17,112 @@ Cada entrada sigue el formato:
 - `refactor` - Reestructuración de la wiki
 - `migration` - Movimiento de archivos
 
+### [2026-04-26] feat | FiberStrainDialog: visualización de fibras por paso pushover + fix _ls_yield_fiber
+
+**Archivos fuente modificados:**
+
+- `manager.py` — Fix `_ls_yield_fiber`: reemplaza lectura de `floor_limit_states` (nivel piso) por `_ls_section_states[(ele_tag, sec_num)]` para que cada bisagra se coloree de forma independiente. Nuevos atributos `fiber_geometry` y `fiber_history`. Nuevo método `capture_fiber_step()`: consulta `fiberData` de OpenSees para todos los elementos FiberSection, guarda geometría en la primera llamada y strains por paso.
+- `pushover_solver.py` — Llama `manager.capture_fiber_step()` tras cada paso, junto a `capture_limit_state_step`.
+- `fiber_strain_dialog.py` (nuevo) — `FiberStrainDialog(QWidget)` anclable en MDI. Renderiza sección 2D con `_PatchItem(pg.GraphicsObject)` (rectángulos exactos, sin gaps). Posiciones calculadas desde definición de sección (loop outer=nIz, inner=nIy) porque `fiberData` devuelve z=0 en 2D. Escala global simétrica `±amp`. Labels de strain con `pg.TextItem`. Colores EC8 (DL/SL/NC) por tipo de material; fallback gradiente azul-blanco-rojo. Slider sincronizado con `AnimationToolbar.step_slider`.
+- `analyze_menu.py` — Acción "Deformaciones de Fibras" en submenú "Ver Resultados". Abre `FiberStrainDialog` vía `add_tool_window` y llama `connect_to_animation(anim_toolbar)`.
+
+**Páginas wiki actualizadas:** `ProjectManager`, `Solvers`, `AnalyzeMenu`, `Dialogs`, nueva `FiberStrainDialog`.
+
+---
+
+### [2026-04-26] update | Correcciones diagrama de cortante, barra de progreso pushover y monitor de fallos
+
+**Archivos fuente modificados:**
+
+- `gravity_solver.py` — Cortante interpolado linealmente desde `localForce`, normalizado por longitud L del elemento (`loc_rel = loc/L`). Antes usaba valor constante del extremo I para todos los puntos.
+- `pushover_solver.py` — Misma corrección de normalización en `_get_all_element_forces()`. Añadido `progress_callback` a `run_pushover` y `run_adaptative_pushover`. El adaptativo reporta progreso por ronda `(step, total, round_idx, MAX_ROUND)` y para automáticamente cuando todos los pisos estructurales están congelados.
+- `failure_detector.py` — Monitor reformateado: imprime una sola vez al detectar fallos nuevos (usa `reported_floors`). `_calculate_tangent_stiffness` usa últimos 2 puntos.
+- `pushover_dialog.py` — Añadida `QProgressBar` + `QLabel` de estado. Botón deshabilitado durante análisis. Dialog se cierra automáticamente (`accept()`) al terminar con éxito.
+- `opensees_translator.py` — `run_pushover_analysis` y `run_adaptive_pushover` aceptan y propagan `progress_callback`.
+
+**Páginas wiki actualizadas:** `GravitySolver`, `PushoverSolver`, `FailureDetector`, `PushoverDialog`, `OpenSeesTranslator`.
+
+---
+
+### [2026-04-25] ingest | Creación de 39 páginas wiki individuales + links bidireccionales
+
+**Objetivo:** Cada `[[WikiLink]]` referenciado en páginas de índice (Dialogs, Menus, Widgets, Solvers, Visualizers, Loads, Element, Sections) debe tener su propio archivo `.md`.
+
+**Archivos creados (39):**
+
+Diálogos: `MaterialDialog`, `SectionDialog`, `GeometryDialog`, `PatternDialog`, `NodalLoadsDialog`, `ElementLoadsDialog`, `RestraintsDialog`, `PushoverDialog`, `GridDialog`, `SelfWeightDialog`, `MomentCurvatureWidget`, `PushoverResultsWidget`
+
+Menús: `FileMenu`, `DefineMenu`, `AssignMenu`, `AnalyzeMenu`, `ToolsMenu`
+
+Widgets: `AnimationToolbar`, `CommandLineWidget`, `MaterialForms`, `SectionForms`, `SectionPreview`, `ScalesPanel`, `UnitSpinBox`, `PropertiesPanel`, `UnitSelectorWidget`, `CommandConsole`, `PropertiesForms`
+
+Solvers: `GravitySolver`, `PushoverSolver`, `FailureDetector`, `LoadPushoverGenerator`, `PushoverConfigurator`
+
+Loads: `NodalLoad`, `ElementLoad`, `LoadPattern`
+
+Visualizers: `ModelRenderer`, `LoadRenderer`, `DeformationRenderer`, `ForceDiagramRenderer`, `YieldRenderer`
+
+Elementos/Secciones: `ForceBeamColumn`, `ForceBeamColumnHinge`, `FiberSection`, `AggregatorSection`
+
+**Bidireccionalidad:** Actualizado encabezado `## X → [[X]]` en: `Dialogs.md`, `Menus.md`, `Widgets.md`, `Solvers.md`, `Visualizers.md`, `Loads.md`, `Element.md`, `Sections.md`.
+
+---
+
+### [2026-04-25] update | Auditoría completa de archivos .py — cobertura 100%
+
+**Método:** `find src/ -name "*.py"` (57 archivos) comparado con entradas wiki.
+
+**Resultado:** Los 5 `__init__.py` están vacíos y no requieren entrada. Los 52 archivos con contenido **todos tienen entrada wiki**. No faltaba ningún archivo.
+
+**Entradas enriquecidas (estaban presentes pero escasas):**
+- `Visualizers.md` — `ModelRenderer`: añadidos atributos de estilos, símbolos de nodo por fixity, `highlight_node()`. `LoadRenderer`: añadidos `_draw_nodal_load()`, `_draw_element_load()`, detalle de vectorización con `PlotCurveItem(connect='pairs')`. `DeformationRenderer`: añadidos atributos, `_compute_beam_curve()`, `_on_hover()`, algoritmo de Hermite.
+- `Widgets.md` — `AnimationToolbar`: controles detallados (`chk_sync`), descripción completa de `_on_slider_changed`. `UnitSelectorWidget`: corregida herencia (`QComboBox`), tabla completa de presets, detalle de bloqueo de señales.
+
+---
+
+### [2026-04-25] update | Auditoría completa de clases — cobertura 100%
+
+**Método:** `grep -rn "^class "` en `src/` comparado con entradas wiki.
+
+**Clase faltante encontrada:** `MassivePolygonsItem(pg.GraphicsObject)` en `force_diagram_renderer.py`
+
+**Cambios:**
+- `Visualizers.md` — Añadida sección `MassivePolygonsItem` (atributos, métodos, propósito). Mejorada `ForceDiagramRenderer`: firma completa de `draw_diagrams` y `_draw_element_diagram_detailed`, tabla de tipos con colores/escalas/unidades, estrategia de cortante documentada.
+
+**Resultado:** 76 clases en `src/` (excl. Modelo), todas con entrada en la wiki.
+
+---
+
+### [2026-04-25] update | Revisión completa de wiki — todos los nodos vacios completados
+
+**Archivos wiki modificados:** `Menus.md`, `Dialogs.md`, `Widgets.md`, `Arquitectura.md`, `ModelBuilder.md`, `Element.md`, `Sections.md`, `CommandProcessor.md`
+
+**Cambios (segunda pasada):**
+
+- `Menus.md` — `AssignMenu`: funciones + tabla de acciones. `ToolsMenu`: funciones + submenú Cargas. `DefineMenu`: tabla de acciones + `setup_actions()`. `FileMenu`: tabla de acciones + `setup_actions()` + acción Salir. `AnalyzeMenu`: funciones con descripciones detalladas e indicación de atajo F5.
+- `Arquitectura.md` — Eliminado `steel_yield_detector.py` (ya no existe; reemplazado por `ProjectManager._ls_*`).
+- `ModelBuilder.md` — Corregido retorno de `freeze_floor()`: `(ghost_nodes, cross_pairs)`.
+- `Element.md` / `Sections.md` — Referencias a `SteelYieldDetector` actualizadas a `ProjectManager._ls_*()`.
+- `CommandProcessor.md` — Firma completa de `process_command()` con estructura interna.
+
+---
+
+### [2026-04-25] update | Nodos vacíos de wiki completados
+
+**Archivos wiki modificados:** `Dialogs.md`, `Widgets.md`
+
+**Cambios:**
+
+- `Dialogs.md` — `ElementLoadsDialog`: añadidas funciones (`populate_patterns`, `populate_elements`, `select_from_text`, `_parse_input`, `apply_loads`, `clear_loads`, `on_element_selected`, `toggle_tags`) y descripción de controles.
+- `Widgets.md` — `MaterialForms`: documentadas las 5 clases (`ConcreteForm`, `SteelForm`, `ElasticForm`, `HystereticForm`, `HystereticSMForm`) con campos y unidades.
+- `Widgets.md` — `PropertiesForms`: documentadas `NodeForms` y `ElementForm` con funciones y señales.
+- `Widgets.md` — `SectionForm / AggregatorForm`: ampliado con detalle de `SectionForm.set_data` (detección geométrica de layers) y `AggregatorForm` completo (añadir/eliminar DOFs).
+- `Widgets.md` — `SectionPreview`: añadida `_setup_ui()`, elementos gráficos y comportamiento `pxMode=False`.
+- `Widgets.md` — `CommandLineWidget`: añadida clase `HistoryLineEdit` con `keyPressEvent` y `add_history`.
+- `Widgets.md` — `CommandConsole`: añadidos atributos `history` e `history_index`.
+
+---
+
 ### [2026-04-25] fix | Cruces de San Andrés en pushover adaptativo
 
 **Archivos modificados:** `model_builder.py`, `pushover_solver.py`, `yield_renderer.py`, `structure_interactor.py`, `animation_toolbar.py`

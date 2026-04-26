@@ -4,7 +4,7 @@ Directorio `src/analysis/solvers/` que contiene los solvers especializados para 
 
 ## Clases
 
-### GravitySolver
+### GravitySolver → [[GravitySolver]]
 
 Ejecuta análisis de gravedad básico con Newton-Raphson.
 
@@ -18,7 +18,7 @@ class GravitySolver:
 | `run()` | Ejecuta análisis estático | bool |
 | `get_results()` | Extrae desplazamientos, reacciones, fuerzas | dict |
 
-### PushoverSolver
+### PushoverSolver → [[PushoverSolver]]
 
 Orquestador principal del análisis pushover.
 
@@ -44,7 +44,7 @@ class PushoverSolver:
 | `_merge_results()` | Une resultados de rondas | None |
 | `_get_deformed_floor_state()` | Extrae estado deformado | list |
 
-### FailureDetector
+### FailureDetector → [[FailureDetector]]
 
 Detecta mecanismos de colapso analizando drifts y cambios de velocidad de rigidez.
 
@@ -72,7 +72,7 @@ class FloorFailureState:
     current_drift: float  # Deriva actual
 ```
 
-### LoadPushoverGenerator
+### LoadPushoverGenerator → [[LoadPushoverGenerator]]
 
 Genera vectores de carga lateral.
 
@@ -96,7 +96,7 @@ class LoadPatternResult:
     periods: List[float]            # Períodos fundamentales
 ```
 
-### PushoverConfigurator
+### PushoverConfigurator → [[PushoverConfigurator]]
 
 Configura el sistema de ecuaciones y algoritmos de OpenSees.
 
@@ -128,7 +128,8 @@ PushoverSolver.run_adaptative_pushover()
             │   ├─► for step in steps:
             │   │   ├─► PushoverConfigurator.run_static_step_with_fallback()
             │   │   ├─► _capture_step_state()
-            │   │   └─► manager.capture_limit_state_step(roof_disp)
+            │   │   ├─► manager.capture_limit_state_step(roof_disp)
+            │   │   └─► manager.capture_fiber_step()
             │   └─► FailureDetector.analyze()
             ├─► _merge_results()
             └─► if nuevos_fallos:
@@ -151,8 +152,11 @@ Solvers
 │   ├─ pushover_results
 │   ├─ yield_history          ← construido en capture_limit_state_step()
 │   ├─ floor_limit_states     ← DL/SL/NC por planta
+│   ├─ fiber_geometry         ← geometría de fibras (primera vez)
+│   ├─ fiber_history          ← strains por paso (capture_fiber_step)
 │   └─ pushover_loads
 ├── AnimationToolbar ──► Consume manager.yield_history
+├── FiberStrainDialog ──► Consume fiber_geometry y fiber_history
 └── LoadRenderer ──► Dibuja pushover_loads
 ```
 
@@ -163,3 +167,4 @@ Solvers
 - [[ProjectManager]] - Almacena resultados
 - [[PushoverDialog]] - UI para configurar pushover
 - [[AnimationToolbar]] - Consume resultados
+- [[FiberStrainDialog]] - Consume fiber_history por paso
