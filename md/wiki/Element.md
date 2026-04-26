@@ -24,7 +24,7 @@ class Element:
 
 ---
 
-## ForceBeamColumn
+## ForceBeamColumn → [[ForceBeamColumn]]
 
 Elemento viga-columna con integración de Gauss-Lobatto.
 
@@ -50,7 +50,7 @@ class ForceBeamColumn(Element):
 
 ---
 
-## ForceBeamColumnHinge
+## ForceBeamColumnHinge → [[ForceBeamColumnHinge]]
 
 Elemento viga-columna con bisagras plásticas en los extremos (integración HingeRadau).
 
@@ -91,7 +91,7 @@ Element
 ├── Manager.get_all_elements() ──► Lista todos
 ├── Manager.get_floor_data() ──► Clasifica por planta
 ├── ModelBuilder._build_elements() ──► Crea en OpenSees
-├── SteelYieldDetector.capture_step() ──► Lee resultados
+├── ProjectManager._ls_*() ──► Lee resultados de fibra (yield/limit states)
 └── FailureDetector ──► Analiza fuerzas
 ```
 

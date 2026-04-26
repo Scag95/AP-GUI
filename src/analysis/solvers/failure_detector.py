@@ -17,6 +17,7 @@ class FailureDetector:
         self.sensitivity = sensitivity
         self.max_drift = max_drift
         self.cached_k_ini = {} # Memoria de rigidez elástica global original
+        self.reported_floors: set = set() # Pisos ya impresos en el monitor
 
     def analyze(self, results: Dict[str, Any]) -> List[FloorFailureState]:
         """
@@ -25,60 +26,56 @@ class FailureDetector:
         """
 
         failed_floors: List[FloorFailureState] = []
+        floor_states = []
 
         for y, data in results["floors"].items():
             disps = data["disp"]
             shears = data["shear"]
             H = data.get("H", 0.0)
 
-            # Filtro : Necesitamos suficiente historia de pasos en la ronda 
-
             if len(disps) < 100:
                 continue
 
-            #1. Extraemos las magnitudes netas a través de nuestros helpers
             if y not in self.cached_k_ini:
                 self.cached_k_ini[y] = self._calculate_initial_stiffness(disps, shears)
-                
+
             k_ini = self.cached_k_ini[y]
             k_tan = self._calculate_tangent_stiffness(disps, shears)
             current_drift = disps[-1]
+            step = len(disps)
+            drift_ratio = abs(current_drift) / H if H > 0 else 0
 
-            # --- MONITOR DE SIGNOS VITALES ---
-            step_actual = len(disps)
-            if step_actual % 50 == 0 or step_actual > 10000:
-                ratio = (k_tan / k_ini) * 100 if k_ini > 0 else 0
-                print(f"[Monitor] Planta Y={y} | Paso: {step_actual} | Deriva: {current_drift:.5f} m | K_tan: {ratio:.2f}% de la inicial")
-            # ----------------------------------------
-
-            #2. Evaluacióndel Mecanismo (Basta con que la rigidez tangente sea menor a la tolerancia elástica)
             is_flat = k_tan < (self.sensitivity * k_ini)
+            is_excessive_drift = self.max_drift is not None and H > 0 and drift_ratio > self.max_drift
+            is_failed = is_flat or is_excessive_drift
 
-            #3. Evaculación de la deriva.
-            is_excessive_drift = False 
+            floor_states.append({
+                "y": y, "step": step, "drift": current_drift,
+                "drift_pct": drift_ratio * 100, "k_ini": k_ini,
+                "k_tan": k_tan, "failed": is_failed
+            })
 
-            if self.max_drift is not None and H > 0:
-                drift_ratio = abs(current_drift)/H
-                is_excessive_drift = drift_ratio > self.max_drift
-
-            #4. Empaquetar y reportar si se activó el fallo
-            if is_flat or is_excessive_drift:
-                #Construimos un string dinámico con el motivo exacto del fallo
+            if is_failed:
                 causes = []
-                drift_pct = (abs(current_drift) / H) * 100 if H > 0 else 0
                 if is_flat:
                     ratio = (k_tan / k_ini) * 100 if k_ini > 0 else 0
-                    causes.append(f"Rigidez ({ratio:.1f}%) | Deriva ({drift_pct:.2f}%)")
+                    causes.append(f"Rigidez ({ratio:.1f}%)")
                 if is_excessive_drift:
-                    causes.append(f"Deriva Excesiva ({drift_pct:.2f}%)")
-                failure_state = FloorFailureState(
-                    y_level = y,
-                    cause = " | ".join(causes),
-                    k_ini = k_ini,
-                    k_tan = k_tan,
-                    current_drift = current_drift
-                )
-                failed_floors.append(failure_state)
+                    causes.append(f"Deriva Excesiva ({drift_ratio * 100:.2f}%)")
+                failed_floors.append(FloorFailureState(
+                    y_level=y, cause=" | ".join(causes),
+                    k_ini=k_ini, k_tan=k_tan, current_drift=current_drift
+                ))
+
+        new_failures = {s["y"] for s in floor_states if s["failed"] and s["y"] not in self.reported_floors}
+        if new_failures:
+            self.reported_floors |= new_failures
+            for s in sorted(floor_states, key=lambda x: x["y"]):
+                label = "[Fallo]" if s["failed"] else "[OK]   "
+                ratio = (s["k_tan"] / s["k_ini"]) * 100 if s["k_ini"] > 0 else 0
+                print(f"{label} Planta Y={s['y']:5.2f} m | Paso: {s['step']:5d} | "
+                      f"Deriva: {s['drift']:.5f} m ({s['drift_pct']:.2f}%) | "
+                      f"K_tan/K_ini: {ratio:6.2f}%")
 
         return failed_floors
 
@@ -102,8 +99,8 @@ class FailureDetector:
         lineal simple de los últimos 5 puntyos para la estabilidad numérica.
         """
 
-        d_last = disps[-5:]
-        v_last = shears[-5:]
+        d_last = disps[-2:]
+        v_last = shears[-2:]
 
         dq_tan = d_last[-1] - d_last[0]
         dv_tan = v_last[-1] - v_last[0]

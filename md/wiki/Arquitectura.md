@@ -51,9 +51,8 @@ AP-GUI es una aplicación de escritorio para análisis estructural 2D desarrolla
 | `command_processor.py` | CommandProcessor | Comandos CLI | Manager |
 | `solvers/gravity_solver.py` | GravitySolver | Análisis de gravedad | Manager |
 | `solvers/pushover_solver.py` | PushoverSolver | Análisis pushover | Manager |
-| `solvers/failure_detector.py` | FailureDetector | Detecta mecanismos | PushoverSolver |
-| `solvers/steel_yield_detector.py` | SteelYieldDetector | Detecta fluencia | PushoverSolver |
-| `solvers/load_generator.py` | LoadPushoverGenerator | Genera vectores de carga | PushoverSolver |
+| `solvers/failure_detector.py` | FailureDetector | Detecta mecanismos de colapso | PushoverSolver |
+| `solvers/load_generator.py` | LoadPushoverGenerator | Genera vectores de carga lateral | PushoverSolver |
 | `solvers/pushover_configurator.py` | PushoverConfigurator | Configura análisis | PushoverSolver |
 
 ### src/ui/ - Interfaz Gráfica

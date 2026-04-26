@@ -4,7 +4,6 @@ from src.utils.units import UnitManager, UnitType
 from src.utils.scale_manager import ScaleManager
 import math
 
-from PyQt6.QtWidgets import QGraphicsPolygonItem
 from PyQt6.QtGui import QPolygonF, QColor, QPen, QBrush, QFont 
 from PyQt6.QtCore import QPointF, QRectF
 
@@ -82,36 +81,19 @@ class ForceDiagramRenderer:
             # Verificamos si es un diccionario nuevo (tiene 'sections') o si es el código viejo
             if isinstance(element_data, dict) and 'sections' in element_data:
                 sections_data = element_data['sections']
-                local_forces = element_data.get('localForce', [])
             else:
-                # Fallback por si intentas renderizar pasos de análisis viejos en caché
                 sections_data = element_data
-                local_forces = []
             # 2. Reconstrucción lógica dependiendo del tipo de gráfico
-            if type in ['M', 'P']:
-                # El Momento y la Fuerza Axial siguen usando los puntos interiores (Curvatura)
+            if type in ['M', 'P', 'V']:
                 lobatto_locs = [s['loc'] for s in sections_data]
                 if type == 'M':
                     values = [-1 * s['M'] for s in sections_data]
-                else: 
+                elif type == 'V':
+                    values = [s['V'] for s in sections_data]
+                else:
                     values = [s['P'] for s in sections_data]
-                
+
                 self._draw_element_diagram_detailed(plot_widget, ele, values, lobatto_locs, scale_factor, color, u_type, polygons_buffer)
-            elif type == 'V':
-                # 3. La MAGIA DEL CORTANTE: Usamos estática global usando solo los extremos
-                if len(local_forces) >= 6:
-                    v_i = local_forces[1]
-                    v_j = local_forces[4] # En OpenSees 2D, el índice 4 es el Cortante en el nodo J
-                    
-                    # Dibujamos una línea recta perfecta desde el Nodo I al Nodo J usando L relativa [0.0, 1.0]
-                    locs = [0.0, 1.0]
-                    
-                    # En diagramas de cortante típicos (dependiendo de tu convención de signos):
-                    # v_i suele ser positivo hacia arriba y v_j es "la reacción en el otro lado".
-                    # Enviamos ambos para que trace la línea recta que los une:
-                    values = [v_i, -v_j] 
-                    
-                    self._draw_element_diagram_detailed(plot_widget, ele, values, locs, scale_factor, color, u_type, polygons_buffer)
 
         # 3. Dibujar TODOS los polígonos del modelo de una sola vez sumados linealmente
         if polygons_buffer:

@@ -30,9 +30,14 @@ class ProjectManager(QObject):
         self.yield_history = []
 
         # Estados Límite (EC8)
-        self.floor_limit_states: dict = {}
-        self._ls_pre_existing: set   = set()
+        self.floor_limit_states: dict  = {}
+        self._ls_pre_existing: set    = set()
         self._ls_elem_floor_map: dict = {}
+        self._ls_section_states: dict = {}  # {(ele_tag, sec_num): "DL"|"SL"|"NC"}
+
+        # Historial de deformaciones de fibras por paso
+        self.fiber_geometry: dict = {}   # {ele_tag: {sec_num: {"y":[..], "z":[..], "area":[..]}}}
+        self.fiber_history:  list = []   # [{ele_tag: {sec_num: [strain, ...]}}]  — un dict por paso
 
         # Almacén Cargas Temporales Pushover
         self.pushover_loads = []
@@ -441,6 +446,8 @@ class ProjectManager(QObject):
         self.floor_limit_states.clear()
         self._ls_pre_existing.clear()
         self._ls_elem_floor_map.clear()
+        self.fiber_geometry.clear()
+        self.fiber_history.clear()
         self.pushover_loads.clear()
         
         # Reiniciar contadores
@@ -467,6 +474,7 @@ class ProjectManager(QObject):
         self.floor_limit_states.clear()
         self._ls_pre_existing.clear()
         self._ls_elem_floor_map.clear()
+        self._ls_section_states.clear()
         self._ls_build_floor_map()
 
     def capture_limit_state_baseline(self):
@@ -541,7 +549,53 @@ class ProjectManager(QObject):
             if ele_yield:
                 step_yield[ele.tag] = ele_yield
 
+        # Garantizar jerarquía DL ≤ SL ≤ NC: si un estado superior se activa
+        # antes que uno inferior (p.ej. hormigón llega a εSL antes de que el
+        # acero fluya), el estado inferior se marca en el mismo paso.
+        for floor_rs in self.floor_limit_states.values():
+            if floor_rs["NC"] is not None and floor_rs["SL"] is None:
+                floor_rs["SL"] = floor_rs["NC"]
+            if floor_rs["SL"] is not None and floor_rs["DL"] is None:
+                floor_rs["DL"] = floor_rs["SL"]
+
         self.yield_history.append(step_yield)
+
+    def capture_fiber_step(self):
+        """Captura fiberData de todas las FiberSection en el paso actual del pushover."""
+        import openseespy.opensees as ops
+        from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
+        from src.analysis.sections import FiberSection
+
+        step_data: dict = {}
+        for ele in self.get_all_elements():
+            if not isinstance(ele, (ForceBeamColumn, ForceBeamColumnHinge)):
+                continue
+            for sec_num in range(1, ele.integration_points + 1):
+                sec_tag = self._ls_get_sec_tag(ele, sec_num)
+                if sec_tag is None:
+                    continue
+                sec = self.get_section(sec_tag)
+                if not isinstance(sec, FiberSection):
+                    continue
+                try:
+                    raw = ops.eleResponse(ele.tag, 'section', sec_num, 'fiberData')
+                except Exception:
+                    continue
+                if not raw:
+                    continue
+                n = len(raw) // 5
+                if ele.tag not in self.fiber_geometry:
+                    self.fiber_geometry[ele.tag] = {}
+                if sec_num not in self.fiber_geometry[ele.tag]:
+                    self.fiber_geometry[ele.tag][sec_num] = {
+                        "y":    [raw[i * 5]     for i in range(n)],
+                        "z":    [raw[i * 5 + 1] for i in range(n)],
+                        "area": [raw[i * 5 + 2] for i in range(n)],
+                        "sec_tag": sec_tag,
+                    }
+                strains = [raw[i * 5 + 4] for i in range(n)]
+                step_data.setdefault(ele.tag, {})[sec_num] = strains
+        self.fiber_history.append(step_data)
 
     def get_floor_limit_states(self) -> dict:
         return {y: dict(d) for y, d in self.floor_limit_states.items()}
@@ -616,8 +670,9 @@ class ProjectManager(QObject):
         if not raw:
             return None
 
-        mat_tags  = self._ls_fiber_mat_tags(fiber_sec)
-        max_ratio = 0.0
+        # Ratio de fluencia del acero (intensidad visual)
+        mat_tags   = self._ls_fiber_mat_tags(fiber_sec)
+        max_ratio  = 0.0
         max_strain = 0.0
         for i in range(min(len(raw) // 5, len(mat_tags))):
             strain = raw[i * 5 + 4]
@@ -629,10 +684,22 @@ class ProjectManager(QObject):
             if ratio > max_ratio:
                 max_ratio, max_strain = ratio, strain
 
-        if max_ratio > 0:
-            return {"ratio": max_ratio, "strain": max_strain,
-                    "loc": self._ls_get_loc(ele, sec_num), "limit_state": "DL"}
-        return None
+        # Estado límite por sección (granularidad fina, no todo el piso a la vez)
+        sec_key    = (ele.tag, sec_num)
+        section_ls = self._ls_section_states.get(sec_key)
+
+        if section_ls == "NC":
+            limit_state = "NC"
+        elif section_ls == "SL":
+            limit_state = "SL"
+        elif max_ratio >= 1.0:
+            limit_state = "DL"
+        else:
+            return None
+
+        return {"ratio": max(max_ratio, 1.0), "strain": max_strain,
+                "loc": self._ls_get_loc(ele, sec_num),
+                "limit_state": limit_state}
 
     def _ls_yield_aggregator(self, ele, sec_num: int, sec):
         import openseespy.opensees as ops
@@ -682,23 +749,33 @@ class ProjectManager(QObject):
         eps_sl   = self.SL_FACTOR * self.EPSC_U
         eps_nc   = self.NC_FACTOR * self.EPSC_U
 
+
         for i in range(n):
             strain = abs(raw[i * 5 + 4])
             mat    = self.get_material(mat_tags[i])
             if mat is None:
                 continue
+            sec_key = (ele.tag, sec_num)
             if isinstance(mat, Steel01):
                 eps_y = mat.get_yield_strain()
                 if (eps_y and floor_result["DL"] is None and strain >= eps_y
                         and (ele.tag, sec_num, "DL") not in self._ls_pre_existing):
                     floor_result["DL"] = roof_disp
+                if (eps_y and strain >= eps_y
+                        and self._ls_section_states.get(sec_key) is None):
+                    self._ls_section_states[sec_key] = "DL"
             elif isinstance(mat, Concrete01):
-                if (floor_result["SL"] is None and strain >= eps_sl
-                        and (ele.tag, sec_num, "SL") not in self._ls_pre_existing):
-                    floor_result["SL"] = roof_disp
-                if (floor_result["NC"] is None and strain >= eps_nc
+                if (strain >= eps_nc
                         and (ele.tag, sec_num, "NC") not in self._ls_pre_existing):
-                    floor_result["NC"] = roof_disp
+                    if floor_result["NC"] is None:
+                        floor_result["NC"] = roof_disp
+                    self._ls_section_states[sec_key] = "NC"
+                elif (strain >= eps_sl
+                        and (ele.tag, sec_num, "SL") not in self._ls_pre_existing):
+                    if floor_result["SL"] is None:
+                        floor_result["SL"] = roof_disp
+                    if self._ls_section_states.get(sec_key) != "NC":
+                        self._ls_section_states[sec_key] = "SL"
 
     def _ls_check_aggregator(self, ele, sec_num: int, sec, floor_result: dict, roof_disp: float):
         import openseespy.opensees as ops

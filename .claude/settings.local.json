@@ -7,7 +7,9 @@
       "WebFetch(domain:openseespydoc.readthedocs.io)",
       "WebFetch(domain:opensees.berkeley.edu)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:opensees.github.io)"
+      "WebFetch(domain:opensees.github.io)",
+      "Bash(xargs wc *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

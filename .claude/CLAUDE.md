@@ -50,6 +50,10 @@ md/
    - Diagrama de relaciones con otros archivos
    - Enlaces `[[WikiLink]]` a archivos relacionados
 
+3. **Relaciones bidireccionales:**
+   - Si la página A menciona a B en su sección "Relacionado Con", la página B debe mencionar a A también.
+   - Al actualizar una página, revisar todas las páginas referenciadas y añadir el enlace inverso si no existe.
+
 3. **Workflow por defecto:**
    - Lees/modificas código en `src/`
    - **NO actualices la wiki durante el trabajo** — solo al cerrar sesión
