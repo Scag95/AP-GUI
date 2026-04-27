@@ -714,36 +714,34 @@ class ProjectManager(QObject):
         if not raw:
             return None
 
-        # Ratio de fluencia del acero (intensidad visual)
-        mat_tags   = self._ls_fiber_mat_tags(fiber_sec)
-        max_ratio  = 0.0
-        max_strain = 0.0
+        mat_tags = self._ls_fiber_mat_tags(fiber_sec)
+        loc = self._ls_get_loc(ele, sec_num)
+        results = []
+
         for i in range(min(len(raw) // 5, len(mat_tags))):
             strain = raw[i * 5 + 4]
-            mat    = self.get_material(mat_tags[i])
-            eps_y  = mat.get_yield_strain() if mat else None
-            if not eps_y or eps_y <= 0:
+            ls = self.get_fiber_limit_state(ele.tag, sec_num, i, strain)
+            if ls == "OK":
                 continue
-            ratio = abs(strain) / eps_y
-            if ratio > max_ratio:
-                max_ratio, max_strain = ratio, strain
 
-        # Estado límite por sección (granularidad fina, no todo el piso a la vez)
-        sec_key    = (ele.tag, sec_num)
-        section_ls = self._ls_section_states.get(sec_key)
+            mat = self.get_material(mat_tags[i])
+            from src.analysis.materials import Concrete01 as _C01
+            if isinstance(mat, _C01):
+                denom = mat.get_nc_strain() if ls == "NC" else mat.get_sl_strain()
+                ratio = abs(strain) / denom if denom else 1.0
+            else:
+                eps_y = mat.get_yield_strain() if mat else None
+                ratio = abs(strain) / eps_y if eps_y and eps_y > 0 else 1.0
 
-        if section_ls == "NC":
-            limit_state = "NC"
-        elif section_ls == "SL":
-            limit_state = "SL"
-        elif max_ratio >= 1.0:
-            limit_state = "DL"
-        else:
-            return None
+            results.append({
+                "strain": strain,
+                "ratio": ratio,
+                "loc": loc,
+                "limit_state": ls,
+                "fiber_idx": i,
+            })
 
-        return {"ratio": max(max_ratio, 1.0), "strain": max_strain,
-                "loc": self._ls_get_loc(ele, sec_num),
-                "limit_state": limit_state}
+        return results if results else None
 
     def _ls_yield_aggregator(self, ele, sec_num: int, sec):
         import openseespy.opensees as ops
@@ -766,17 +764,18 @@ class ProjectManager(QObject):
             return None
 
         ratio = kappa / kappa_y
-        if ratio > 0:
-            ls     = "DL"
-            sl_val = mat.get_sl_strain(sign)
-            nc_val = mat.get_nc_strain(sign)
-            if nc_val and kappa >= nc_val:
-                ls = "NC"
-            elif sl_val and kappa >= sl_val:
-                ls = "SL"
-            return {"ratio": ratio, "strain": raw_kappa,
-                    "loc": self._ls_get_loc(ele, sec_num), "limit_state": ls}
-        return None
+        if ratio < 1.0:
+            return None
+
+        ls     = "DL"
+        sl_val = mat.get_sl_strain(sign)
+        nc_val = mat.get_nc_strain(sign)
+        if nc_val and kappa >= nc_val:
+            ls = "NC"
+        elif sl_val and kappa >= sl_val:
+            ls = "SL"
+        return [{"ratio": ratio, "strain": raw_kappa,
+                 "loc": self._ls_get_loc(ele, sec_num), "limit_state": ls}]
 
     def _ls_check_fiber(self, ele, sec_num: int, sec, floor_result: dict, roof_disp: float):
         import openseespy.opensees as ops
@@ -802,9 +801,10 @@ class ProjectManager(QObject):
             sec_key = (ele.tag, sec_num)
             if isinstance(mat, Steel01):
                 eps_y = mat.get_yield_strain()
-                if (eps_y and abs(strain) >= eps_y
-                        and self._ls_section_states.get(sec_key) is None):
-                    self._ls_section_states[sec_key] = "DL"
+                if eps_y and abs(strain) >= eps_y:
+                    current = self._ls_section_states.get(sec_key)
+                    if current is None:
+                        self._ls_section_states[sec_key] = "DL"
                 if (eps_y and floor_result["DL"] is None and abs(strain) >= eps_y
                         and (ele.tag, sec_num, "DL") not in self._ls_pre_existing):
                     floor_result["DL"] = roof_disp

@@ -225,12 +225,15 @@ class StructureInteractor(QWidget):
             scale_factor=s_def
         )
 
-    def draw_kinematic_yield_step(self, yield_data, step_displacements, frozen_floors=None, frozen_columns=None):
+    def draw_kinematic_yield_step(self, yield_data, step_displacements,
+                                    frozen_floors=None, frozen_columns=None,
+                                    step_index: int = None):
         """Pinta rotulas y cruces de San Andres sobre la forma deformada del step actual."""
         scale = ScaleManager.instance().get_scale('deformation')
         if yield_data and self.show_hinges:
             self.renderer_yield.draw_yield_state(
-                self.plot_widget, self.manager, yield_data, step_displacements
+                self.plot_widget, self.manager, yield_data, step_displacements,
+                step_index=step_index
             )
         else:
             self.renderer_yield.clear(self.plot_widget)

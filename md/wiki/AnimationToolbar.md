@@ -16,7 +16,7 @@ type: reference
 | Función | Descripción |
 |--------|-------------|
 | `load_pushover_results()` | Lee `pushover_results` del manager; configura el rango del slider y muestra la toolbar |
-| `_on_slider_changed(value)` | Al mover el slider, actualiza la deformada en el viewport al paso correspondiente; si `chk_sync` está activo, sincroniza también el slider del `PushoverResultsWidget` |
+| `_on_slider_changed(value)` | Al mover el slider, actualiza la deformada en el viewport; pasa `step_index=value` a `draw_kinematic_yield_step` para permitir scrubbing inverso correcto; si `chk_sync` activo, sincroniza el `PushoverResultsWidget` |
 
 ## Controles
 

@@ -149,8 +149,8 @@ Helpers privados (prefijo `_ls_`):
 | `_ls_get_loc()` | Posición normalizada de la sección |
 | `_ls_fiber_mat_tags()` | Lista mat_tags en orden OpenSees |
 | `_ls_get_mz_mat()` | Material Mz de una AggregatorSection |
-| `_ls_yield_fiber()` | Dato de fluencia de FiberSection; lee `_ls_section_states` por sección (no floor-level) |
-| `_ls_yield_aggregator()` | Dato de fluencia de AggregatorSection con signo correcto |
+| `_ls_yield_fiber()` | Dato de fluencia de FiberSection. Ratio = ε/εy (acero) o ε/εsl|εnc (hormigón). Devuelve lista de dicts o None |
+| `_ls_yield_aggregator()` | Dato de fluencia de AggregatorSection. Ratio = κ/κy. Solo retorna (como lista) si ratio ≥ 1.0 |
 | `_ls_check_fiber()` | Actualiza floor_result con umbrales Steel01/Concrete01 |
 | `_ls_check_aggregator()` | Actualiza floor_result con umbrales Hysteretic/HystereticSM |
 

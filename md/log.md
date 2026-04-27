@@ -17,6 +17,29 @@ Cada entrada sigue el formato:
 - `refactor` - Reestructuración de la wiki
 - `migration` - Movimiento de archivos
 
+### [2026-04-27] update | Fix bugs yield pipeline + optimización YieldRenderer
+
+**Archivos de código modificados:**
+
+- `src/ui/visualizers/yield_renderer.py` — Reescrito: 3 ScatterPlotItem con brush fijo, `_accumulate_limit_states`, `_flush_scatter` con numpy, `_node_map` cacheado, `_last_step` para scrubbing inverso.
+- `src/analysis/manager.py` — `_ls_yield_aggregator`: devuelve lista (no dict) y solo si ratio ≥ 1.0. `_ls_yield_fiber`: ratio de hormigón usa `get_nc_strain()`/`get_sl_strain()` en vez de fallback 1.0.
+- `src/ui/widgets/structure_interactor.py` — `draw_kinematic_yield_step` acepta `step_index`.
+- `src/ui/widgets/animation_toolbar.py` — `_on_slider_changed` pasa `step_index=value`.
+
+**Bugs corregidos:**
+1. `_ls_yield_aggregator` devolvía `dict` → crash silencioso en modelos con rótulas (AggregatorSection).
+2. `_ls_yield_aggregator` retornaba datos para ratio > 0 (antes de ceder), contaminando el acumulador.
+3. Ratio de fibras Concrete01 siempre 1.0 (hardcoded); ahora usa umbral EC8 correcto.
+4. Scrubbing inverso del slider no reseteaba `_max_limit_state` → colores erróneos al retroceder.
+
+**Archivos wiki modificados:**
+- `YieldRenderer.md` — Reescrita completamente con nueva arquitectura.
+- `ProjectManager.md` — Actualizada descripción de `_ls_yield_fiber` y `_ls_yield_aggregator`.
+- `StructureInteractor.md` — `draw_kinematic_yield_step` ahora documenta `step_index`.
+- `AnimationToolbar.md` — `_on_slider_changed` documenta paso de `step_index`.
+
+---
+
 ### [2026-04-27] update | Wiki: ResultsMenu separado, comandos actualizados
 
 **Archivos wiki modificados:**

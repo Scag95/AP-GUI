@@ -75,7 +75,8 @@ class AnimationToolbar(QToolBar):
                     if active_viz:
                         active_viz.draw_kinematic_step(step_data)
                         if hasattr(active_viz, 'draw_kinematic_yield_step'):
-                            active_viz.draw_kinematic_yield_step(step_yield, step_data, step_frozen, frozen_columns)
+                            active_viz.draw_kinematic_yield_step(step_yield, step_data, step_frozen, frozen_columns,
+                                                                  step_index=value)
                 
                 # Le pedimos al MainWindow que se encargue de sincronizar a todos sus hijos
                 if self.parent_window and hasattr(self.parent_window, 'sync_animation_step'):
