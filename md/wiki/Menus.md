@@ -98,13 +98,33 @@ Menú para ejecutar análisis.
 | `run_gravity()` | Construye modelo + análisis de gravedad; guarda `gravity_results` y llama `broadcast_results()` (atajo F5) |
 | `run_modal()` | Ejecuta `translator.run_modal_analysis(1)` |
 | `show_pushover_dialog()` | Verifica que existan `gravity_results`; si no, ofrece ejecutarlos; luego abre `PushoverDialog` |
-| `_show_diagram(type_)` | Llama `viz_widget.show_force_diagrams(type_)` con "M", "V" o "P" |
-| `_set_deformed_visibility(visible)` | Llama `viz_widget.set_visibility("deformed", visible)` |
-| `_clear_results()` | Oculta diagramas y deformada en todos los viewports |
-| `_show_curve_pushover()` | Abre `PushoverResultsWidget` en ventana MDI con los `pushover_results` |
-| `_show_section_results()` | Abre `MomentCurvatureWidget` en ventana MDI |
 
-**Relacionado:** [[OpenSeesTranslator]], [[PushoverDialog]]
+**Nota:** Las acciones de visualización de resultados (diagramas, deformada, pushover, etc.) se encuentran en [[ResultsMenu]].
+
+**Relacionado:** [[OpenSeesTranslator]], [[PushoverDialog]], [[ResultsMenu]]
+
+---
+
+## ResultsMenu → [[ResultsMenu]]
+
+Menú para visualizar resultados del análisis. Se sitúa entre Analizar y Ver.
+
+**Clase:** `ResultsMenu`
+
+**Acciones del menú:**
+
+| Acción | Función |
+|-------|---------|
+| Deformada | `_set_deformed_visibility(True)` |
+| Momentos (M) | `_show_diagram("M")` |
+| Cortantes (V) | `_show_diagram("V")` |
+| Axiales (P) | `_show_diagram("P")` |
+| Curva Pushover | `_show_curve_pushover()` |
+| Análisis de Sección (M-φ) | `_show_section_results()` |
+| Deformaciones de Fibras | `_show_fiber_strains()` |
+| Ocultar Resultados | `_clear_results()` |
+
+**Relacionado:** [[PushoverResultsWidget]], [[MomentCurvatureWidget]], [[FiberStrainDialog]]
 
 ---
 

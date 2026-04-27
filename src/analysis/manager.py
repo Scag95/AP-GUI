@@ -37,10 +37,11 @@ class ProjectManager(QObject):
 
         # Historial de deformaciones de fibras por paso
         self.fiber_geometry: dict = {}   # {ele_tag: {sec_num: {"y":[..], "z":[..], "area":[..]}}}
-        self.fiber_history:  list = []   # [{ele_tag: {sec_num: [strain, ...]}}]  — un dict por paso
+        self.fiber_history:  list = []   # [{ele_tag: {sec_num: {"strains":[...], "stresses":[...]}}}]  — un dict por paso
 
         # Almacén Cargas Temporales Pushover
         self.pushover_loads = []
+        self._just_loaded_from_json = False
 
         #Contador para los IDs automáticos
         self.next_material_tag = 1 
@@ -421,6 +422,7 @@ class ProjectManager(QObject):
                 self.add_pattern(pattern)
 
             self.mark_topology_dirty()
+            self._just_loaded_from_json = True
 
             print(f"Projecto cargado: {len(self.node)} nodos, {len(self.element)} elementos")
             self.dataChanged.emit()
@@ -449,6 +451,7 @@ class ProjectManager(QObject):
         self.fiber_geometry.clear()
         self.fiber_history.clear()
         self.pushover_loads.clear()
+        self._just_loaded_from_json = False
         
         # Reiniciar contadores
         self.next_material_tag = 1
@@ -594,11 +597,52 @@ class ProjectManager(QObject):
                         "sec_tag": sec_tag,
                     }
                 strains = [raw[i * 5 + 4] for i in range(n)]
-                step_data.setdefault(ele.tag, {})[sec_num] = strains
+                stresses = [raw[i * 5 + 3] for i in range(n)]
+                step_data.setdefault(ele.tag, {})[sec_num] = {"strains": strains, "stresses": stresses}
         self.fiber_history.append(step_data)
 
     def get_floor_limit_states(self) -> dict:
         return {y: dict(d) for y, d in self.floor_limit_states.items()}
+
+    def get_fiber_limit_state(self, ele_tag: int, sec_num: int, fiber_idx: int, strain: float) -> str:
+        """
+        Devuelve el estado límite EC8 para una fibra concreta.
+        Consulta el material de la fibra y verifica strain contra umbrales.
+        Acero: abs(strain) vs eps_y → DL
+        Hormigón: solo compresión (strain<=0), abs(strain) vs eps_nc/eps_sl → NC/SL
+        """
+        from src.analysis.materials import Steel01, Concrete01
+
+        mat_tags = []
+        ele = self.get_element(ele_tag)
+        if ele:
+            sec_tag = self._ls_get_sec_tag(ele, sec_num)
+            if sec_tag:
+                sec = self.get_section(sec_tag)
+                if sec:
+                    mat_tags = self._ls_fiber_mat_tags(sec)
+
+        if fiber_idx >= len(mat_tags):
+            return "OK"
+
+        mat = self.get_material(mat_tags[fiber_idx])
+        if mat is None:
+            return "OK"
+
+        if isinstance(mat, Steel01):
+            eps_y = mat.get_yield_strain()
+            if eps_y and abs(strain) >= eps_y:
+                return "DL"
+        elif isinstance(mat, Concrete01):
+            if strain <= 0:
+                eps_nc = self.EPSC_U * self.NC_FACTOR
+                eps_sl = self.EPSC_U * self.SL_FACTOR
+                if abs(strain) >= eps_nc:
+                    return "NC"
+                if abs(strain) >= eps_sl:
+                    return "SL"
+
+        return "OK"
 
     # ── Helpers privados ──────────────────────────────────────────────────────
 
@@ -751,31 +795,32 @@ class ProjectManager(QObject):
 
 
         for i in range(n):
-            strain = abs(raw[i * 5 + 4])
+            strain = raw[i * 5 + 4]
             mat    = self.get_material(mat_tags[i])
             if mat is None:
                 continue
             sec_key = (ele.tag, sec_num)
             if isinstance(mat, Steel01):
                 eps_y = mat.get_yield_strain()
-                if (eps_y and floor_result["DL"] is None and strain >= eps_y
-                        and (ele.tag, sec_num, "DL") not in self._ls_pre_existing):
-                    floor_result["DL"] = roof_disp
-                if (eps_y and strain >= eps_y
+                if (eps_y and abs(strain) >= eps_y
                         and self._ls_section_states.get(sec_key) is None):
                     self._ls_section_states[sec_key] = "DL"
+                if (eps_y and floor_result["DL"] is None and abs(strain) >= eps_y
+                        and (ele.tag, sec_num, "DL") not in self._ls_pre_existing):
+                    floor_result["DL"] = roof_disp
             elif isinstance(mat, Concrete01):
-                if (strain >= eps_nc
-                        and (ele.tag, sec_num, "NC") not in self._ls_pre_existing):
-                    if floor_result["NC"] is None:
-                        floor_result["NC"] = roof_disp
-                    self._ls_section_states[sec_key] = "NC"
-                elif (strain >= eps_sl
-                        and (ele.tag, sec_num, "SL") not in self._ls_pre_existing):
-                    if floor_result["SL"] is None:
-                        floor_result["SL"] = roof_disp
-                    if self._ls_section_states.get(sec_key) != "NC":
-                        self._ls_section_states[sec_key] = "SL"
+                if strain <= 0:
+                    if (abs(strain) >= eps_nc
+                            and (ele.tag, sec_num, "NC") not in self._ls_pre_existing):
+                        if floor_result["NC"] is None:
+                            floor_result["NC"] = roof_disp
+                        self._ls_section_states[sec_key] = "NC"
+                    elif (abs(strain) >= eps_sl
+                            and (ele.tag, sec_num, "SL") not in self._ls_pre_existing):
+                        if floor_result["SL"] is None:
+                            floor_result["SL"] = roof_disp
+                        if self._ls_section_states.get(sec_key) != "NC":
+                            self._ls_section_states[sec_key] = "SL"
 
     def _ls_check_aggregator(self, ele, sec_num: int, sec, floor_result: dict, roof_disp: float):
         import openseespy.opensees as ops

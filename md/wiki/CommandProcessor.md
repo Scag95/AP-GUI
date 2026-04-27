@@ -56,8 +56,12 @@ args  = parts[1:]           # ej. ["moment", "0.5"]
 | `loads`, `load` | `n`/`e` | Cargas nodales/elementales |
 | `diagrams` | `M`/`V`/`P` | Diagramas de fuerzas |
 | `deformed`, `deformation` | - | Forma deformada |
-| `nodes`, `node` | - | Etiquetas de nodos |
-| `elements`, `element` | - | Etiquetas de elementos |
+| `nodes` | - | Oculta/muestra nodos físicos |
+| `elements` | - | Oculta/muestra elementos físicos |
+| `nodetag` | - | Etiquetas de nodos |
+| `elementtag` | - | Etiquetas de elementos |
+| `hinges` | - | Articulaciones plásticas (yield) |
+| `crosses` | - | Indicadores de fluencia en fibras |
 
 ## Arquitectura
 

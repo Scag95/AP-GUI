@@ -17,6 +17,20 @@ Cada entrada sigue el formato:
 - `refactor` - Reestructuración de la wiki
 - `migration` - Movimiento de archivos
 
+### [2026-04-27] update | Wiki: ResultsMenu separado, comandos actualizados
+
+**Archivos wiki modificados:**
+
+- `ResultsMenu.md` (nuevo) — Documentación completa del menú Resultados con acciones, funciones y relaciones.
+- `CommandProcessor.md` — Actualizada tabla de alias show/hide: removido `structure`, añadidos `nodes` (oculta nodos físicos), `elements` (oculta elementos físicos), `nodetag`/`elementtag` (labels), `hinges`/`crosses` (indicadores de fluencia).
+- `AnalyzeMenu.md` — Eliminadas acciones de resultados (diagramas, deformada, pushover, etc.) — ahora en ResultsMenu. Nota indicativa añadida.
+- `MainWindow.md` — Añadido `results_menu` a atributos. Añadida sección "Handlers de Comandos CLI" con `set_nodes_visible`, `set_elements_visible`, `set_hinges_visible`, `set_crosses_visible`. Añadido enlace a ResultsMenu en relaciones.
+- `Menus.md` — Añadida entrada completa de ResultsMenu entre AnalyzeMenu y ToolsMenu. Actualizada AnalyzeMenu con referencia a ResultsMenu.
+
+**Verificación de código:** Fix de cargas al cargar JSON confirmado en `_on_data_changed` (`show_loads_nodes=False`, `show_loads_elements=False`) y `_just_loaded_from_json` flag en manager.
+
+---
+
 ### [2026-04-26] feat | FiberStrainDialog: visualización de fibras por paso pushover + fix _ls_yield_fiber
 
 **Archivos fuente modificados:**

@@ -23,7 +23,19 @@ Gestiona el área MDI, menús, toolbars, docks y coordinación de viewports.
 | `define_menu` | DefineMenu |
 | `assign_menu` | AssignMenu |
 | `analyze_menu` | AnalyzeMenu |
+| `results_menu` | ResultsMenu (entre Analizar y Ver) |
 | `tools_menu` | ToolsMenu |
+
+## Handlers de Comandos CLI
+
+| Handler | Comando asociado |
+|---------|-----------------|
+| `set_nodes_visible(visible)` | `show/hide nodes` |
+| `set_elements_visible(visible)` | `show/hide elements` |
+| `set_hinges_visible(visible)` | `show/hide hinges` |
+| `set_crosses_visible(visible)` | `show/hide crosses` |
+| `set_visibility(what, visible)` | Diagramas, deformada |
+| `show_force_diagrams(type_)` | `show/hide diagrams M/V/P` |
 
 ## Funciones
 
@@ -80,3 +92,4 @@ MainWindow
 - [[Dialogs]] - Diálogos abiertos
 - [[StructureInteractor]] - Viewport
 - [[AnimationToolbar]] - Barra de animación
+- [[ResultsMenu]] - Menú de resultados (entre Analizar y Ver)

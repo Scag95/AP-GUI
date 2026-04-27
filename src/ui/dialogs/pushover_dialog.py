@@ -220,8 +220,8 @@ class PushoverDialog(QDialog):
                 print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
 
                 # Extraer parámetros personalizados si aplica
-                sen = self.spin_sensitivity.value() if self.chk_custom_failure.isChecked() else None
-                drf = self.spin_max_drift.value() if self.chk_custom_failure.isChecked() else None
+                sen = self.spin_sensitivity.value()
+                drf = self.spin_max_drift.value()
 
                 # Extraer método de congelamiento escogido
                 idx_method = self.freeze_method_combo.currentIndex()

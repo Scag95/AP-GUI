@@ -3,7 +3,7 @@ import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QSlider, QFrame,
+    QComboBox, QSlider, QFrame, QCheckBox,
 )
 from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import QPen, QBrush, QColor
@@ -23,7 +23,7 @@ class _PatchItem(pg.GraphicsObject):
     def setup(self, rects_xywh: list):
         """rects_xywh: [(x, y, w, h),...] donde x=z_centroide-dz/2, y=y_centroide-dy/2."""
         self._rects  = [QRectF(x, y, w, h) for x, y, w, h in rects_xywh]
-        self._colors = [(180, 180, 180)] * len(rects_xywh)
+        self._colors = [(220, 220, 220)] * len(rects_xywh)
         if rects_xywh:
             x_min = min(r[0] for r in rects_xywh)
             y_min = min(r[1] for r in rects_xywh)
@@ -53,9 +53,8 @@ class _PatchItem(pg.GraphicsObject):
 
 class FiberStrainDialog(QWidget):
     """
-    Visualiza ε de cada fibra de una FiberSection en cada paso del pushover.
-    La escala de color es global (fija para todos los pasos) para que se
-    aprecie la evolución de deformaciones al mover el slider.
+    Visualiza ε y σ de cada fibra de una FiberSection en cada paso del pushover.
+    Los colores de fibras se determinan por estados límite EC8.
     """
 
     def __init__(self, parent=None):
@@ -63,14 +62,13 @@ class FiberStrainDialog(QWidget):
         self.setWindowTitle("Deformaciones de Fibras por Sección")
         self.resize(980, 640)
         self.manager   = ProjectManager.instance()
-        self._vmin     = 0.0
-        self._vmax     = 0.0
         self._n_patch      = 0
         self._bar_z        = []
         self._bar_y        = []
         self._bar_s        = []
         self._fiber_labels = []   # pg.TextItem por cada fibra
-        self._mat_tags     = []   # tag de material por fibra (mismo orden que strains)
+        self._show_strain = True
+        self._show_stress = False
         self._setup_ui()
         self._populate_elements()
 
@@ -99,21 +97,15 @@ class FiberStrainDialog(QWidget):
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine)
         left.addWidget(sep)
 
-        left.addWidget(QLabel("<b>Escala (global todos los pasos):</b>"))
-        self.lbl_range = QLabel("—")
-        self.lbl_range.setWordWrap(True)
-        left.addWidget(self.lbl_range)
+        left.addWidget(QLabel("<b>Etiquetas visibles:</b>"))
+        self.chk_strain = QCheckBox("ε (deformación)")
+        self.chk_strain.setChecked(True)
+        self.chk_strain.toggled.connect(self._on_labels_toggled)
+        left.addWidget(self.chk_strain)
 
-        left.addSpacing(4)
-        left.addWidget(QLabel("← Compresión   Tracción →"))
-        bar_lbl = QLabel()
-        bar_lbl.setFixedHeight(18)
-        bar_lbl.setStyleSheet(
-            "background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            "stop:0 #0000ff, stop:0.5 #ffffff, stop:1 #ff0000);"
-            "border:1px solid #888;"
-        )
-        left.addWidget(bar_lbl)
+        self.chk_stress = QCheckBox("σ (esfuerzo)")
+        self.chk_stress.toggled.connect(self._on_labels_toggled)
+        left.addWidget(self.chk_stress)
 
         left.addSpacing(6)
         left.addWidget(QLabel("<b>Estados límite EC8:</b>"))
@@ -214,6 +206,11 @@ class FiberStrainDialog(QWidget):
     def _on_sec_changed(self, _):
         self._rebuild_section()
 
+    def _on_labels_toggled(self, checked: bool):
+        self._show_strain = self.chk_strain.isChecked()
+        self._show_stress = self.chk_stress.isChecked()
+        self._update_colors()
+
     def _on_step_changed(self, _):
         n = len(self.manager.fiber_history)
         self.lbl_step.setText(f"Paso: {self.slider.value()} / {max(0, n-1)}")
@@ -255,14 +252,12 @@ class FiberStrainDialog(QWidget):
         for lbl in self._fiber_labels:
             self.plot.removeItem(lbl)
         self._fiber_labels.clear()
-        self._mat_tags.clear()
 
     # ── Reconstrucción completa al cambiar elemento/sec ───────────────────────
 
     def _rebuild_section(self):
         self._clear_items()
         self.lbl_status.setText("")
-        self.lbl_range.setText("—")
 
         ele_tag, sec_num, ele, sec = self._current_ele_sec()
         if ele is None:
@@ -296,17 +291,10 @@ class FiberStrainDialog(QWidget):
             self._bar_scatter.setData(
                 x=bar_z, y=bar_y, size=bar_s,
                 symbol='o', pen=pg.mkPen('k', width=0.5),
-                brush=[pg.mkBrush(180, 180, 180)] * len(bar_z),
+                brush=[pg.mkBrush(220, 220, 220)] * len(bar_z),
             )
 
         self._setup_labels(rects, bar_z, bar_y)
-        self._mat_tags = self.manager._ls_fiber_mat_tags(sec)
-
-        # Escala global (simétrica alrededor de cero)
-        self._compute_global_scale(ele_tag, sec_num)
-        self.lbl_range.setText(
-            f"ε_mín: {self._vmin:+.4e}\nε_máx: {self._vmax:+.4e}"
-        )
 
         self._update_colors()
         self.plot.autoRange()
@@ -348,20 +336,8 @@ class FiberStrainDialog(QWidget):
             self._bar_scatter.setData(
                 x=bar_z, y=bar_y, size=bar_s,
                 symbol='o', pen=pg.mkPen('k', width=0.5),
-                brush=[pg.mkBrush(180, 180, 180)] * len(bar_z),
+                brush=[pg.mkBrush(220, 220, 220)] * len(bar_z),
             )
-
-    def _compute_global_scale(self, ele_tag: int, sec_num: int):
-        """Escala simétrica respecto a cero calculada sobre todos los pasos."""
-        vmin, vmax = 0.0, 0.0
-        for step_data in self.manager.fiber_history:
-            strains = step_data.get(ele_tag, {}).get(sec_num)
-            if strains:
-                vmin = min(vmin, min(strains))
-                vmax = max(vmax, max(strains))
-        amp = max(abs(vmin), abs(vmax), 1e-10)
-        self._vmin = -amp
-        self._vmax =  amp
 
     def _setup_labels(self, patch_rects: list, bar_z: list, bar_y: list):
         """Crea un TextItem centrado en cada fibra (patches + barras)."""
@@ -394,25 +370,26 @@ class FiberStrainDialog(QWidget):
         if step >= len(self.manager.fiber_history):
             return
 
-        strains = self.manager.fiber_history[step].get(ele_tag, {}).get(sec_num)
-        if strains is None:
+        fiber_data = self.manager.fiber_history[step].get(ele_tag, {}).get(sec_num)
+        if fiber_data is None:
             return
+
+        strains = fiber_data.get("strains", [])
+        stresses = fiber_data.get("stresses", [])
 
         _STYLE = 'font-size:7pt; font-family:monospace;'
         n_patch = self._n_patch
 
-        # Colores de patches
         patch_colors = [
-            self._fiber_color(strains[i], i)
+            self._fiber_color(strains[i], i, stresses[i] if i < len(stresses) else 0.0)
             for i in range(n_patch)
         ]
         self._patch_item.update_colors(patch_colors)
 
-        # Colores de barras
         n_bars = len(self._bar_z)
-        if n_bars > 0:
+        if n_bars > 0 and len(strains) > n_patch:
             bar_brushes = [
-                pg.mkBrush(*self._fiber_color(strains[n_patch + i], n_patch + i))
+                pg.mkBrush(*self._fiber_color(strains[n_patch + i], n_patch + i, stresses[n_patch + i] if n_patch + i < len(stresses) else 0.0))
                 for i in range(n_bars)
             ]
             self._bar_scatter.setData(
@@ -421,16 +398,23 @@ class FiberStrainDialog(QWidget):
                 brush=bar_brushes,
             )
 
-        # Labels de todas las fibras (patches primero, luego barras)
+        show_s = self._show_strain
+        show_sigma = self._show_stress
+
         for i, lbl in enumerate(self._fiber_labels):
-            if i < len(strains):
-                v = strains[i]
-                col = self._fiber_color(v, i)
-                brightness = 0.299 * col[0] + 0.587 * col[1] + 0.114 * col[2]
-                txt_col = '#000000' if brightness > 128 else '#ffffff'
+            if show_s and show_sigma and i < len(strains) and i < len(stresses):
+                lbl.setVisible(True)
                 lbl.setHtml(
-                    f'<span style="{_STYLE} color:{txt_col}">{v:.2e}</span>'
+                    f'<span style="{_STYLE} color:black;">ε={strains[i]:.2e}<br>σ={stresses[i]/1e6:.2f} MPa</span>'
                 )
+            elif show_s and i < len(strains):
+                lbl.setVisible(True)
+                lbl.setHtml(f'<span style="{_STYLE} color:black;">ε={strains[i]:.2e}</span>')
+            elif show_sigma and i < len(stresses):
+                lbl.setVisible(True)
+                lbl.setHtml(f'<span style="{_STYLE} color:black;">σ={stresses[i]/1e6:.2f} MPa</span>')
+            else:
+                lbl.setVisible(False)
 
     # ── Sincronización con AnimationToolbar del MainWindow ────────────────────
 
@@ -450,50 +434,20 @@ class FiberStrainDialog(QWidget):
         self.lbl_step.setText(f"Paso: {safe} / {max(0, n - 1)}")
         self._update_colors()
 
-    # Colores de estados límite (coinciden con los marcadores de la curva pushover)
-    _LS_COLORS = {
-        "DL": (220, 180,   0),   # amarillo
-        "SL": (230, 100,   0),   # naranja
-        "NC": (210,   0,   0),   # rojo oscuro
-    }
-
-    def _fiber_color(self, strain: float, fiber_idx: int) -> tuple:
+    def _fiber_color(self, strain: float, fiber_idx: int, stress: float = 0.0) -> tuple:
         """
-        Devuelve color de estado límite EC8 si el strain supera el umbral del
-        material correspondiente. Si no, usa el gradiente de deformación.
+        Consulta al manager el estado límite de la fibra y devuelve el color EC8.
         """
-        from src.analysis.materials import Steel01, Concrete01
+        ele_tag = self.combo_element.currentData()
+        sec_num = self.combo_sec.currentData()
+        if ele_tag is None or sec_num is None:
+            return (220, 220, 220)
 
-        if fiber_idx < len(self._mat_tags):
-            mat = self.manager.get_material(self._mat_tags[fiber_idx])
-            eps = abs(strain)
-
-            if isinstance(mat, Steel01):
-                eps_y = mat.get_yield_strain()
-                if eps_y and eps >= eps_y:
-                    return self._LS_COLORS["DL"]
-
-            elif isinstance(mat, Concrete01):
-                eps_nc = self.manager.EPSC_U * self.manager.NC_FACTOR
-                eps_sl = self.manager.EPSC_U * self.manager.SL_FACTOR
-                if eps >= eps_nc:
-                    return self._LS_COLORS["NC"]
-                if eps >= eps_sl:
-                    return self._LS_COLORS["SL"]
-
-        # Sin estado límite: gradiente azul-blanco-rojo
-        return self._strain_color(strain, self._vmin, self._vmax)
-
-    @staticmethod
-    def _strain_color(strain: float, vmin: float, vmax: float):
-        """Azul (compresión) → blanco (cero) → rojo (tracción)."""
-        span = vmax - vmin
-        if span < 1e-14:
-            return (200, 200, 200)
-        t = max(0.0, min(1.0, (strain - vmin) / span))
-        if t < 0.5:
-            t2 = t * 2.0
-            return (int(t2 * 255), int(t2 * 255), 255)
-        else:
-            t2 = (t - 0.5) * 2.0
-            return (255, int((1 - t2) * 255), int((1 - t2) * 255))
+        ls = self.manager.get_fiber_limit_state(ele_tag, sec_num, fiber_idx, strain)
+        if ls == "NC":
+            return (210, 0, 0)
+        if ls == "SL":
+            return (230, 100, 0)
+        if ls == "DL":
+            return (220, 180, 0)
+        return (220, 220, 220)
