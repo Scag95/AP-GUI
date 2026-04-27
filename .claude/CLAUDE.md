@@ -57,7 +57,9 @@ md/
 3. **Workflow por defecto:**
    - Lees/modificas código en `src/`
    - **NO actualices la wiki durante el trabajo** — solo al cerrar sesión
-   - Al cerrar sesión: actualiza todos los archivos wiki modificados + entrada en `md/log.md`
+   - Al cerrar sesión:
+     1. Actualiza todos los archivos wiki modificados + entrada en `md/log.md`
+     2. Proporciona una descripción de commit en **inglés**, usando comillas simples `'` en lugar de `"`
 
    **Tip:** Para saber qué se modificó, usa `git diff` o recuerda mentalmente.
 

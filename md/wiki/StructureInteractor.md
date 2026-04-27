@@ -47,7 +47,7 @@ Viewport principal que usa pyqtgraph para renderizar el modelo, cargas, deformac
 | `show_deformation()` | Muestra resultados de deformación |
 | `draw_kinematic_step()` | Dibuja paso de animación |
 | `draw_kinematic_forces_step()` | Dibuja fuerzas del paso |
-| `draw_kinematic_yield_step()` | Dibuja fluencia del paso |
+| `draw_kinematic_yield_step(yield_data, step_displacements, frozen_floors, frozen_columns, step_index)` | Dibuja rótulas y cruces del paso; `step_index` permite al YieldRenderer gestionar scrubbing inverso |
 | `set_pushover_loads_visible()` | Muestra cargas pushover |
 | `increase_load_scale()` / `decrease_load_scale()` | Ajusta escala de cargas |
 | `increase_deform_scale()` / `decrease_deform_scale()` | Ajusta escala de deformación |
