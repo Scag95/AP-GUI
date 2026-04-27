@@ -72,7 +72,7 @@ class YieldRenderer:
                     'pos':   (x_sec, y_sec),
                     'brush': pg.mkBrush(*self._ls_to_color(ls)),
                     'pen':   pg.mkPen(None),
-                    'size':  5,
+                    'size':  8,
                 })
 
         if spots:

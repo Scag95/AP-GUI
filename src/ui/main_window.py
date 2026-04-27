@@ -7,6 +7,7 @@ from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
 from src.ui.menus.assign_menu import AssignMenu
 from src.ui.menus.analyze_menu import AnalyzeMenu
+from src.ui.menus.results_menu import ResultsMenu
 from src.ui.widgets.structure_interactor import StructureInteractor
 from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
@@ -39,6 +40,9 @@ class MainWindow(QMainWindow):
         
         self.analyze_menu = AnalyzeMenu(self)
         bar.addMenu(self.analyze_menu) 
+        
+        self.results_menu = ResultsMenu(self)
+        bar.addMenu(self.results_menu)
         
         self.view_menu = bar.addMenu("Ver")
         
@@ -308,6 +312,14 @@ class MainWindow(QMainWindow):
                 viz.set_visibility("diagrams", True)
             elif act_type == "set_load_visibility":
                 viz.set_load_visibility(action.get("type"), value)
+            elif act_type == "set_nodes_visible":
+                viz.set_nodes_visible(value)
+            elif act_type == "set_elements_visible":
+                viz.set_elements_visible(value)
+            elif act_type == "set_hinges_visible":
+                viz.set_hinges_visible(value)
+            elif act_type == "set_crosses_visible":
+                viz.set_crosses_visible(value)
         
 
 

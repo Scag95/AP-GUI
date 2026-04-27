@@ -54,14 +54,19 @@ class StructureInteractor(QWidget):
         self.current_results = None 
 
         # View Options
-        self.show_node_labels = False 
+        self.show_node_labels = False
         self.show_element_labels = False
-        self.show_loads_nodes = True
-        self.show_loads_elements = True
+        self.show_nodes = True
+        self.show_elements = True
+        self.show_loads_nodes = False
+        self.show_loads_elements = False
         self.show_deformed = True
         self.show_diagrams = True
         self.show_pushover_loads = False
-        self.active_pattern_tag = None  # None = mostrar cargas de todos los patrones
+        self.show_hinges = True
+        self.show_crosses = True
+        self._skip_loads_on_refresh = False
+        self.active_pattern_tag = None
 
         # --- ATAJOS DE TECLADO ---
         self.shortcut_inc = QShortcut(QKeySequence("Ctrl++"), self)
@@ -79,6 +84,11 @@ class StructureInteractor(QWidget):
         self.plot_widget.scene().sigMouseClicked.connect(self._on_background_clicked)
 
     def _on_data_changed(self):
+        if self.manager._just_loaded_from_json:
+            self._skip_loads_on_refresh = True
+            self.show_loads_nodes = False
+            self.show_loads_elements = False
+            self.manager._just_loaded_from_json = False
         ScaleManager.instance().autocalculate_scales()
         self.refresh_viz()
 
@@ -99,56 +109,51 @@ class StructureInteractor(QWidget):
     def refresh_viz(self):
         """Redibuja todo usando los renderizadores."""
         self.last_clicked_point = None
-        self.current_label = None 
-        
-        # Render Modelo
-        self.renderer_model.draw_structure(
-            self.plot_widget, 
-            self.manager, 
-            show_node_labels=self.show_node_labels,
-            show_element_labels=self.show_element_labels,
-            on_element_click=self._on_element_clicked_wrapper
-        )
-        
-        # Render Cargas
+        self.current_label = None
+
+        if self.show_nodes or self.show_elements:
+            self.renderer_model.draw_structure(
+                self.plot_widget,
+                self.manager,
+                show_nodes=self.show_nodes,
+                show_elements=self.show_elements,
+                show_node_labels=self.show_node_labels,
+                show_element_labels=self.show_element_labels,
+                on_element_click=self._on_element_clicked_wrapper
+            )
+        else:
+            self.renderer_model.clear(self.plot_widget)
+
         s_load = ScaleManager.instance().get_scale('load')
-        
-        # 1. Dibujar cargas normales (filtradas por patrón si hay uno activo)
-        self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load,
-                                      show_nodes=self.show_loads_nodes,
-                                      show_elements=self.show_loads_elements,
-                                      draw_pushover=False,
-                                      pattern_tag=self.active_pattern_tag)
-        
-        # 2. Si corresponde, sobreescribir con cargas temporales (ej. pushover lateral)    
-        #    Hacemos esto habilitando updates para que se dibujen encima de la base                
-        if self.show_pushover_loads:
-            # IMPORTANTE: No la limpiamos porque clear borraría también las gravitacionales
-            # Pero internamente LoadRenderer.clear() siempre limpia la capa.
-            # Para solucionarlo temporalmente sin reestructurar todo el cache,
-            # volvemos a llamar a draw_loads pero le decimos que dibuje por encima de las previas
-            # pero necesitamos modificar renderer_load ligeramente si no borra todo.
-            # Por ahora, como el método limpia la pantalla internamente, desactivamos
-            # la renderización base del Pushover para solo ver las laterales (es más visualmente limpio).
-            self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load, 
-                                      show_nodes=True, 
-                                      show_elements=False,
-                                      draw_pushover=True)
-        # Render Deformada
+
+        if not self._skip_loads_on_refresh:
+            self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load,
+                                          show_nodes=self.show_loads_nodes,
+                                          show_elements=self.show_loads_elements,
+                                          draw_pushover=False,
+                                          pattern_tag=self.active_pattern_tag)
+
+            if self.show_pushover_loads:
+                self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load,
+                                              show_nodes=True,
+                                              show_elements=False,
+                                              draw_pushover=True)
+        else:
+            self._skip_loads_on_refresh = False
+
         if self.current_results and self.show_deformed:
             s_def = ScaleManager.instance().get_scale('deformation')
             self.renderer_deform.draw_deformed(
-                self.plot_widget, 
-                self.manager, 
+                self.plot_widget,
+                self.manager,
                 self.current_results.get("displacements"),
                 scale_factor=s_def
             )
         else:
             self.renderer_deform.clear(self.plot_widget)
 
-        # Render fuerzas
         if self.current_results and self.current_diagram_type and self.show_diagrams:
-            forces = self.current_results.get("element_forces",{})
+            forces = self.current_results.get("element_forces", {})
             self.renderer_forces.draw_diagrams(
                 self.plot_widget,
                 self.manager,
@@ -161,10 +166,10 @@ class StructureInteractor(QWidget):
     def set_visibility(self, item_type, visible):
         if item_type == 'deformed': self.show_deformed = visible
         elif item_type == 'diagrams': self.show_diagrams = visible
-        elif item_type == 'loads': # Master toggle
-             self.show_loads_nodes = visible
-             self.show_loads_elements = visible
-             self.show_pushover_loads = visible
+        elif item_type == 'loads':
+            self.show_loads_nodes = visible
+            self.show_loads_elements = visible
+            self.show_pushover_loads = visible
         self.refresh_viz()
 
     def set_load_visibility(self, load_type, visible):
@@ -172,9 +177,31 @@ class StructureInteractor(QWidget):
         elif load_type == 'elements': self.show_loads_elements = visible
         self.refresh_viz()
 
+    def set_nodes_visible(self, visible):
+        self.show_nodes = visible
+        self.refresh_viz()
+
+    def set_elements_visible(self, visible):
+        self.show_elements = visible
+        self.refresh_viz()
+
+    def set_hinges_visible(self, visible):
+        self.show_hinges = visible
+        if not visible:
+            self.renderer_yield.clear(self.plot_widget)
+        elif self.current_results:
+            self.refresh_viz()
+
+    def set_crosses_visible(self, visible):
+        self.show_crosses = visible
+        if not visible:
+            self.renderer_yield.clear_crosses(self.plot_widget)
+        elif self.current_results:
+            self.refresh_viz()
+
     def show_deformation(self, results, scale_factor=None):
         self.current_results = results
-        self.refresh_viz() # Se encarga de llamar al renderer si show_deformed es True
+        self.refresh_viz()
 
     def draw_kinematic_step(self, step_data):
         """
@@ -199,18 +226,22 @@ class StructureInteractor(QWidget):
         )
 
     def draw_kinematic_yield_step(self, yield_data, step_displacements, frozen_floors=None, frozen_columns=None):
-        """Pinta rótulas y cruces de San Andrés sobre la forma deformada del step actual."""
+        """Pinta rotulas y cruces de San Andres sobre la forma deformada del step actual."""
         scale = ScaleManager.instance().get_scale('deformation')
-        if yield_data:
+        if yield_data and self.show_hinges:
             self.renderer_yield.draw_yield_state(
                 self.plot_widget, self.manager, yield_data, step_displacements
             )
         else:
             self.renderer_yield.clear(self.plot_widget)
-        self.renderer_yield.draw_frozen_floors(
-            self.plot_widget, frozen_floors or set(), frozen_columns or {},
-            step_displacements, scale, self.manager
-        )
+
+        if self.show_crosses:
+            self.renderer_yield.draw_frozen_floors(
+                self.plot_widget, frozen_floors or set(), frozen_columns or {},
+                step_displacements, scale, self.manager
+            )
+        else:
+            self.renderer_yield.clear_crosses(self.plot_widget)
 
     def draw_kinematic_forces_step(self, forces_data):
         """

@@ -59,24 +59,20 @@ class CommandProcessor:
             # --- COMANDO: SHOW / HIDE (Visibilidad) ---
             elif verb == "show" or verb == "hide":
                 if not args:
-                    return "Uso: [show/hide] [loads/deformed/diagrams] [sub-arg]", None
-                
+                    return "Uso: [show/hide] [loads|deformed|diagrams|nodes|elements|hinges|crosses|nodetag|elementtag]", None
+
                 arg = args[0].lower()
                 is_show = (verb == "show")
 
-                # Caso Especial: DIAGRAMS [Tipo]
                 if arg in ["diagrams", "diagram", "forces"]:
                     if len(args) > 1:
                         dtype = args[1].upper()
                         if dtype in ['M', 'V', 'P', 'S']:
-                            if dtype == 'S': dtype = 'V' # Alias
+                            if dtype == 'S': dtype = 'V'
                             if is_show:
                                 return f"Diagrama '{dtype}' activado", {"action": "set_diagram_type", "value": dtype}
-                    
-                    # Si no hay sub-arg, toggle general
                     return f"Visibilidad Diagramas: {is_show}", {"action": "set_visibility", "type": "diagrams", "value": is_show}
 
-                # Caso Especial: LOADS [N/E]
                 if arg in ["loads", "load"]:
                     if len(args) > 1:
                         sub = args[1].lower()
@@ -84,24 +80,26 @@ class CommandProcessor:
                              return f"Cargas Nodos: {is_show}", {"action": "set_load_visibility", "type": "nodes", "value": is_show}
                         elif sub in ['e', 'element', 'elements']:
                              return f"Cargas Elementos: {is_show}", {"action": "set_load_visibility", "type": "elements", "value": is_show}
-                    
-                    # General
                     return f"Visibilidad Cargas: {is_show}", {"action": "set_visibility", "type": "loads", "value": is_show}
 
-                # Resto de casos generales
                 target_map = {
                     "deformed": "deformed", "deformation": "deformed",
-                    "nodes": "node_labels", "node": "node_labels",
-                    "elements": "element_labels", "element": "element_labels"
+                    "nodes": "nodes", "node": "nodes",
+                    "elements": "elements", "element": "elements",
+                    "hinges": "hinges", "hinge": "hinges",
+                    "crosses": "crosses", "cross": "crosses",
+                    "nodetag": "node_labels", "nodetags": "node_labels",
+                    "elementtag": "element_labels", "elementtags": "element_labels",
                 }
-                
+
                 if arg in target_map:
                     target = target_map[arg]
-                    # Mapeo de acciones específicas
-                    if target == "node_labels":
-                        return f"Etiquetas Nodos: {is_show}", {"action": "toggle_node_labels", "value": is_show}
-                    elif target == "element_labels":
-                        return f"Etiquetas Elementos: {is_show}", {"action": "toggle_element_labels", "value": is_show}
+                    if target in ("node_labels", "element_labels"):
+                        return f"Etiquetas {target}: {is_show}", {"action": f"toggle_{target}", "value": is_show}
+                    elif target in ("nodes", "elements"):
+                        return f"{target.capitalize()}: {is_show}", {"action": f"set_{target}_visible", "value": is_show}
+                    elif target in ("hinges", "crosses"):
+                        return f"{target.capitalize()}: {is_show}", {"action": f"set_{target}_visible", "value": is_show}
                     else:
                         return f"Visibilidad de '{target}': {is_show}", {"action": "set_visibility", "type": target, "value": is_show}
                 else:
