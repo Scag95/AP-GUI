@@ -19,6 +19,7 @@ class _PatchItem(pg.GraphicsObject):
         self._rects  = []
         self._colors = []
         self._br     = QRectF()
+        self._click_handler = None  # callable(fiber_idx: int)
 
     def setup(self, rects_xywh: list):
         """rects_xywh: [(x, y, w, h),...] donde x=z_centroide-dz/2, y=y_centroide-dy/2."""
@@ -50,6 +51,16 @@ class _PatchItem(pg.GraphicsObject):
             p.setPen(border)
             p.drawRect(rect)
 
+    def mousePressEvent(self, event):
+        pos = event.pos()
+        for i, rect in enumerate(self._rects):
+            if rect.contains(pos):
+                if self._click_handler:
+                    self._click_handler(i)
+                event.accept()
+                return
+        event.ignore()
+
 
 class FiberStrainDialog(QWidget):
     """
@@ -69,6 +80,7 @@ class FiberStrainDialog(QWidget):
         self._fiber_labels = []   # pg.TextItem por cada fibra
         self._show_strain = True
         self._show_stress = False
+        self._open_fiber_dialogs: dict = {}  # (ele_tag, sec_num, fiber_idx) -> dialog
         self._setup_ui()
         self._populate_elements()
 
@@ -144,6 +156,11 @@ class FiberStrainDialog(QWidget):
         self.plot.addItem(self._patch_item)
         self.plot.addItem(self._bar_scatter)
 
+        self._patch_item._click_handler = self._open_fiber_history
+        self._bar_scatter.sigClicked.connect(
+            lambda _s, pts, _ev: self._on_bar_clicked(pts)
+        )
+
         right.addWidget(self.plot)
 
         slider_row = QHBoxLayout()
@@ -213,8 +230,40 @@ class FiberStrainDialog(QWidget):
 
     def _on_step_changed(self, _):
         n = len(self.manager.fiber_history)
-        self.lbl_step.setText(f"Paso: {self.slider.value()} / {max(0, n-1)}")
+        step = self.slider.value()
+        self.lbl_step.setText(f"Paso: {step} / {max(0, n-1)}")
         self._update_colors()
+        for dlg in self._open_fiber_dialogs.values():
+            if dlg.isVisible():
+                dlg.update_step(step)
+
+    def _on_bar_clicked(self, points):
+        if not points:
+            return
+        spot = points[0]
+        pos = spot.pos()
+        best, best_d = 0, float('inf')
+        for i, (z, y) in enumerate(zip(self._bar_z, self._bar_y)):
+            d = (z - pos.x()) ** 2 + (y - pos.y()) ** 2
+            if d < best_d:
+                best, best_d = i, d
+        self._open_fiber_history(self._n_patch + best)
+
+    def _open_fiber_history(self, fiber_idx: int):
+        ele_tag, sec_num, ele, sec = self._current_ele_sec()
+        if ele_tag is None or not isinstance(sec, FiberSection):
+            return
+        key = (ele_tag, sec_num, fiber_idx)
+        existing = self._open_fiber_dialogs.get(key)
+        if existing and existing.isVisible():
+            existing.raise_()
+            return
+        dlg = FiberStressStrainDialog(
+            ele_tag, sec_num, fiber_idx,
+            self.manager, self.slider.value()
+        )
+        self._open_fiber_dialogs[key] = dlg
+        dlg.show()
 
     def _sync_slider(self):
         n = len(self.manager.fiber_history)
@@ -433,6 +482,9 @@ class FiberStrainDialog(QWidget):
         self.slider.blockSignals(False)
         self.lbl_step.setText(f"Paso: {safe} / {max(0, n - 1)}")
         self._update_colors()
+        for dlg in self._open_fiber_dialogs.values():
+            if dlg.isVisible():
+                dlg.update_step(safe)
 
     def _fiber_color(self, strain: float, fiber_idx: int, stress: float = 0.0) -> tuple:
         """
@@ -451,3 +503,147 @@ class FiberStrainDialog(QWidget):
         if ls == "DL":
             return (220, 180, 0)
         return (220, 220, 220)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+class FiberStressStrainDialog(QWidget):
+    """
+    Ventana σ-ε para una fibra individual a lo largo de todos los pasos del pushover.
+    Se abre al hacer click sobre una fibra en FiberStrainDialog.
+    """
+
+    def __init__(self, ele_tag: int, sec_num: int, fiber_idx: int,
+                 manager, current_step: int = 0, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.Window)
+        self._ele_tag   = ele_tag
+        self._sec_num   = sec_num
+        self._fiber_idx = fiber_idx
+        self._manager   = manager
+        self._step      = current_step
+        self._strains   = []
+        self._stresses  = []  # en MPa
+        self._curve     = None
+        self._marker    = None
+        self._setup_ui()
+        self._load_history()
+        self._draw_thresholds()
+        self._update_marker()
+
+    # ── UI ────────────────────────────────────────────────────────────────────
+
+    def _setup_ui(self):
+        mat = self._get_material()
+        mat_name = mat.name if mat else "?"
+        self.setWindowTitle(
+            f"σ-ε  ·  Ele {self._ele_tag}  ·  Sec {self._sec_num}"
+            f"  ·  Fibra {self._fiber_idx}  [{mat_name}]"
+        )
+        self.resize(520, 400)
+        layout = QVBoxLayout(self)
+
+        self.plot = pg.PlotWidget(background='w')
+        self.plot.setLabel('bottom', 'ε')
+        self.plot.setLabel('left', 'σ [MPa]')
+        self.plot.showGrid(x=True, y=True, alpha=0.3)
+        layout.addWidget(self.plot)
+
+        self.lbl_info = QLabel()
+        self.lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.lbl_info)
+
+    # ── Datos ─────────────────────────────────────────────────────────────────
+
+    def _get_material(self):
+        ele = self._manager.get_element(self._ele_tag)
+        if not ele:
+            return None
+        sec_tag = self._manager._ls_get_sec_tag(ele, self._sec_num)
+        if not sec_tag:
+            return None
+        sec = self._manager.get_section(sec_tag)
+        if not isinstance(sec, FiberSection):
+            return None
+        mat_tags = self._manager._ls_fiber_mat_tags(sec)
+        if self._fiber_idx >= len(mat_tags):
+            return None
+        return self._manager.get_material(mat_tags[self._fiber_idx])
+
+    def _load_history(self):
+        self._strains  = []
+        self._stresses = []
+        for step_data in self._manager.fiber_history:
+            fdata = step_data.get(self._ele_tag, {}).get(self._sec_num)
+            if fdata:
+                eps_list = fdata.get("strains",  [])
+                sig_list = fdata.get("stresses", [])
+                if self._fiber_idx < len(eps_list):
+                    self._strains.append(eps_list[self._fiber_idx])
+                    sig_pa = sig_list[self._fiber_idx] if self._fiber_idx < len(sig_list) else 0.0
+                    self._stresses.append(sig_pa / 1e6)
+
+        if not self._strains:
+            self.lbl_info.setText("Sin datos de historial para esta fibra.")
+            return
+
+        self._curve = self.plot.plot(
+            self._strains, self._stresses,
+            pen=pg.mkPen((50, 100, 220), width=2),
+            name="Historial σ-ε",
+        )
+        self._marker = self.plot.plot(
+            [], [],
+            symbol='o', symbolSize=10,
+            symbolBrush=pg.mkBrush(220, 50, 50),
+            symbolPen=pg.mkPen('k', width=1),
+            pen=None,
+        )
+
+    def _draw_thresholds(self):
+        from src.analysis.materials import Steel01, Concrete01
+        mat = self._get_material()
+        if mat is None:
+            return
+
+        if isinstance(mat, Steel01):
+            eps_y = mat.get_yield_strain()
+            if eps_y:
+                for x in (eps_y, -eps_y):
+                    self.plot.addItem(pg.InfiniteLine(
+                        pos=x, angle=90,
+                        pen=pg.mkPen((220, 180, 0, 200), width=1.5,
+                                     style=Qt.PenStyle.DashLine),
+                        label=f"εy={x:.3e}",
+                        labelOpts={"position": 0.92, "color": (160, 130, 0)},
+                    ))
+
+        elif isinstance(mat, Concrete01):
+            eps_sl = self._manager.SL_FACTOR * self._manager.EPSC_U
+            eps_nc = self._manager.NC_FACTOR * self._manager.EPSC_U
+            for val, color, lbl in [
+                (-eps_sl, (230, 100, 0, 200), f"εSL={-eps_sl:.3e}"),
+                (-eps_nc, (210,   0, 0, 200), f"εNC={-eps_nc:.3e}"),
+            ]:
+                self.plot.addItem(pg.InfiniteLine(
+                    pos=val, angle=90,
+                    pen=pg.mkPen(color, width=1.5, style=Qt.PenStyle.DashLine),
+                    label=lbl,
+                    labelOpts={"position": 0.92, "color": color[:3]},
+                ))
+
+    # ── Actualización de paso ─────────────────────────────────────────────────
+
+    def update_step(self, step: int):
+        self._step = step
+        self._update_marker()
+
+    def _update_marker(self):
+        if not self._strains or self._marker is None:
+            return
+        idx = min(self._step, len(self._strains) - 1)
+        self._marker.setData([self._strains[idx]], [self._stresses[idx]])
+        self.lbl_info.setText(
+            f"Paso {self._step}  |  ε = {self._strains[idx]:.4e}"
+            f"  |  σ = {self._stresses[idx]:.2f} MPa"
+        )
