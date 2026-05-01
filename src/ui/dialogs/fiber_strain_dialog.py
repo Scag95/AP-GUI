@@ -51,16 +51,6 @@ class _PatchItem(pg.GraphicsObject):
             p.setPen(border)
             p.drawRect(rect)
 
-    def mousePressEvent(self, event):
-        pos = event.pos()
-        for i, rect in enumerate(self._rects):
-            if rect.contains(pos):
-                if self._click_handler:
-                    self._click_handler(i)
-                event.accept()
-                return
-        event.ignore()
-
 
 class FiberStrainDialog(QWidget):
     """
@@ -156,10 +146,7 @@ class FiberStrainDialog(QWidget):
         self.plot.addItem(self._patch_item)
         self.plot.addItem(self._bar_scatter)
 
-        self._patch_item._click_handler = self._open_fiber_history
-        self._bar_scatter.sigClicked.connect(
-            lambda _s, pts, _ev: self._on_bar_clicked(pts)
-        )
+        self.plot.scene().sigMouseClicked.connect(self._on_plot_clicked)
 
         right.addWidget(self.plot)
 
@@ -237,17 +224,31 @@ class FiberStrainDialog(QWidget):
             if dlg.isVisible():
                 dlg.update_step(step)
 
-    def _on_bar_clicked(self, points):
-        if not points:
+    def _on_plot_clicked(self, event):
+        if event.button() != Qt.MouseButton.LeftButton:
             return
-        spot = points[0]
-        pos = spot.pos()
-        best, best_d = 0, float('inf')
-        for i, (z, y) in enumerate(zip(self._bar_z, self._bar_y)):
-            d = (z - pos.x()) ** 2 + (y - pos.y()) ** 2
-            if d < best_d:
-                best, best_d = i, d
-        self._open_fiber_history(self._n_patch + best)
+        
+        pos = self.plot.plotItem.vb.mapSceneToView(event.scenePos())
+        z, y = pos.x(), pos.y()
+
+        # 1. Prioridad: Buscar fibra de acero (barras) cerca (tolerancia 1.5 diametros)
+        best_bar, best_d = -1, float('inf')
+        for i, (bz, by, bs) in enumerate(zip(self._bar_z, self._bar_y, self._bar_s)):
+            d = math.hypot(bz - z, by - y)
+            if d < bs * 1.5 and d < best_d:
+                best_bar, best_d = i, d
+        
+        if best_bar >= 0:
+            self._open_fiber_history(self._n_patch + best_bar)
+            event.accept()
+            return
+
+        # 2. Si no tocó acero, buscar parche de concreto
+        for i, rect in enumerate(self._patch_item._rects):
+            if rect.contains(pos):
+                self._open_fiber_history(i)
+                event.accept()
+                return
 
     def _open_fiber_history(self, fiber_idx: int):
         ele_tag, sec_num, ele, sec = self._current_ele_sec()
@@ -516,7 +517,7 @@ class FiberStressStrainDialog(QWidget):
     def __init__(self, ele_tag: int, sec_num: int, fiber_idx: int,
                  manager, current_step: int = 0, parent=None):
         super().__init__(parent)
-        self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         self._ele_tag   = ele_tag
         self._sec_num   = sec_num
         self._fiber_idx = fiber_idx
@@ -528,7 +529,6 @@ class FiberStressStrainDialog(QWidget):
         self._marker    = None
         self._setup_ui()
         self._load_history()
-        self._draw_thresholds()
         self._update_marker()
 
     # ── UI ────────────────────────────────────────────────────────────────────
@@ -546,6 +546,7 @@ class FiberStressStrainDialog(QWidget):
         self.plot = pg.PlotWidget(background='w')
         self.plot.setLabel('bottom', 'ε')
         self.plot.setLabel('left', 'σ [MPa]')
+        self.plot.getAxis('left').enableAutoSIPrefix(False)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         layout.addWidget(self.plot)
 
@@ -573,15 +574,31 @@ class FiberStressStrainDialog(QWidget):
     def _load_history(self):
         self._strains  = []
         self._stresses = []
-        for step_data in self._manager.fiber_history:
+        self._ls_points = {"DL": None, "SL": None, "NC": None}
+
+        for step_idx, step_data in enumerate(self._manager.fiber_history):
             fdata = step_data.get(self._ele_tag, {}).get(self._sec_num)
             if fdata:
                 eps_list = fdata.get("strains",  [])
                 sig_list = fdata.get("stresses", [])
                 if self._fiber_idx < len(eps_list):
-                    self._strains.append(eps_list[self._fiber_idx])
+                    strain = eps_list[self._fiber_idx]
+                    self._strains.append(strain)
                     sig_pa = sig_list[self._fiber_idx] if self._fiber_idx < len(sig_list) else 0.0
-                    self._stresses.append(sig_pa / 1e6)
+                    stress = sig_pa / 1e6
+                    self._stresses.append(stress)
+
+                    ls = self._manager.get_fiber_limit_state(self._ele_tag, self._sec_num, self._fiber_idx, strain)
+                    if ls != "OK":
+                        if ls == "DL" and self._ls_points["DL"] is None:
+                            self._ls_points["DL"] = (step_idx, strain, stress)
+                        elif ls == "SL":
+                            if self._ls_points["DL"] is None: self._ls_points["DL"] = (step_idx, strain, stress)
+                            if self._ls_points["SL"] is None: self._ls_points["SL"] = (step_idx, strain, stress)
+                        elif ls == "NC":
+                            if self._ls_points["DL"] is None: self._ls_points["DL"] = (step_idx, strain, stress)
+                            if self._ls_points["SL"] is None: self._ls_points["SL"] = (step_idx, strain, stress)
+                            if self._ls_points["NC"] is None: self._ls_points["NC"] = (step_idx, strain, stress)
 
         if not self._strains:
             self.lbl_info.setText("Sin datos de historial para esta fibra.")
@@ -592,6 +609,10 @@ class FiberStressStrainDialog(QWidget):
             pen=pg.mkPen((50, 100, 220), width=2),
             name="Historial σ-ε",
         )
+        
+        self._ls_scatter = pg.ScatterPlotItem()
+        self.plot.addItem(self._ls_scatter)
+
         self._marker = self.plot.plot(
             [], [],
             symbol='o', symbolSize=10,
@@ -599,38 +620,6 @@ class FiberStressStrainDialog(QWidget):
             symbolPen=pg.mkPen('k', width=1),
             pen=None,
         )
-
-    def _draw_thresholds(self):
-        from src.analysis.materials import Steel01, Concrete01
-        mat = self._get_material()
-        if mat is None:
-            return
-
-        if isinstance(mat, Steel01):
-            eps_y = mat.get_yield_strain()
-            if eps_y:
-                for x in (eps_y, -eps_y):
-                    self.plot.addItem(pg.InfiniteLine(
-                        pos=x, angle=90,
-                        pen=pg.mkPen((220, 180, 0, 200), width=1.5,
-                                     style=Qt.PenStyle.DashLine),
-                        label=f"εy={x:.3e}",
-                        labelOpts={"position": 0.92, "color": (160, 130, 0)},
-                    ))
-
-        elif isinstance(mat, Concrete01):
-            eps_sl = self._manager.SL_FACTOR * self._manager.EPSC_U
-            eps_nc = self._manager.NC_FACTOR * self._manager.EPSC_U
-            for val, color, lbl in [
-                (-eps_sl, (230, 100, 0, 200), f"εSL={-eps_sl:.3e}"),
-                (-eps_nc, (210,   0, 0, 200), f"εNC={-eps_nc:.3e}"),
-            ]:
-                self.plot.addItem(pg.InfiniteLine(
-                    pos=val, angle=90,
-                    pen=pg.mkPen(color, width=1.5, style=Qt.PenStyle.DashLine),
-                    label=lbl,
-                    labelOpts={"position": 0.92, "color": color[:3]},
-                ))
 
     # ── Actualización de paso ─────────────────────────────────────────────────
 
@@ -647,3 +636,25 @@ class FiberStressStrainDialog(QWidget):
             f"Paso {self._step}  |  ε = {self._strains[idx]:.4e}"
             f"  |  σ = {self._stresses[idx]:.2f} MPa"
         )
+        
+        ls_styles = {
+            "DL": ((220, 180,   0), "t1"),
+            "SL": ((230, 100,   0), "s"),
+            "NC": ((210,   0,   0), "o"),
+        }
+        
+        spots = []
+        if hasattr(self, '_ls_points'):
+            for ls, data in self._ls_points.items():
+                if data is not None:
+                    step_idx, strain, stress = data
+                    if idx >= step_idx:
+                        color, symbol = ls_styles[ls]
+                        spots.append({
+                            "pos": (strain, stress),
+                            "symbol": symbol,
+                            "brush": pg.mkBrush(color),
+                            "pen": pg.mkPen((255, 255, 255), width=1),
+                            "size": 12
+                        })
+            self._ls_scatter.setData(spots)

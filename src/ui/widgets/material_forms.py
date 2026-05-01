@@ -242,9 +242,9 @@ class SteelForm(QWidget):
             "E0": self.spin_E0.get_value_base(),
             "b": self.spin_b.value(),
             "a1": 0.0,
-            "a2": 0.0,
+            "a2": 1.0,
             "a3": 0.0,
-            "a4": 0.0,
+            "a4": 1.0,
             "minmax": None
         }
         
@@ -621,4 +621,151 @@ class HystereticSMForm(QWidget):
             "damage1": self.spin_damage1.value(),
             "damage2": self.spin_damage2.value(),
             "beta": self.spin_beta.value() if self.chk_beta.isChecked() else None
+        }
+
+class Steel02Form(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.layout = QFormLayout(self)
+        
+        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
+        self.spin_rho.setDecimals(0)
+        self.spin_rho.setRange(0, 1e6)
+        self.spin_rho.set_value_base(7850)
+        self.layout.addRow("Densidad (ρ):", self.spin_rho)
+
+        self.spin_Fy = UnitSpinBox(UnitType.STRESS)
+        self.spin_Fy.setDecimals(0)
+        self.spin_Fy.setRange(0, 1e10) 
+        self.spin_Fy.set_value_base(500*1e6) # 500 MPa = 500e6 Pa
+
+        self.spin_E0 = UnitSpinBox(UnitType.STRESS)
+        self.spin_E0.setDecimals(0)
+        self.spin_E0.setRange(0, 1e12)
+        self.spin_E0.set_value_base(200*1e9) # 200 GPa = 200,000 MPa = 200e9 Pa
+
+        self.spin_b = QDoubleSpinBox()
+        self.spin_b.setValue(0.000001)
+        self.spin_b.setDecimals(6)
+        self.spin_b.setSingleStep(0.01)
+
+        self.layout.addRow("Esfuerzo de Fluencia (Fy):", self.spin_Fy)
+        self.layout.addRow("Módulo Elástico (E0):", self.spin_E0)
+        self.layout.addRow("Ratio de Endurecimiento (b):", self.spin_b)
+
+        self.chk_advanced = QCheckBox("Mostrar Propiedades Avanzadas")
+        self.chk_advanced.toggled.connect(self._toggle_advanced)
+        self.layout.addRow(self.chk_advanced)
+
+        self.adv_widget = QWidget()
+        self.adv_layout = QFormLayout(self.adv_widget)
+        self.adv_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.spin_R0 = QDoubleSpinBox()
+        self.spin_R0.setDecimals(3)
+        self.spin_R0.setRange(0, 100)
+        self.spin_R0.setValue(15.0)
+        
+        self.spin_cR1 = QDoubleSpinBox()
+        self.spin_cR1.setDecimals(3)
+        self.spin_cR1.setValue(0.925)
+        
+        self.spin_cR2 = QDoubleSpinBox()
+        self.spin_cR2.setDecimals(3)
+        self.spin_cR2.setValue(0.15)
+        
+        self.adv_layout.addRow("R0 (10-20):", self.spin_R0)
+        self.adv_layout.addRow("cR1:", self.spin_cR1)
+        self.adv_layout.addRow("cR2:", self.spin_cR2)
+
+        self.spin_a1 = QDoubleSpinBox(); self.spin_a1.setDecimals(3); self.spin_a1.setValue(0.0)
+        self.spin_a2 = QDoubleSpinBox(); self.spin_a2.setDecimals(3); self.spin_a2.setValue(1.0)
+        self.spin_a3 = QDoubleSpinBox(); self.spin_a3.setDecimals(3); self.spin_a3.setValue(0.0)
+        self.spin_a4 = QDoubleSpinBox(); self.spin_a4.setDecimals(3); self.spin_a4.setValue(1.0)
+        self.spin_sigInit = UnitSpinBox(UnitType.STRESS)
+
+        self.adv_layout.addRow("a1 (endurec. comp):", self.spin_a1)
+        self.adv_layout.addRow("a2 (deform. comp):", self.spin_a2)
+        self.adv_layout.addRow("a3 (endurec. trac):", self.spin_a3)
+        self.adv_layout.addRow("a4 (deform. trac):", self.spin_a4)
+        self.adv_layout.addRow("Esfuerzo Inicial (sigInit):", self.spin_sigInit)
+
+        self.layout.addRow(self.adv_widget)
+        self.adv_widget.hide()
+
+    def _toggle_advanced(self, checked):
+        self.adv_widget.setVisible(checked)
+
+    def set_data(self, material):
+        self.spin_rho.set_value_base(material.rho)
+        self.spin_Fy.set_value_base(material.Fy)
+        self.spin_E0.set_value_base(material.E0)
+        self.spin_b.setValue(material.b)
+        
+        self.spin_R0.setValue(material.R0)
+        self.spin_cR1.setValue(material.cR1)
+        self.spin_cR2.setValue(material.cR2)
+        
+        self.spin_a1.setValue(material.a1)
+        self.spin_a2.setValue(material.a2)
+        self.spin_a3.setValue(material.a3)
+        self.spin_a4.setValue(material.a4)
+        self.spin_sigInit.set_value_base(material.sigInit)
+
+    def get_data(self):
+        return {
+            "rho": self.spin_rho.get_value_base(),
+            "Fy": self.spin_Fy.get_value_base(),
+            "E0": self.spin_E0.get_value_base(),
+            "b": self.spin_b.value(),
+            "R0": self.spin_R0.value(),
+            "cR1": self.spin_cR1.value(),
+            "cR2": self.spin_cR2.value(),
+            "a1": self.spin_a1.value(),
+            "a2": self.spin_a2.value(),
+            "a3": self.spin_a3.value(),
+            "a4": self.spin_a4.value(),
+            "sigInit": self.spin_sigInit.get_value_base()
+        }
+
+class ElasticPPGapForm(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.layout = QFormLayout(self)
+
+        self.spin_rho = UnitSpinBox(UnitType.DENSITY)
+        self.layout.addRow("Densidad (ρ):", self.spin_rho)
+
+        self.spin_E = UnitSpinBox(UnitType.STRESS)
+        self.spin_Fy = UnitSpinBox(UnitType.STRESS)
+        self.spin_gap = UnitSpinBox(UnitType.LENGTH)
+        
+        self.spin_eta = QDoubleSpinBox()
+        self.spin_eta.setDecimals(6)
+        self.spin_eta.setSingleStep(0.01)
+        
+        self.chk_damage = QCheckBox("Acumular daño (No centrar en descarga)")
+
+        self.layout.addRow("Módulo Elástico (E):", self.spin_E)
+        self.layout.addRow("Esfuerzo de Fluencia (Fy):", self.spin_Fy)
+        self.layout.addRow("Brecha Inicial (gap):", self.spin_gap)
+        self.layout.addRow("Ratio de Endurecimiento (eta):", self.spin_eta)
+        self.layout.addRow("", self.chk_damage)
+
+    def set_data(self, material):
+        self.spin_rho.set_value_base(material.rho)
+        self.spin_E.set_value_base(material.E)
+        self.spin_Fy.set_value_base(material.Fy)
+        self.spin_gap.set_value_base(material.gap)
+        self.spin_eta.setValue(material.eta)
+        self.chk_damage.setChecked(material.damage == 'damage')
+
+    def get_data(self):
+        return {
+            "rho": self.spin_rho.get_value_base(),
+            "E": self.spin_E.get_value_base(),
+            "Fy": self.spin_Fy.get_value_base(),
+            "gap": self.spin_gap.get_value_base(),
+            "eta": self.spin_eta.value(),
+            "damage": 'damage' if self.chk_damage.isChecked() else 'noDamage'
         }

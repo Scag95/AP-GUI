@@ -19,12 +19,13 @@ class LoadRenderer:
             plot_widget.removeItem(item)
         self.load_items.clear()
 
-    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True, draw_pushover=False, pattern_tag=None):
+    def draw_loads(self, plot_widget, manager, scale=1.0, show_nodes=True, show_elements=True, draw_pushover=False, pattern_tag=None, clear=True):
         """Dibuja todas las cargas del manager en el plot_widget."""
         # Desactivamos actualizaciones para acelerar la inserción masiva de items
         plot_widget.setUpdatesEnabled(False)
         try:
-            self.clear(plot_widget)
+            if clear:
+                self.clear(plot_widget)
 
             # Pre-calc scales/constants
             um = UnitManager.instance()

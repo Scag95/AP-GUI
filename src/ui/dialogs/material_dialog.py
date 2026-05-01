@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                              QComboBox,QStackedWidget,QListWidgetItem)
 from PyQt6.QtCore import Qt
 
-from src.ui.widgets.material_forms import ConcreteForm, SteelForm, ElasticForm, HystereticForm, HystereticSMForm
-from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM
+from src.ui.widgets.material_forms import ConcreteForm, SteelForm, ElasticForm, HystereticForm, HystereticSMForm, Steel02Form, ElasticPPGapForm
+from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM, Steel02, ElasticPPGap
 from src.analysis.manager import ProjectManager
 
 class MaterialDialog(QDialog):
@@ -29,7 +29,15 @@ class MaterialDialog(QDialog):
 
         #Selector de tipo de material
         self.combo_type =QComboBox()
-        self.combo_type.addItems(["Concrete01", "Steel01", "Elastic", "Hysteretic", "HystereticSM"])
+        self.combo_type.addItems([
+            "Concrete01", 
+            "Steel01", 
+            "Steel02", 
+            "Elastic", 
+            "ElasticPPGap", 
+            "Hysteretic", 
+            "HystereticSM"
+        ])
         self.left_panel_layout.addWidget(self.combo_type)
 
         #Botones de control
@@ -54,13 +62,20 @@ class MaterialDialog(QDialog):
         self.form_elastic = ElasticForm()
         self.form_hysteretic = HystereticForm()
         self.form_hysteretic_sm = HystereticSMForm()
+        self.form_steel02 = Steel02Form()
+        self.form_elastic_gap = ElasticPPGapForm()
 
-        #Los añadimos a la pila
+        # Los añadimos a la pila en el mismo orden que el combo_type
         self.form_stack.addWidget(self.form_concrete)         # Índice 0: Concrete01
         self.form_stack.addWidget(self.form_steel)            # Índice 1: Steel01
-        self.form_stack.addWidget(self.form_elastic)          # Índice 2: Elastic
-        self.form_stack.addWidget(self.form_hysteretic)       # Índice 3: Hysteretic
-        self.form_stack.addWidget(self.form_hysteretic_sm)    # Índice 4: HystereticSM
+        self.form_stack.addWidget(self.form_steel02)          # Índice 2: Steel02
+        self.form_stack.addWidget(self.form_elastic)          # Índice 3: Elastic
+        self.form_stack.addWidget(self.form_elastic_gap)      # Índice 4: ElasticPPGap
+        self.form_stack.addWidget(self.form_hysteretic)       # Índice 5: Hysteretic
+        self.form_stack.addWidget(self.form_hysteretic_sm)    # Índice 6: HystereticSM
+
+
+
 
         self.right_panel_layout.addWidget(self.form_stack)
         #Añadimos el panel derefcho a layout principal
@@ -106,8 +121,16 @@ class MaterialDialog(QDialog):
             data = self.form_hysteretic_sm.get_data()
             name = f"Mat_HystereticSM_{next_tag}"
             material = HystereticSM(next_tag, name, **data)
+        elif material_type == "Steel02":
+            data = self.form_steel02.get_data()
+            name = f"Mat_Acero02_{next_tag}"
+            material = Steel02(next_tag, name, **data)
+        elif material_type == "ElasticPPGap":
+            data = self.form_elastic_gap.get_data()
+            name = f"Mat_ElasticPPGap_{next_tag}"
+            material = ElasticPPGap(next_tag, name, **data)
         else:
-            return 
+            return
 
         # Guardar logica
         manager.add_material(material)
@@ -180,6 +203,16 @@ class MaterialDialog(QDialog):
                 if index >= 0:
                     self.combo_type.setCurrentIndex(index)
                     self.form_hysteretic_sm.set_data(material)
+            elif isinstance(material, Steel02):
+                index = self.combo_type.findText("Steel02")
+                if index >= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_steel02.set_data(material)
+            elif isinstance(material, ElasticPPGap):
+                index = self.combo_type.findText("ElasticPPGap")
+                if index >= 0:
+                    self.combo_type.setCurrentIndex(index)
+                    self.form_elastic_gap.set_data(material)
 
     def update_material(self):
         current_row = self.materials_list.currentRow()
@@ -220,6 +253,18 @@ class MaterialDialog(QDialog):
                     
         elif isinstance(material, HystereticSM):
             new_data = self.form_hysteretic_sm.get_data()
+            for key, value in new_data.items():
+                if hasattr(material, key):
+                    setattr(material, key, value)
+
+        elif isinstance(material, Steel02):
+            new_data = self.form_steel02.get_data()
+            for key, value in new_data.items():
+                if hasattr(material, key):
+                    setattr(material, key, value)
+
+        elif isinstance(material, ElasticPPGap):
+            new_data = self.form_elastic_gap.get_data()
             for key, value in new_data.items():
                 if hasattr(material, key):
                     setattr(material, key, value)

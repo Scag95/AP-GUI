@@ -362,7 +362,7 @@ class ProjectManager(QObject):
 
     def load_project(self,filename):
         import json
-        from src.analysis.materials import Concrete01, Steel01, Hysteretic, HystereticSM
+        from src.analysis.materials import Concrete01, Steel01, Steel02, Hysteretic, HystereticSM, ElasticPPGap
         from src.analysis.sections import FiberSection, AggregatorSection
         from src.analysis.node import Node
         from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
@@ -385,6 +385,10 @@ class ProjectManager(QObject):
                     mat = Hysteretic.from_dict(m_data)
                 elif tipo == "HystereticSM":
                     mat = HystereticSM.from_dict(m_data)
+                elif tipo == "Steel02":
+                    mat = Steel02.from_dict(m_data)
+                elif tipo == "ElasticPPGap":
+                    mat = ElasticPPGap.from_dict(m_data)
                 elif tipo == "Elastic":
                     from src.analysis.materials import Elastic
                     mat = Elastic.from_dict(m_data)

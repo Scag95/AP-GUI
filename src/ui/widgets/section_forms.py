@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QFormLayout, QGroupBox, QComboBox,
                              QSpinBox, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QMessageBox)
 from src.analysis.manager import ProjectManager
-from src.analysis.materials import Concrete01, Steel01
+from src.analysis.materials import Concrete01, Steel01, Steel02
 from src.ui.widgets.unit_spinbox import UnitSpinBox
 from src.utils.units import UnitType
 import math
@@ -150,7 +150,7 @@ class SectionForm(QWidget):
             if isinstance(mat, Concrete01):
                 self.combo_concrete.addItem(display_text, mat.tag)
 
-            elif isinstance(mat, Steel01):
+            elif isinstance(mat, (Steel01, Steel02)):
                 self.combo_steel.addItem(display_text, mat.tag)
 
     def get_data(self):
