@@ -66,6 +66,7 @@ class StructureInteractor(QWidget):
         self.show_hinges = True
         self.show_crosses = True
         self._skip_loads_on_refresh = False
+        self._last_yield_args = None  # caché para redibujado inmediato al show
         self.active_pattern_tag = None
 
         # --- ATAJOS DE TECLADO ---
@@ -189,15 +190,15 @@ class StructureInteractor(QWidget):
         self.show_hinges = visible
         if not visible:
             self.renderer_yield.clear(self.plot_widget)
-        elif self.current_results:
-            self.refresh_viz()
+        elif self._last_yield_args:
+            self.draw_kinematic_yield_step(*self._last_yield_args)
 
     def set_crosses_visible(self, visible):
         self.show_crosses = visible
         if not visible:
             self.renderer_yield.clear_crosses(self.plot_widget)
-        elif self.current_results:
-            self.refresh_viz()
+        elif self._last_yield_args:
+            self.draw_kinematic_yield_step(*self._last_yield_args)
 
     def show_deformation(self, results, scale_factor=None):
         self.current_results = results
@@ -229,6 +230,7 @@ class StructureInteractor(QWidget):
                                     frozen_floors=None, frozen_columns=None,
                                     step_index: int = None):
         """Pinta rotulas y cruces de San Andres sobre la forma deformada del step actual."""
+        self._last_yield_args = (yield_data, step_displacements, frozen_floors, frozen_columns, step_index)
         scale = ScaleManager.instance().get_scale('deformation')
         if yield_data and self.show_hinges:
             self.renderer_yield.draw_yield_state(
@@ -266,6 +268,7 @@ class StructureInteractor(QWidget):
 
     def clear_results(self):
         self.current_results = None
+        self._last_yield_args = None
         self.renderer_deform.clear(self.plot_widget)
         self.renderer_forces.clear(self.plot_widget)
         self.renderer_yield.clear(self.plot_widget)

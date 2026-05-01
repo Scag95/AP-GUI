@@ -9,7 +9,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:opensees.github.io)",
       "Bash(xargs wc *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(python -c \"from src.ui.dialogs.fiber_strain_dialog import FiberStrainDialog, FiberStressStrainDialog; print\\('OK'\\)\")"
     ]
   }
 }
