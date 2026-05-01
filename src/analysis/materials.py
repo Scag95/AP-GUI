@@ -335,3 +335,104 @@ class HystereticSM(Material):
             beta=data.get("beta",        0.5),
             rho=data.get("rho",          0.0)
         )
+
+class Steel02(Material):
+    __slots__ = ['Fy', 'E0', 'b', 'R0', 'cR1', 'cR2', 'a1', 'a2', 'a3', 'a4', 'sigInit', 'minmax']
+    def __init__(self, tag, name, Fy, E0, b, rho=7850.0, 
+                 R0=15.0, cR1=0.925, cR2=0.15, 
+                 a1=0.0, a2=1.0, a3=0.0, a4=1.0, sigInit=0.0, minmax=None):
+        super().__init__(tag, name, rho)
+        self.Fy = Fy
+        self.E0 = E0
+        self.b = b
+        self.R0 = R0
+        self.cR1 = cR1
+        self.cR2 = cR2
+        self.a1 = a1
+        self.a2 = a2
+        self.a3 = a3
+        self.a4 = a4
+        self.sigInit = sigInit
+        self.minmax = minmax
+
+    def get_yield_strain(self):
+        return self.Fy / self.E0
+
+    def get_opensees_args(self):
+        return ["Steel02", self.tag, self.Fy, self.E0, self.b, 
+                self.R0, self.cR1, self.cR2, 
+                self.a1, self.a2, self.a3, self.a4, self.sigInit]
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "Steel02"
+        data["Fy"] = self.Fy
+        data["E0"] = self.E0
+        data["b"] = self.b
+        data["rho"] = self.rho
+        data["R0"] = self.R0
+        data["cR1"] = self.cR1
+        data["cR2"] = self.cR2
+        data["a1"] = self.a1
+        data["a2"] = self.a2
+        data["a3"] = self.a3
+        data["a4"] = self.a4
+        data["sigInit"] = self.sigInit
+        data["minmax"] = self.minmax
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            tag=data["tag"],
+            name=data["name"],
+            Fy=data["Fy"],
+            E0=data["E0"],
+            b=data["b"],
+            rho=data.get("rho", 7850.0),
+            R0=data.get("R0", 15.0),
+            cR1=data.get("cR1", 0.925),
+            cR2=data.get("cR2", 0.15),
+            a1=data.get("a1", 0.0),
+            a2=data.get("a2", 1.0),
+            a3=data.get("a3", 0.0),
+            a4=data.get("a4", 1.0),
+            sigInit=data.get("sigInit", 0.0),
+            minmax=data.get("minmax", None)
+        )
+
+class ElasticPPGap(Material):
+    __slots__ = ['E', 'Fy', 'gap', 'eta', 'damage']
+    def __init__(self, tag, name, E, Fy, gap, eta=0.0, damage='noDamage', rho=0.0):
+        super().__init__(tag, name, rho)
+        self.E = E
+        self.Fy = Fy
+        self.gap = gap
+        self.eta = eta
+        self.damage = damage
+
+    def get_opensees_args(self):
+        return ["ElasticPPGap", self.tag, self.E, self.Fy, self.gap, self.eta, self.damage]
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["type"] = "ElasticPPGap"
+        data["E"] = self.E
+        data["Fy"] = self.Fy
+        data["gap"] = self.gap
+        data["eta"] = self.eta
+        data["damage"] = self.damage
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            tag=data["tag"],
+            name=data["name"],
+            E=data["E"],
+            Fy=data["Fy"],
+            gap=data["gap"],
+            eta=data.get("eta", 0.0),
+            damage=data.get("damage", 'noDamage'),
+            rho=data.get("rho", 0.0)
+        )
