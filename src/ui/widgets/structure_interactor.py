@@ -128,17 +128,21 @@ class StructureInteractor(QWidget):
         s_load = ScaleManager.instance().get_scale('load')
 
         if not self._skip_loads_on_refresh:
+            self.renderer_load.clear(self.plot_widget)
+            
             self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load,
                                           show_nodes=self.show_loads_nodes,
                                           show_elements=self.show_loads_elements,
                                           draw_pushover=False,
-                                          pattern_tag=self.active_pattern_tag)
+                                          pattern_tag=self.active_pattern_tag,
+                                          clear=False)
 
             if self.show_pushover_loads:
                 self.renderer_load.draw_loads(self.plot_widget, self.manager, scale=s_load,
                                               show_nodes=True,
                                               show_elements=False,
-                                              draw_pushover=True)
+                                              draw_pushover=True,
+                                              clear=False)
         else:
             self._skip_loads_on_refresh = False
 
