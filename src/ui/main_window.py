@@ -1,11 +1,13 @@
 from pandas.io.formats.format import save_to_buffer
-from PyQt6.QtWidgets import QMainWindow, QDockWidget, QMdiArea, QMdiSubWindow
+from PyQt6.QtWidgets import (QMainWindow, QDockWidget, QMdiArea, QMdiSubWindow,
+                             QToolBar, QComboBox, QLabel, QWidget)
 from PyQt6.QtCore import Qt 
 from PyQt6.QtGui import QAction
 from src.ui.menus.file_menu import FileMenu
 from src.ui.menus.define_menu import DefineMenu
 from src.ui.menus.assign_menu import AssignMenu
 from src.ui.menus.analyze_menu import AnalyzeMenu
+from src.ui.menus.results_menu import ResultsMenu
 from src.ui.widgets.structure_interactor import StructureInteractor
 from src.ui.widgets.properties_panel import PropertiesPanel
 from src.analysis.manager import ProjectManager
@@ -39,6 +41,9 @@ class MainWindow(QMainWindow):
         self.analyze_menu = AnalyzeMenu(self)
         bar.addMenu(self.analyze_menu) 
         
+        self.results_menu = ResultsMenu(self)
+        bar.addMenu(self.results_menu)
+        
         self.view_menu = bar.addMenu("Ver")
         
         self.act_new_view = QAction("Nueva Vista 3D", self)
@@ -50,6 +55,17 @@ class MainWindow(QMainWindow):
         self.anim_toolbar = AnimationToolbar(self)
         self.addToolBar(self.anim_toolbar)
         self.anim_toolbar.hide() # Oculta por defecto hasta que haya un resultado de Pushover
+
+        # --- PATTERN FILTER TOOLBAR ---
+        self.pattern_toolbar = QToolBar("Filtro de Patrones", self)
+        self.pattern_toolbar.setMovable(False)
+        self.pattern_toolbar.addWidget(QLabel("  Patrón de Carga:  "))
+        self.pattern_combo = QComboBox()
+        self.pattern_combo.setMinimumWidth(220)
+        self.pattern_combo.setToolTip("Selecciona un patrón para ver solo sus cargas")
+        self.pattern_combo.currentIndexChanged.connect(self._on_pattern_selected)
+        self.pattern_toolbar.addWidget(self.pattern_combo)
+        self.addToolBar(self.pattern_toolbar)
 
         self.mdi_area = QMdiArea()
         self.setCentralWidget(self.mdi_area)
@@ -73,6 +89,10 @@ class MainWindow(QMainWindow):
         from src.utils.units import UnitManager
         UnitManager.instance().unitsChanged.connect(self.refresh_project)
 
+        # Rellenar combobox inicial y reconectar al cargar proyectos
+        self._refresh_pattern_combo()
+        ProjectManager.instance().dataChanged.connect(self._refresh_pattern_combo)
+
         # --- SISTEMA DE COMANDOS ---
         self.cmd_processor = CommandProcessor()
         self.console_widget = CommandLineWidget() 
@@ -81,8 +101,8 @@ class MainWindow(QMainWindow):
         self.console_dock.setWidget(self.console_widget)
         self.console_dock.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea)
         # Quitar la barra de título (botones de cerrar/maximizar) asignando un widget vacío
-        from PyQt6.QtWidgets import QWidget
         self.console_dock.setTitleBarWidget(QWidget())
+
         
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.console_dock)
         
@@ -111,6 +131,26 @@ class MainWindow(QMainWindow):
     def refresh_project(self):
         ProjectManager.instance().dataChanged.emit()
 
+    def _refresh_pattern_combo(self):
+        """Repopula el combobox de patrones sin disparar selecciones intermedias."""
+        combo = self.pattern_combo
+        combo.blockSignals(True)
+        current_data = combo.currentData()  # Recordar selección actual
+        combo.clear()
+        combo.addItem("— Todos los Patrones —", None)  # Opción default
+        for p in ProjectManager.instance().get_all_patterns():
+            combo.addItem(f"Patrón {p.tag}: {p.name}", p.tag)
+        # Restaurar selección previa si sigue existiendo
+        idx = combo.findData(current_data)
+        combo.setCurrentIndex(idx if idx >= 0 else 0)
+        combo.blockSignals(False)
+
+    def _on_pattern_selected(self):
+        """Propaga el patrón seleccionado a todos los viewports activos."""
+        tag = self.pattern_combo.currentData()  # None = todos
+        for viz in self._viewports:
+            viz.set_active_pattern(tag)
+
     @property
     def _viewports(self):
         return [sub.widget() for sub in self.mdi_area.subWindowList() if isinstance(sub.widget(), StructureInteractor)]
@@ -129,6 +169,10 @@ class MainWindow(QMainWindow):
         if not title:
             title = f"Vista 3D - {vps_count + 1}"
         interactor = StructureInteractor()
+
+        # Los viewports nuevos heredan el patrón activo en el combobox
+        if hasattr(self, 'pattern_combo'):
+            interactor.active_pattern_tag = self.pattern_combo.currentData()
         sub_window = QMdiSubWindow()
         sub_window.setWidget(interactor)
         sub_window.setWindowTitle(title)
@@ -201,7 +245,7 @@ class MainWindow(QMainWindow):
             for viz in self._viewports:
                 viz.renderer_deform.clear(viz.plot_widget)
 
-    def sync_animation_step(self, step_index, step_data, sync_graphs=True):
+    def sync_animation_step(self, step_index, step_data, sync_graphs=True, step_forces=None):
         """ Recibe una señal temporal de la barra de animación y la distribuye a 
             todoas las subventanas (3D y Gráfcicos) que están escuchando."""
         
@@ -216,6 +260,8 @@ class MainWindow(QMainWindow):
             # --- 1. a los visores 3D les mandamos datos geográficos ---
             if isinstance(widget, StructureInteractor):
                 widget.draw_kinematic_step(step_data)
+                if step_forces is not None:
+                    widget.draw_kinematic_forces_step(step_forces)
 
             # --- 2. A los g´raficos de resultados les mandamos el índice del Slider ---
             elif sync_graphs:
@@ -266,6 +312,14 @@ class MainWindow(QMainWindow):
                 viz.set_visibility("diagrams", True)
             elif act_type == "set_load_visibility":
                 viz.set_load_visibility(action.get("type"), value)
+            elif act_type == "set_nodes_visible":
+                viz.set_nodes_visible(value)
+            elif act_type == "set_elements_visible":
+                viz.set_elements_visible(value)
+            elif act_type == "set_hinges_visible":
+                viz.set_hinges_visible(value)
+            elif act_type == "set_crosses_visible":
+                viz.set_crosses_visible(value)
         
 
 

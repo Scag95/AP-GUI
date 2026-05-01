@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import QSpinBox
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
-                             QComboBox, QPushButton, QCheckBox)
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout,
+                             QComboBox, QPushButton, QCheckBox, QProgressBar, QLabel)
+from PyQt6.QtWidgets import QApplication
 from src.analysis.manager import ProjectManager
 from src.ui.widgets.unit_spinbox import UnitSpinBox
-from src.utils.units import UnitManager
 from src.utils.units import UnitType
 
 class PushoverDialog(QDialog):
@@ -32,7 +32,18 @@ class PushoverDialog(QDialog):
 
         #2. Tipo de fuerzas
         self.combo_load_pattern_type = QComboBox()
-        self.combo_load_pattern_type.addItems(["Modal","Uniforme"])
+        self.combo_load_pattern_type.addItems(["Modal", "Uniforme", "Patrón Definido"])
+        self.combo_load_pattern_type.currentTextChanged.connect(self._on_load_type_changed)
+
+        # Selector de patrón (visible únicamente cuando se elige "Patrón Definido")
+        self.combo_defined_pattern = QComboBox()
+        self.combo_defined_pattern.setMinimumWidth(200)
+        self.combo_defined_pattern.setToolTip("Usa las cargas nodales de este patrón como distribución lateral")
+        for p in self.manager.get_all_patterns():
+            nodal_fx = [l for l in p.loads if hasattr(l, 'fx') and abs(l.fx) > 1e-9]
+            if nodal_fx:  # Solo mostrar patrones que tengan cargas nodales en X
+                self.combo_defined_pattern.addItem(f"Patrón {p.tag}: {p.name}", p.tag)
+        self.combo_defined_pattern.setVisible(False)
 
 
         #2. Desplazamiento Máximo
@@ -52,6 +63,12 @@ class PushoverDialog(QDialog):
         form_layout.addRow("Desplazamiento Máx:", self.spin_drift)
         form_layout.addRow("Número de pasos:", self.spin_steps)
         form_layout.addRow("Modo de aplicación de fuerza", self.combo_load_pattern_type)
+        form_layout.addRow("Patrón lateral a usar:", self.combo_defined_pattern)
+
+        # Guardar referencia al label del combo de patrón para ocultar/mostrar la fila completa
+        self._label_defined_pattern = form_layout.labelForField(self.combo_defined_pattern)
+        if self._label_defined_pattern:
+            self._label_defined_pattern.setVisible(False)
         
         layout.addLayout(form_layout)
 
@@ -64,7 +81,7 @@ class PushoverDialog(QDialog):
         from PyQt6.QtWidgets import QHBoxLayout, QLabel
         freeze_method_layout = QHBoxLayout()
         self.freeze_method_combo = QComboBox()
-        self.freeze_method_combo.addItems(["Springs", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)"])
+        self.freeze_method_combo.addItems(["Springs", "Node Fix (Anclaje Rígido)", "Load Pattern (Fuerzas Opuestas)", "Cruces de San Andrés"])
         self.freeze_method_combo.setToolTip("Elige cómo OpenSees tratará cinemáticamente a un piso que acaba de fallar.")
 
         freeze_method_layout.addWidget(self.freeze_method_combo)
@@ -90,7 +107,7 @@ class PushoverDialog(QDialog):
         self.spin_sensitivity.setRange(0, 100)
         self.spin_sensitivity.setSingleStep(1)
         self.spin_sensitivity.setDecimals(2)
-        self.spin_sensitivity.setValue(1)
+        self.spin_sensitivity.setValue(3)
         self.spin_sensitivity.setSuffix(" %")
         self.spin_sensitivity.setToolTip("Porcentaje de la rigidez inicial para considerar 'plana' la curva (Mecanismo).")
         failure_layout.addRow("Sensibilidad de Caída (1-100%):", self.spin_sensitivity)
@@ -115,13 +132,28 @@ class PushoverDialog(QDialog):
         form_layout.addRow("Visualización:", self.chk_show_loads)
 
         # --- BOTONES ---
-        # Run Button
         self.btn_run = QPushButton("Ejecutar Pushover")
         self.btn_run.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;")
         self.btn_run.clicked.connect(self.run_pushover)
         layout.addWidget(self.btn_run)
 
+        # --- PROGRESO ---
+        self.lbl_progress = QLabel("Ejecutando análisis...")
+        self.lbl_progress.setVisible(False)
+        layout.addWidget(self.lbl_progress)
 
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+
+
+
+    def _on_load_type_changed(self, text):
+        """Muestra u oculta el selector de patrón según el modo elegido."""
+        is_defined = (text == "Patrón Definido")
+        self.combo_defined_pattern.setVisible(is_defined)
+        if self._label_defined_pattern:
+            self._label_defined_pattern.setVisible(is_defined)
 
     def populate_nodes(self):
         nodes = self.manager.get_all_nodes()
@@ -134,7 +166,6 @@ class PushoverDialog(QDialog):
     
     def run_pushover(self):
         from src.analysis.opensees_translator import OpenSeesTranslator
-        um = UnitManager.instance()
 
         #1. Obtenner inputs
         idx = self.combo_node.currentIndex()
@@ -143,6 +174,15 @@ class PushoverDialog(QDialog):
         control_node = self.combo_node.itemData(idx)
         max_disp = self.spin_drift.get_value_base()
         steps = self.spin_steps.value()
+
+        # Tag del patrón definido (solo relevante cuando load_pattern_type == "Patrón Definido")
+        defined_pattern_tag = None
+        if load_pattern_type == "Patrón Definido":
+            defined_pattern_tag = self.combo_defined_pattern.currentData()
+            if defined_pattern_tag is None:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Aviso", "No hay ningún patrón con cargas laterales disponible.\nCrea primero un patrón con NodalLoad en la dirección X.")
+                return
 
 
         #2. Instacniar Tranaltor y ejecutar
@@ -157,29 +197,52 @@ class PushoverDialog(QDialog):
 
         print(f"Lanzando Pushover: Node {control_node}, Disp {max_disp}, Pattern {load_pattern_type}")
 
+        # Activar barra de progreso
+        self.btn_run.setEnabled(False)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(True)
+        self.lbl_progress.setVisible(True)
+        QApplication.processEvents()
 
+        def on_progress(current, total, round_idx=0, total_rounds=1):
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+            if total_rounds > 1:
+                self.lbl_progress.setText(f"Ronda {round_idx + 1} de {total_rounds} | Paso {current} / {total}")
+            else:
+                self.lbl_progress.setText(f"Ejecutando análisis... Paso {current} / {total}")
+            QApplication.processEvents()
 
-        try: 
+        try:
             #Ejecutar lógica backend
             results = None
             if self.chk_adaptive.isChecked():
                 print("[UI] Ejecutando Pushover Adaptativo (Freeze Forward)...")
-                
+
                 # Extraer parámetros personalizados si aplica
-                sen = self.spin_sensitivity.value() if self.chk_custom_failure.isChecked() else None
-                drf = self.spin_max_drift.value() if self.chk_custom_failure.isChecked() else None
-                
+                sen = self.spin_sensitivity.value()
+                drf = self.spin_max_drift.value()
+
                 # Extraer método de congelamiento escogido
                 idx_method = self.freeze_method_combo.currentIndex()
                 if idx_method == 0: freeze_method = "spring"
                 elif idx_method == 1: freeze_method = "fix"
-                else: freeze_method = "load"
-                
-                results = translator.run_adaptive_pushover(control_node, max_disp, steps, load_pattern_type, 
-                                                           sensitivity=sen, freeze_method=freeze_method, max_drift = drf)
+                elif idx_method == 2: freeze_method = "load"
+                else: freeze_method = "crosses"
+
+                results = translator.run_adaptive_pushover(
+                    control_node, max_disp, steps, load_pattern_type,
+                    sensitivity=sen, freeze_method=freeze_method, max_drift=drf,
+                    defined_pattern_tag=defined_pattern_tag,
+                    progress_callback=on_progress
+                )
             else:
                 print("[UI] Ejecutando Pushover Monotónico Normal...")
-                results = translator.run_pushover_analysis(control_node, max_disp, steps, load_pattern_type)
+                results = translator.run_pushover_analysis(
+                    control_node, max_disp, steps, load_pattern_type,
+                    defined_pattern_tag=defined_pattern_tag,
+                    progress_callback=on_progress
+                )
 
             if results:
                 # Guardar resultados en el Manager para persistencia
@@ -199,11 +262,14 @@ class PushoverDialog(QDialog):
                 # Pasamos también el estado inicial del checkbox para que el result_dialog arranque sincronizado
                 widget = PushoverResultsWidget(results, self.chk_show_loads.isChecked())
                 if hasattr(self.parent(), 'add_tool_window'):
-                    self.parent().add_tool_window(widget,"Curva de Capacidad (Pushover)")
-
+                    self.parent().add_tool_window(widget, "Curva de Capacidad (Pushover)")
+                self.accept()
 
         except Exception as e:
             print(f"Error crítico en Pushover: {e}")
             import traceback
             traceback.print_exc()
+            self.btn_run.setEnabled(True)
+            self.progress_bar.setVisible(False)
+            self.lbl_progress.setVisible(False)
 

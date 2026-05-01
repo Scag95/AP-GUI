@@ -1,71 +1,25 @@
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox, QMenu
 from src.analysis.opensees_translator import OpenSeesTranslator
 from src.ui.dialogs.pushover_dialog import PushoverDialog
-from src.ui.dialogs.pushover_result_dialog import PushoverResultsWidget
-from src.ui.dialogs.moment_curvature_dialog import MomentCurvatureWidget
 from src.analysis.manager import ProjectManager
-from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
-
 
 
 class AnalyzeMenu(QMenu):
     def __init__(self, parent = None):
         super().__init__("Analizar",parent)
         
-        # Acción Principal: Ejecutar Gravedad
         self.action_gravity = QAction("Ejecutar Análisis de Gravedad",self)
         self.action_gravity.setShortcut("F5")
         self.action_gravity.setStatusTip("Construye el modelo y ejecuta un análisis estático lineal")
         self.action_gravity.triggered.connect(self.run_gravity)
         self.addAction(self.action_gravity)
-        # Modal Analysis
+
         self.action_modal = QAction("Análisis modal", self)
         self.action_modal.triggered.connect(self.run_modal)
         self.addAction(self.action_modal)
 
-        # Pushover
         self.addAction("Análisis Pushover (No Lineal)", self.show_pushover_dialog)
-
-        self.addSeparator()
-
-        # Submenú de Resultados
-        self.results_menu = QMenu("Ver Resultados", self)
-        self.addMenu(self.results_menu)
-
-        # Acciones de Visualización
-        self.act_deform = QAction("Deformada", self)
-        self.act_deform.triggered.connect(lambda: self._set_deformed_visibility(True))
-        self.results_menu.addAction(self.act_deform)
-
-        self.results_menu.addSeparator()
-
-        # Acciones de Diagramas
-        self.act_moment = QAction("Momentos (M)", self)
-        self.act_moment.triggered.connect(lambda: self._show_diagram("M"))
-        self.results_menu.addAction(self.act_moment)
-
-        self.act_shear = QAction("Cortantes (V)", self)
-        self.act_shear.triggered.connect(lambda: self._show_diagram("V"))
-        self.results_menu.addAction(self.act_shear)
-
-        self.act_axial = QAction("Axiales (P)", self)
-        self.act_axial.triggered.connect(lambda: self._show_diagram("P"))
-        self.results_menu.addAction(self.act_axial)
-
-        self.pushover_curve = QAction("Curva Pushover",self)
-        self.pushover_curve.triggered.connect(lambda: self._show_curve_pushover())
-        self.results_menu.addAction(self.pushover_curve)
-
-        self.section_results = QAction("Análisis de Sección (M-phi)", self)
-        self.section_results.triggered.connect(lambda: self._show_section_results())
-        self.results_menu.addAction(self.section_results)
-
-        self.results_menu.addSeparator()
-
-        self.act_clear = QAction("Ocultar Resultados", self)
-        self.act_clear.triggered.connect(self._clear_results)
-        self.results_menu.addAction(self.act_clear)
 
     def _set_deformed_visibility(self, visible):
         if self.parent() and hasattr(self.parent(), "viz_widget"):
@@ -138,20 +92,3 @@ class AnalyzeMenu(QMenu):
 
         dlg = PushoverDialog(self.parent())
         dlg.exec()
-
-    def _show_curve_pushover(self):
-
-        results = ProjectManager.instance().pushover_results
-        
-        if not results:
-             QMessageBox.warning(self, "No hay resultados", "Debe ejecutar primero un Análisis Pushover desde el menú Analizar.")
-             return
-
-        widget = PushoverResultsWidget(results)
-        self.parent().add_tool_window(widget, "Curva de Capacidad (Pushover)")
-
-
-    def _show_section_results(self):
-        
-        widget = MomentCurvatureWidget()
-        self.parent().add_tool_window(widget, "Análisis de sección: Momento-Curvatura")

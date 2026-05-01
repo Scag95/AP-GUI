@@ -28,6 +28,7 @@ ENV/
 .ipynb_checkpoints/
 *.swp
 
+
 # ==========================================
 # Sistemas Operativos
 # ==========================================
@@ -49,3 +50,6 @@ Desktop.ini
 pushover_data/
 outputs/
 debug_reactions.csv
+Modelo/
+.claude/
+.agents/

@@ -1,8 +1,8 @@
 import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
-from src.analysis.materials import Concrete01, Steel01, Elastic
+from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM
 from src.analysis.sections import FiberSection
-from src.analysis.element import ForceBeamColumn
+from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
 from src.analysis.loads import NodalLoad, ElementLoad
 
 class ModelBuilder:
@@ -72,6 +72,10 @@ class ModelBuilder:
         for node in self.manager.get_all_nodes():
             self.log_command('node', node.tag, node.x, node.y)
             
+            # Aplicar masas nodales si están definidas
+            if node.mass is not None:
+                self.log_command('mass', node.tag, *node.mass)
+
             # Aplicar restricciones (Fixity)
             if any(f != 0 for f in node.fixity):
                 self.log_command('fix', node.tag, *node.fixity)
@@ -79,9 +83,10 @@ class ModelBuilder:
     def _build_materials(self):
         if self.debug_file: self.debug_file.write("\n# --- Materials ---\n")
 
-        # Material Rígido para futuras Congelaciones (Cruces de San Andrés)
+        # Materiales Rígidos para futuras Congelaciones (Cruces de San Andrés / Muelles)
         if self.debug_file: self.debug_file.write("# Material Elastico Rígido para Congelaciones adaptativas\n")
         self.log_command('uniaxialMaterial', 'Elastic', 99999, 1.0e12)
+        self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
 
         for mat in self.manager.get_all_materials():
             args = list(mat.get_opensees_args())
@@ -136,6 +141,14 @@ class ModelBuilder:
                 if self.debug_file: self.debug_file.write(f"# Section Aggregator {sec.tag} wrapping {fiber_tag_internal}\n")
                 self.log_command('section', 'Aggregator', sec.tag, shear_mat_tag, 'Vy', '-section', fiber_tag_internal)
 
+        # 2. Las AggregatorSection explícitas (después de las bases para respetar dependencias)
+        from src.analysis.sections import AggregatorSection
+        for sec in self.manager.get_all_sections():
+            if isinstance(sec, AggregatorSection):
+                cmds = sec.get_opensees_commands()
+                for cmd in cmds:
+                    self.log_command('section', *cmd)
+
     def _build_elements(self):
         if self.debug_file: self.debug_file.write("\n# --- Elements ---\n")
         transf_tag = 1 # Usamos la transformación definida en build_model
@@ -169,30 +182,63 @@ class ModelBuilder:
                 
                 self.log_command('element', 'forceBeamColumn', *args)
 
+            elif isinstance(ele, ForceBeamColumnHinge):
+                # Para HingeRadau en OpenSeesPy, debes definir la integración antes:
+                # beamIntegration 'HingeRadau' tag secI lpI secJ lpJ secE
+                integ_tag = next_integ_id
+                next_integ_id += 1
+                
+                self.log_command('beamIntegration', 'HingeRadau', integ_tag,
+                                 ele.section_i_tag, ele.lp_i, 
+                                 ele.section_j_tag, ele.lp_j, 
+                                 ele.section_e_tag)
+
+                args = [
+                    ele.tag, ele.node_i, ele.node_j, ele.transf_tag, integ_tag
+                ]
+
+                if ele.mass_density > 0:
+                    args.append('-mass')
+                    args.append(ele.mass_density)
+                args.extend(['-iter', 10, 1e-12])
+
+                self.log_command('element', 'forceBeamColumn', *args)
+
     def _build_patterns(self):
         if self.debug_file: self.debug_file.write("\n# --- Patterns ---\n")
         
-        ts_tag = 1
-        pattern_tag = 1
-        self.log_command('timeSeries', 'Linear', ts_tag)
-        self.log_command('pattern', 'Plain', pattern_tag, ts_tag)
-        
-        for load in self.manager.get_all_loads():
-            if isinstance(load, NodalLoad):
-                self.log_command('load', load.node_tag, load.fx, load.fy, load.mz)
-            elif isinstance(load, ElementLoad):
-                self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
-                
+        for pattern in self.manager.get_all_patterns():
+            # Creamos una TimeSeries para este patrón. Por simplicidad usamos Linear.
+            # Usamos el propio tag del patrón como tag de la TimeSeries para evitar colisiones
+            ts_tag = pattern.tag
+            self.log_command('timeSeries', 'Linear', ts_tag)
+            
+            # Inicializamos el patrón Plain inyectándole su factor dinámico
+            self.log_command('pattern', 'Plain', pattern.tag, ts_tag, '-fact', pattern.factor)
+            
+            # Anidamos sus cargas correspondientes
+            for load in pattern.loads:
+                if isinstance(load, NodalLoad):
+                    self.log_command('load', load.node_tag, load.fx, load.fy, load.mz)
+                elif isinstance(load, ElementLoad):
+                    self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
 
 
-    def freeze_floor(self, deformed_state: list, method="spring"):
+    def freeze_floor(self, floor_state, method="spring"):
         """
         Freeze logic SRP: Recibe el estado deformado desde el Solver.
         Inyecta restricciones en el modelo (Opensees) temporalmente.
         """
 
-        if not deformed_state:
+        if not floor_state:
             return
+
+        if isinstance(floor_state, list):
+            deformed_state = floor_state
+            bot_nodes = []
+        else:
+            deformed_state = floor_state.get("top", [])
+            bot_nodes = floor_state.get("bot", [])
 
         print(f"[Adaptative] Congelando piso ({len(deformed_state)} nodos). Método: {method}")
 
@@ -203,12 +249,6 @@ class ModelBuilder:
             # --- FLAG DE PRUEBA: True = nodo fantasma en coordenadas ORIGINALES del nodo real (sin warning)
             #                     False = nodo fantasma en coordenadas DEFORMADAS (comportamiento anterior)
             USE_ORIGINAL_COORDS = True
-
-            # Creamos el material Uniforme 
-            try:
-                self.log_command('uniaxialMaterial', 'Elastic', 999999, 1.0e10)
-            except:
-                pass
 
             for i, node_data in enumerate(deformed_state):
                 real_tag = node_data["real_node_tag"]
@@ -248,8 +288,48 @@ class ModelBuilder:
                 # 2. Le clavamos una tuerca irrompible exactamente en ese punto
                 self.log_command('sp', real_tag, 1, current_disp_x)
 
+        elif method == "crosses":
+            A       = 1000.0
+            mat_tag = 999999
 
-        return created_nodes 
+            # Construir mapa tag → def_x para resolver posiciones deformadas
+            node_x = {n["real_node_tag"]: n["def_x"] for n in deformed_state + bot_nodes}
 
-            
+            # Usar conectividad real de columnas si está disponible
+            story_columns = floor_state.get("story_columns", [])
+            if story_columns:
+                # Ordenar columnas por x del nodo inferior
+                col_sorted = sorted(story_columns, key=lambda p: node_x.get(p[0], 0))
+            else:
+                # Fallback: aparear nodos bot y top por proximidad en x
+                top_sorted = sorted(deformed_state, key=lambda n: n["def_x"])
+                bot_sorted = sorted(bot_nodes,      key=lambda n: n["def_x"])
+                col_sorted = []
+                for bd in bot_sorted:
+                    nearest_top = min(top_sorted, key=lambda n: abs(n["def_x"] - bd["def_x"]))
+                    col_sorted.append((bd["real_node_tag"], nearest_top["real_node_tag"]))
 
+            cross_pairs = []
+            for i in range(len(col_sorted) - 1):
+                bot_left,  top_left  = col_sorted[i]
+                bot_right, top_right = col_sorted[i + 1]
+
+                base_ele_tag = 4000000 + top_left * 100 + i * 10
+
+                self.log_command('element', 'Truss', base_ele_tag + 1, bot_left,  top_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 2, bot_right, top_left,  A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 3, top_left,  top_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 4, bot_left,  bot_right, A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 5, bot_left,  top_left,  A, mat_tag)
+                self.log_command('element', 'Truss', base_ele_tag + 6, bot_right, top_right, A, mat_tag)
+
+                cross_pairs.append((bot_left,  top_right))
+                cross_pairs.append((bot_right, top_left))
+                cross_pairs.append((top_left,  top_right))
+                cross_pairs.append((bot_left,  bot_right))
+                cross_pairs.append((bot_left,  top_left))
+                cross_pairs.append((bot_right, top_right))
+
+            return created_nodes, cross_pairs
+
+        return created_nodes, []

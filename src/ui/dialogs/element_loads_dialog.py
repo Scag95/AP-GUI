@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QListWidget, QListWidgetItem, QDoubleSpinBox, 
+                             QListWidget, QListWidgetItem, QDoubleSpinBox, QComboBox,
                              QPushButton, QGroupBox, QFormLayout, QMessageBox, QLineEdit, QCheckBox)
 from PyQt6.QtCore import Qt
 from src.analysis.manager import ProjectManager
@@ -50,6 +50,11 @@ class ElementLoadsDialog(QDialog):
         # --- Panel Derecho: Configuración ---
         right_layout = QVBoxLayout()
 
+        right_layout.addWidget(QLabel("Patrón de Carga Destino:"))
+        self.combo_pattern = QComboBox()
+        self.combo_pattern.currentIndexChanged.connect(self.populate_elements)
+        right_layout.addWidget(self.combo_pattern)
+
         self.load_group = QGroupBox("Carga Distribuida Uniforme")
         form_layout = QFormLayout()
 
@@ -89,7 +94,15 @@ class ElementLoadsDialog(QDialog):
             self.chk_show_tags.setChecked(is_visible)
 
         # Inicializar datos
+        self.populate_patterns()
         self.populate_elements()
+
+    def populate_patterns(self):
+        self.combo_pattern.blockSignals(True)
+        self.combo_pattern.clear()
+        for p in self.manager.get_all_patterns():
+            self.combo_pattern.addItem(f"[{p.tag}] {p.name}", p.tag)
+        self.combo_pattern.blockSignals(False)
 
     def toggle_tags(self, checked):
         if self.parent() and hasattr(self.parent(), "viz_widget"):
@@ -98,12 +111,15 @@ class ElementLoadsDialog(QDialog):
     def populate_elements(self):
         self.element_list.clear()
         elements = self.manager.get_all_elements()
-        loads = self.manager.get_all_loads()
 
         element_load_map = {}
-        for load in loads:
-            if isinstance(load, ElementLoad):
-                element_load_map[load.element_tag] = load
+        if self.combo_pattern.count() > 0:
+            active_pattern_tag = self.combo_pattern.currentData()
+            pattern = self.manager.get_pattern(active_pattern_tag)
+            if pattern:
+                for load in pattern.loads:
+                    if isinstance(load, ElementLoad):
+                        element_load_map[load.element_tag] = load
 
         for el in elements:
             # Filtro: Solo mostrar si tiene carga asignada
@@ -158,6 +174,10 @@ class ElementLoadsDialog(QDialog):
         return list(ids)
 
     def apply_loads(self):
+        if self.combo_pattern.count() == 0:
+            QMessageBox.warning(self, "Aviso", "No hay Patrones de Carga. Crea uno en el Gestor de Patrones primero.")
+            return
+
         # 1. Primero intentamos leer del cuadro de texto
         target_ids = self._parse_input(self.txt_elements.text())
 
@@ -188,7 +208,9 @@ class ElementLoadsDialog(QDialog):
             # Crear nueva Carga
             new_tag = self.manager.get_next_load_tag()
             load = ElementLoad(new_tag, el_tag, wx, wy)
-            self.manager.add_load(load)
+            
+            pattern_tag = self.combo_pattern.currentData()
+            self.manager.add_load(load, pattern_tag)
             count += 1
         
         self.populate_elements()
@@ -211,8 +233,12 @@ class ElementLoadsDialog(QDialog):
         self.populate_elements()
 
     def _remove_load_for_element(self, element_tag):
-        loads = self.manager.get_all_loads() 
-        for load in loads:
+        if self.combo_pattern.count() == 0: return
+        pattern_tag = self.combo_pattern.currentData()
+        pattern = self.manager.get_pattern(pattern_tag)
+        if not pattern: return
+        
+        for load in list(pattern.loads):
             if isinstance(load, ElementLoad) and load.element_tag == element_tag:
                 self.manager.delete_load(load.tag)
 
@@ -224,12 +250,15 @@ class ElementLoadsDialog(QDialog):
         el_tag = item.data(Qt.ItemDataRole.UserRole)
         
         # Buscar Carga
-        loads = self.manager.get_all_loads()
         found_load = None
-        for load in loads:
-            if isinstance(load, ElementLoad) and load.element_tag == el_tag:
-                found_load = load
-                break
+        if self.combo_pattern.count() > 0:
+            pattern_tag = self.combo_pattern.currentData()
+            pattern = self.manager.get_pattern(pattern_tag)
+            if pattern:
+                for load in pattern.loads:
+                    if isinstance(load, ElementLoad) and load.element_tag == el_tag:
+                        found_load = load
+                        break
         
         # Actualizar UI
         if found_load:

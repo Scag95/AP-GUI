@@ -26,21 +26,21 @@ class SelfWeightDialog(QDialog):
         #Formulaio
         form_layout = QFormLayout()
 
-        #1. Valor de gravedad
-        self.spin_g = UnitSpinBox(UnitType.ACCELERATION)
-        self.spin_g.setRange(0,1e5)
-        self.spin_g.set_value_base(9.81)
-        self.spin_g.setDecimals(2)
-        form_layout.addRow("Aceleración Gravedad (g):", self.spin_g)
+        #1. (Eliminado) Gravedad estática 9.81
 
-        #2. Filtro vigas
+        #2. Selector de Patrón
+        self.combo_pattern = QComboBox()
+        self.populate_patterns()
+        form_layout.addRow("Patrón Destino:", self.combo_pattern)
+
+        #3. Filtro vigas
         self.check_beams_only = QCheckBox("Aplicar solo a vigas (Horizontales)")
         self.check_beams_only.setChecked(False)
         form_layout.addRow("", self.check_beams_only)
 
-        #3. Opcion de Reemplazo
+        #4. Opcion de Reemplazo
         self.check_delete = QCheckBox("Eliminar cargas distribuidas existentes")
-        self.check_delete.setToolTip("Si se marca, se borraran TODAS las cargas distruidas actiales antes de añadir el peso propio.")
+        self.check_delete.setToolTip("Si se marca, se borraran TODAS las cargas distruidas actiales en este Patrón antes de añadir el peso propio.")
         form_layout.addRow("",self.check_delete)
 
         layout.addLayout(form_layout)
@@ -51,10 +51,18 @@ class SelfWeightDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
+    def populate_patterns(self):
+        self.combo_pattern.clear()
+        for p in self.manager.get_all_patterns():
+            self.combo_pattern.addItem(f"[{p.tag}] {p.name}", p.tag)
+
     def generate_loads(self):
-        g_val_visual = self.spin_g.value()
+        if self.combo_pattern.count() == 0:
+            QMessageBox.warning(self, "Aviso", "No hay Patrones de Carga. Crea uno en el Gestor de Patrones primero.")
+            return
+
+        g_val_visual = 9.81 # Fijo
         g_acc_base = UnitManager.instance().to_base(g_val_visual, UnitType.ACCELERATION)
-        delete_existing = self.check_delete.isChecked()
 
         only_beams = self.check_beams_only.isChecked()
         delete_existing = self.check_delete.isChecked()
@@ -67,8 +75,12 @@ class SelfWeightDialog(QDialog):
             QMessageBox.critical(self, "Error", f"Error generando cargas: {str(e)}")
 
     def apply_self_weight(self, g, only_beams, delete_existing):
+        pattern_tag = self.combo_pattern.currentData()
+        pattern = self.manager.get_pattern(pattern_tag)
+        if not pattern: return 0
+
         if delete_existing:
-            loads_to_remove = [l.tag for l in self.manager.get_all_loads() if isinstance(l, ElementLoad)]
+            loads_to_remove = [l.tag for l in pattern.loads if isinstance(l, ElementLoad)]
             for tag in loads_to_remove:
                 self.manager.delete_load(tag)
 
@@ -101,7 +113,7 @@ class SelfWeightDialog(QDialog):
             wx = -W * (dy / L)
             
             load = ElementLoad(tag=0, element_tag=ele.tag, wy=wy, wx=wx)
-            self.manager.add_load(load)
+            self.manager.add_load(load, pattern_tag)
             new_loads_count += 1
             
         return new_loads_count

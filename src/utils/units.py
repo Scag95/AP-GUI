@@ -10,6 +10,7 @@ class UnitType(Enum):
     DENSITY = "Density"
     DISTRIBUTED_FORCE = "DistributedForce"
     ACCELERATION = "Acceleration"
+    MASS = "Mass"
 
 class UnitManager(QObject):
     _instance = None
@@ -87,6 +88,12 @@ class UnitManager(QObject):
                 "ft/s2": 0.3048,
                 "in/s2": 0.0254,
                 "g": 9.80665  
+            },
+            UnitType.MASS:{
+                "kg": 1.0,           #BASE
+                "T": 1000.0,
+                "g": 0.001,
+                "lb": 0.453592
             }
         }
 
@@ -98,7 +105,8 @@ class UnitManager(QObject):
             UnitType.STRESS: "MPa",
             UnitType.DENSITY: "kg/m3",
             UnitType.DISTRIBUTED_FORCE: "kN/m",
-            UnitType.ACCELERATION: "m/s2"          
+            UnitType.ACCELERATION: "m/s2",
+            UnitType.MASS: "kg"          
         }
 
     def get_current_unit(self, unit_type: UnitType):

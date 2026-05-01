@@ -26,9 +26,9 @@ class OpenSeesTranslator:
         """Delegates result extraction to GravitySolver."""
         return self.gravity_solver.get_results()
         
-    def run_pushover_analysis(self, control_node_tag, max_disp, n_steps, load_pattern_type):
+    def run_pushover_analysis(self, control_node_tag, max_disp, n_steps, load_pattern_type, defined_pattern_tag=None, progress_callback=None):
         """Delegates pushover analysis to PushoverSolver."""
-        return self.pushover_solver.run_pushover(control_node_tag, max_disp, n_steps, load_pattern_type)
+        return self.pushover_solver.run_pushover(control_node_tag, max_disp, n_steps, load_pattern_type, defined_pattern_tag=defined_pattern_tag, progress_callback=progress_callback)
         
     def run_modal_analysis(self, n_modes):
         """Delegates modal analysis to PushoverSolver (where it was moved)."""
@@ -39,5 +39,5 @@ class OpenSeesTranslator:
         ops.printModel('-file', filename)
         print(f"[OpenSees] Modelo volcado en: {filename}")
 
-    def run_adaptive_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, max_drift=None,  freeze_method="spring"):
-        return self.pushover_solver.run_adaptative_pushover(control_node_tag, max_disp, steps, load_pattern_type, sensitivity, freeze_method, max_drift=max_drift)
+    def run_adaptive_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, max_drift=None, freeze_method="spring", defined_pattern_tag=None, progress_callback=None):
+        return self.pushover_solver.run_adaptative_pushover(control_node_tag, max_disp, steps, load_pattern_type, sensitivity, freeze_method, max_drift=max_drift, defined_pattern_tag=defined_pattern_tag, progress_callback=progress_callback)

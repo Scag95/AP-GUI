@@ -1,3 +1,4 @@
+import math
 from src.analysis.loads import NodalLoad
 import os
 import openseespy.opensees as ops
@@ -5,7 +6,8 @@ from src.analysis.manager import ProjectManager
 from src.analysis.solvers.failure_detector import FailureDetector
 from src.analysis.solvers.load_generator import LoadPushoverGenerator
 from src.analysis.solvers.pushover_configurator import PushoverConfigurator
-from src.analysis.element import ForceBeamColumn
+from src.analysis.element import ForceBeamColumn, ForceBeamColumnHinge
+
 
 class PushoverSolver:
     """
@@ -22,6 +24,31 @@ class PushoverSolver:
         self.failure_detector = FailureDetector()
         self.active_support_nodes = []
 
+    def run_modal_analysis(self, n_modes=1):
+        """Ejecuta un análisis modal sobre el estado actual del modelo en OpenSees."""
+        import math
+        print(f"[Modal] Ejecutando análisis modal ({n_modes} modos)...")
+        try:
+            lambdas = ops.eigen(n_modes)
+            if not lambdas:
+                print("[Modal] ⚠️ No se pudieron calcular los autovalores. Asegúrate de ejecutar el análisis de gravedad primero.")
+                return None
+            
+            periods = []
+            for count, lam in enumerate(lambdas, 1):
+                if lam > 0:
+                    omega = math.sqrt(lam)
+                    T = 2 * math.pi / omega
+                    periods.append(T)
+                    print(f"  -> Modo {count}: T = {T:.4f} s, w = {omega:.2f} rad/s")
+                else:
+                    print(f"  -> Modo {count}: Eigenvalue negativo ({lam})")
+            return periods
+        except Exception as e:
+            print(f"[Modal] Error al ejecutar ops.eigen: {e}")
+            from PyQt6.QtWidgets import QMessageBox
+            # No podemos usar QMessageBox fácil aquí sin parent. Solo imprimimos.
+            return None
 
     def _initialize_results_structure(self):
         """ Helpers para preparar los diccionarios limpios antes de un run."""
@@ -32,7 +59,8 @@ class PushoverSolver:
             "node_displacements": [],
             "element_forces_history": [],
             "failed_floors": [],
-            "floors": {}
+            "floors": {},
+            "frozen_floors_history": []
         }
 
         floor_data = self.manager.get_floor_data()
@@ -58,7 +86,7 @@ class PushoverSolver:
                 self.active_support_nodes.append(n.tag)
 
 
-    def _apply_load_pattern(self, load_pattern_type: str, pattern_tag: int, precalc_vector=None):
+    def _apply_load_pattern(self, load_pattern_type: str, pattern_tag: int, precalc_vector=None, defined_pattern_tag=None):
         """Helper para delegar la creación del patrón al generador."""
 
         #0. Limpieza preventiva: Evita crasheos si el usuario ejecuta multiples pushover seguidos sobre el mismo modelo
@@ -72,19 +100,33 @@ class PushoverSolver:
         self.builder.log_command('timeSeries', 'Linear', pattern_tag)
         self.builder.log_command('pattern', 'Plain', pattern_tag, pattern_tag)
 
-        #2. Pedirle al generador que haga la matemática (solo si no tenemos vector precalculado)
-        if precalc_vector is None:
-            result_pattern = self.load_generator.generate_pattern(pattern_type=load_pattern_type)
-            force_vector = result_pattern.force_vector
-        else:
+        #2. Resolver el vector de fuerzas según el modo elegido
+        if precalc_vector is not None:
+            # Vector precalculado (rondas adaptativas)
             force_vector = precalc_vector
+        elif load_pattern_type == "Patrón Definido" and defined_pattern_tag is not None:
+            # Leer directamente las NodalLoad.fx del patrón guardado
+            pattern = self.manager.get_pattern(defined_pattern_tag)
+            if pattern:
+                force_vector = {
+                    load.node_tag: load.fx
+                    for load in pattern.loads
+                    if isinstance(load, NodalLoad) and abs(load.fx) > 1e-9
+                }
+                print(f"[Pushover] Usando patrón '{pattern.name}' ({len(force_vector)} nodos con carga Fx)")
+            else:
+                print(f"[Pushover] ⚠️ Patrón {defined_pattern_tag} no encontrado. Usando Modal.")
+                force_vector = self.load_generator.generate_pattern(pattern_type="Modal").force_vector
+        else:
+            # Modal o Uniforme: el generador calcula automáticamente
+            force_vector = self.load_generator.generate_pattern(pattern_type=load_pattern_type).force_vector
 
-        #3. Aplicar las cargas en OpenSees devueltas por el generador (o el vector forzado)
+        #3. Aplicar las cargas en OpenSees y registrarlas para la visualización
         for node_tag, force in force_vector.items():
             if abs(force) > 1e-9:
                 self.builder.log_command('load', node_tag, force, 0.0, 0.0)
 
-                load_pushover = NodalLoad(tag=9000 + node_tag, node_tag=node_tag, fx= force)
+                load_pushover = NodalLoad(tag=9000 + node_tag, node_tag=node_tag, fx=force)
                 self.manager.pushover_loads.append(load_pushover)
 
     def _capture_step_state(self, results_dict, step_idx, control_node_tag, cycle_idx=0):
@@ -97,6 +139,7 @@ class PushoverSolver:
 
         #2.
         results_dict["node_displacements"].append(self._get_all_node_displacements())
+        results_dict["element_forces_history"].append(self._get_all_element_forces())
 
         #3. Estado de Meacanismos por planta
         self._capture_floor_data(results_dict)
@@ -147,6 +190,14 @@ class PushoverSolver:
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+        else:
+            # Purgar archivos de registros anteriores para mantener el estado limpio
+            for filename in os.listdir(output_dir):
+                if filename.endswith(".out"):
+                    try:
+                        os.remove(os.path.join(output_dir, filename))
+                    except Exception as err:
+                        print(f"[Recorders] Aviso: Error limpiando {filename}: {err}")
 
         print(f"[Recorders] Configurando en: {os.path.abspath(output_dir)}")
 
@@ -155,7 +206,7 @@ class PushoverSolver:
 
         count = 0
         for ele in self.manager.get_all_elements():
-            if not isinstance(ele, ForceBeamColumn):
+            if not isinstance(ele, (ForceBeamColumn, ForceBeamColumnHinge)):
                 continue
 
             force_file = os.path.join(output_dir, f"ele_{ele.tag}_force.out")
@@ -179,6 +230,70 @@ class PushoverSolver:
 
         return step_disp
 
+    def _get_all_element_forces(self) -> dict:
+        """Captura fuerzas internas (P, M, V) de todos los elementos en el paso actual"""
+        forces = {}
+        for ele in self.manager.get_all_elements():
+            if not isinstance(ele, (ForceBeamColumn, ForceBeamColumnHinge)):
+                continue
+            try:
+                n_pts = int(getattr(ele, 'integration_points', 0) or 0)
+                sections_data = []
+               
+                #1. Extracción de las fuerzas en los nodos de los elementos.
+                loc_forces = ops.eleResponse(ele.tag, 'localForce')
+
+                ni = self.manager.get_node(ele.node_i)
+                nj = self.manager.get_node(ele.node_j)
+                if ni and nj:
+                    L = math.sqrt((nj.x - ni.x)**2 + (nj.y - ni.y)**2)
+                else:
+                    L = 1.0
+
+                #2. Extracción de los puntos de integración (Para construir la curva Momentos/Curvatura)
+                for i in range(1, n_pts + 1):
+                    sec_forces = ops.eleResponse(ele.tag, 'section', i, 'force')
+                    loc = ops.sectionLocation(ele.tag, i)
+                    loc_rel = loc / L if L > 1e-9 else 0.0
+
+                    if not sec_forces:
+                        continue
+
+                    #Extraemos Axial y Momento.
+                    p_val = sec_forces[0]
+                    if len(sec_forces) == 2:
+                        m_val = sec_forces[1]
+                        if loc_forces and len(loc_forces) >= 6:
+                            v_val = loc_forces[1] * (1 - loc_rel) + (-loc_forces[4]) * loc_rel
+                        else:
+                            v_val = 0.0
+                    elif len(sec_forces) >= 3:
+                        m_val = sec_forces[1]
+                        v_val = sec_forces[2]
+                    else:
+                        m_val = v_val = 0.0
+
+                    sections_data.append({
+                        "i": i,
+                        "P": p_val,
+                        "M": m_val,
+                        "V": v_val,
+                        "loc": loc                        
+                    })
+                #3. Empaquetado final separado
+                forces[ele.tag] = {
+                    "localForce": loc_forces,                         # Cortante y fuerzas locales V_I, V_J
+                    "globalForce": ops.eleResponse(ele.tag, 'force'), # Para leer cortante basal de la columna directamente
+                    "sections": sections_data                         # Puntos Radau
+                }
+
+            except Exception as e:
+                print(f"[Pushover] Error capturando fuerzas elemento {ele.tag}: {e}")
+
+        return forces                
+
+
+
     def _capture_floor_data(self, results_dict):
         """Calcula el drift y el contante de cada planta y lo guarda"""
 
@@ -196,17 +311,24 @@ class PushoverSolver:
             #1 calcular cortante de la planta (Sumando cortantes en las columnas)
             shear_total = 0.0
             for col in cols:
-                #Obtenemos nodos de la columna para saber cual es la base y el top
-                node_i = self.manager.get_node(col.node_i)
-                node_j = self.manager.get_node(col.node_j)
-                n_points = int(getattr(col, 'integration_points', 0) or 0)
+                # Obtenemos directamente las fuerzas globales [Fx_i, Fy_i, Mz_i, Fx_j, Fy_j, Mz_j]
+                global_forces = ops.eleResponse(col.tag, 'force')
 
-                # El cortante suele eestar en la sección más baja o alta
-                sec_idx = n_points if node_j.y >= node_i.y else 1
-                forces = ops.eleResponse(col.tag, 'section', sec_idx, 'force')
+                if global_forces and len(global_forces) >= 6:
+                    node_i = self.manager.get_node(col.node_i)
+                    node_j = self.manager.get_node(col.node_j)
+                    
+                    # Identificamos la fuerza X en el nodo que actúe como "base" (el de menor 'y')
+                    if node_i.y <= node_j.y:
+                        fx_bottom = global_forces[0]  # Fx en el nodo I
+                    else:
+                        fx_bottom = global_forces[3]  # Fx en el nodo J
+                        
+                    # Acumulamos la fuerza cruda respetando su signo para el equilibrio del piso
+                    shear_total += fx_bottom
 
-                if forces and len(forces) >= 3:
-                    shear_total += float(forces[2]) #El cortante se encuentra en esa posición
+            # Una vez acumuladas todas las fuerzas del piso, sacamos el módulo total
+            shear_total = abs(shear_total)
 
             #2. Clacular Deriva Relativa (U-top - U_bot) de la primera columna como representante
 
@@ -224,13 +346,18 @@ class PushoverSolver:
             results_dict["floors"][y]["shear"].append(shear_total)
             results_dict["floors"][y]["H"] = h_floor
 
-    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True):
+    def run_pushover(self, control_node_tag, max_disp, n_steps, load_pattern_type, failure_detector=None, frozen_floors=None, pattern_tag=200, precalc_vector=None, setup_recorders=True, defined_pattern_tag=None, reset_detector=True, progress_callback=None):
         """
         Ejecución limpia de un Pushover Monotónico estándar.
         """
 
         if frozen_floors is None:
             frozen_floors = set()
+
+        if reset_detector:
+            self.manager.yield_history = []
+            self.manager.reset_limit_states()
+            self.manager.capture_limit_state_baseline()
 
         # Asegurarnos de tener los apoyos base si alguien llama a este método directamente
         # (El análisis adaptativo ya los inicializa por fuera para mantener los fantasmas)
@@ -240,12 +367,14 @@ class PushoverSolver:
         # Configurar recorders salvo que el orquestador adaptativo ya lo haya hecho
         if setup_recorders:
             self._setup_recorders()
-            
+
         results = self._initialize_results_structure()
         
 
         #1. Aplicar Cargas 
-        self._apply_load_pattern(load_pattern_type, pattern_tag=pattern_tag, precalc_vector=precalc_vector)
+        self._apply_load_pattern(load_pattern_type, pattern_tag=pattern_tag,
+                                  precalc_vector=precalc_vector,
+                                  defined_pattern_tag=defined_pattern_tag)
 
         #2. Configurar motor matématico
         incr_disp = max_disp/n_steps
@@ -259,6 +388,13 @@ class PushoverSolver:
                 break
 
             self._capture_step_state(results, i, control_node_tag, cycle_idx=getattr(self, '_current_cycle_idx', 0))
+            self.manager.capture_limit_state_step(results["roof_disp"][-1])
+            self.manager.capture_fiber_step()
+            results["frozen_floors_history"].append(frozenset(frozen_floors))
+
+            if progress_callback:
+                progress_callback(i, n_steps)
+
 
             #4. Evaluación paso a paso:
             if failure_detector:
@@ -269,7 +405,8 @@ class PushoverSolver:
                     f = nuevos_fallos[0]
                     print(f"[Pushover] ⚠️ Fallo detectado en piso (Y={f.y_level}) Causa principal: '{f.cause}'. Rompiendo bucle estático.")
                     break
-
+        
+        results["limit_states"] = self.manager.get_floor_limit_states()
         return results
 
 
@@ -278,7 +415,8 @@ class PushoverSolver:
         consolidated["roof_disp"].extend(new_res["roof_disp"])
         consolidated["base_shear"].extend(new_res["base_shear"])
         consolidated.setdefault("node_displacements",[]).extend(new_res.get("node_displacements",[]))
-
+        consolidated.setdefault("element_forces_history",[]).extend(new_res.get("element_forces_history", []))
+        consolidated.setdefault("frozen_floors_history",[]).extend(new_res.get("frozen_floors_history", []))
         count = len(new_res["roof_disp"])
         consolidated["cycle_id"].extend([cycle_idx] * count)
 
@@ -288,8 +426,10 @@ class PushoverSolver:
 
         for y, data in new_res["floors"].items():
             # Si el piso ya falló en una ronda anterior, no añadir más datos residuales 
-            if y in consolidated["failed_floors"]:
-                continue
+            # (Restricción desactivada para poder ver todo el historial post-pico)
+            # if y in consolidated["failed_floors"]:
+            #     continue
+                
             if y not in consolidated["floors"]:
                 consolidated["floors"][y] = {"disp":[], "shear": [], "H": data.get("H",0.0)}
 
@@ -329,7 +469,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity = None, freeze_method="spring", max_drift = None):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, defined_pattern_tag=None, progress_callback=None):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -347,23 +487,46 @@ class PushoverSolver:
         
         self._initialize_supports()
         self._setup_recorders()
+        self.manager.yield_history = []
+        self.manager.reset_limit_states()
+        self.manager.capture_limit_state_baseline()
 
-        #2. Diccionario consolidado 
+        #2. Diccionario consolidado
         consolidated = {
             "roof_disp": [], "base_shear": [], "steps": [],
-            "cycle_id": [], "node_displacements": [], "floors": {}, "failed_floors": []
+            "cycle_id": [], "node_displacements": [], "floors": {}, "failed_floors": [],
+            "frozen_columns": {}   # {y_level: [(ni_tag, nj_tag), ...]}
         }
 
         frozen_floors = set()
+        current_round = [0]
+
+        def _round_callback(step_in_round, total_in_round):
+            if progress_callback:
+                progress_callback(step_in_round, total_in_round, current_round[0], MAX_ROUND)
+
         print(f"[Adaptative] Iniciando Pushover Adaptativo ({MAX_ROUND} posibles fallos, Dmax={max_disp})")
 
-        # Novedad: Precalcular y congelar la distribución de carga original
-        print(f"[Adaptive] Precalculando patrón modal original ({load_pattern_type}) intacto.")
-        result_pattern = self.load_generator.generate_pattern(pattern_type=load_pattern_type)
-        base_force_vector = result_pattern.force_vector
+        # Precalcular y congelar la distribución de carga base (antes de cualquier ronda)
+        print(f"[Adaptive] Precalculando distribución de carga ({load_pattern_type})...")
+        if load_pattern_type == "Patrón Definido" and defined_pattern_tag is not None:
+            pattern = self.manager.get_pattern(defined_pattern_tag)
+            if pattern:
+                base_force_vector = {
+                    load.node_tag: load.fx
+                    for load in pattern.loads
+                    if isinstance(load, NodalLoad) and abs(load.fx) > 1e-9
+                }
+                print(f"[Adaptive] Patrón '{pattern.name}' cargado ({len(base_force_vector)} nodos).")
+            else:
+                print(f"[Adaptive] ⚠️ Patrón {defined_pattern_tag} no encontrado. Usando Modal.")
+                base_force_vector = self.load_generator.generate_pattern(pattern_type="Modal").force_vector
+        else:
+            base_force_vector = self.load_generator.generate_pattern(pattern_type=load_pattern_type).force_vector
 
         # --- BUCLE DE RONDAS ADAPTATIVAS ---
         for round_idx in range(MAX_ROUND):
+            current_round[0] = round_idx
             print(f"\n[Adaptive] --- Ronda {round_idx + 1}")
 
             if round_idx > 0:
@@ -376,14 +539,17 @@ class PushoverSolver:
             
             # 3. Correr un Pushover Estándar (Delegar el Empuje)
             round_results = self.run_pushover(
-                control_node_tag=control_node_tag, 
-                max_disp=disp_per_round, 
-                n_steps=steps, 
+                control_node_tag=control_node_tag,
+                max_disp=disp_per_round,
+                n_steps=steps,
                 load_pattern_type=load_pattern_type,
                 failure_detector=self.failure_detector,
                 frozen_floors=frozen_floors, pattern_tag=current_pattern_tag,
                 precalc_vector=base_force_vector,
-                setup_recorders=False  # Los recorders ya están configurados antes del bucle
+                setup_recorders=False,
+                defined_pattern_tag=defined_pattern_tag,
+                reset_detector=False,
+                progress_callback=_round_callback
             )
 
             #4. Fusión de Datos
@@ -404,25 +570,53 @@ class PushoverSolver:
                 print(f"[Adaptive] ⚠️ Fallo detectado en piso {idx} cota Y={y_fail}. Aplicando Freeze='{freeze_method}'")
 
                 # REFACTOR SRP: Extraermos el estacio espacial de los nodos
-                deformed_state = self._get_deformed_floor_state(y_fail)
-
-
-                # Recibimos los tags de los fantasmas recién anclados a la pared!
-                new_ghosts = self.builder.freeze_floor(deformed_state, freeze_method)
+                floor_keys = sorted(self.manager.get_floor_data().keys())
+                y_bot = floor_keys[floor_keys.index(y_fail) - 1]
                 
+                # Extraer conectividad real de columnas: [(bot_tag, top_tag), ...]
+                floor_cols  = self.manager.get_floor_data().get(y_fail, {}).get("columns", [])
+                story_columns = []
+                for col in floor_cols:
+                    ni = self.manager.get_node(col.node_i)
+                    nj = self.manager.get_node(col.node_j)
+                    if not ni or not nj:
+                        continue
+                    if ni.y > nj.y:
+                        story_columns.append((col.node_j, col.node_i))  # (bot, top)
+                    else:
+                        story_columns.append((col.node_i, col.node_j))  # (bot, top)
+
+                floor_state = {
+                    "top":           self._get_deformed_floor_state(y_fail),
+                    "bot":           self._get_deformed_floor_state(y_bot),
+                    "story_columns": story_columns,
+                }
+
+                # El builder retorna los nodos fantasma Y los pares diagonales para render
+                new_ghosts, cross_pairs = self.builder.freeze_floor(floor_state, freeze_method)
+                consolidated["frozen_columns"][y_fail] = cross_pairs
+
                 # Actualizamos nuestra memoria global de apoyos activos
-                self.active_support_nodes.extend(new_ghosts)
-                
+                if new_ghosts:
+                    self.active_support_nodes.extend(new_ghosts)
+
                 frozen_floors.add(y_fail)
                 consolidated["failed_floors"].append(y_fail)
 
-            # Check fatal: Si el fallo incluyó el techo supremo, la estructura es irreparable.
-            if sorted_ys[-1] in nuevos_fallos:
-                 print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
-                 break
+            # Parar si todos los pisos estructurales están congelados
+            base_y = min(sorted_ys)
+            structural_floors = {y for y in sorted_ys if y > base_y}
+            if frozen_floors >= structural_floors:
+                print("[Adaptive] Todos los pisos estructurales congelados. Fin del análisis.")
+                break
+
+            # Con "crosses" la última planta queda arriostrada y el análisis puede continuar
+            if freeze_method != "crosses" and sorted_ys[-1] in nuevos_fallos:
+                print("[Adaptive] La última planta estructural ha fallado rotundo. Colapso Total.")
+                break
                  
         ops.remove('recorders')
         print("[Adaptive] Análisis Finalizado Exitosamente.")
 
-
+        consolidated["limit_states"] = self.manager.get_floor_limit_states()
         return consolidated                

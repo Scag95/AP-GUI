@@ -4,7 +4,6 @@ from src.utils.units import UnitManager, UnitType
 from src.utils.scale_manager import ScaleManager
 import math
 
-from PyQt6.QtWidgets import QGraphicsPolygonItem
 from PyQt6.QtGui import QPolygonF, QColor, QPen, QBrush, QFont 
 from PyQt6.QtCore import QPointF, QRectF
 
@@ -76,20 +75,25 @@ class ForceDiagramRenderer:
 
         for ele in manager.get_all_elements():
             if ele.tag not in element_forces: continue
-
-            sections_data = element_forces[ele.tag]
-            lobatto_locs = [s['loc'] for s in sections_data]
+            # 1. Desempaquetar la nueva estructura del diccionario
+            element_data = element_forces[ele.tag]
             
-            # Extraer valores numéricos
-            values = []
-            if type == 'M':
-                values = [-1*s['M'] for s in sections_data]
-            elif type == 'V':
-                values = [s['V'] for s in sections_data]
-            elif type == 'P':
-                values = [s['P'] for s in sections_data]
+            # Verificamos si es un diccionario nuevo (tiene 'sections') o si es el código viejo
+            if isinstance(element_data, dict) and 'sections' in element_data:
+                sections_data = element_data['sections']
+            else:
+                sections_data = element_data
+            # 2. Reconstrucción lógica dependiendo del tipo de gráfico
+            if type in ['M', 'P', 'V']:
+                lobatto_locs = [s['loc'] for s in sections_data]
+                if type == 'M':
+                    values = [-1 * s['M'] for s in sections_data]
+                elif type == 'V':
+                    values = [s['V'] for s in sections_data]
+                else:
+                    values = [s['P'] for s in sections_data]
 
-            self._draw_element_diagram_detailed(plot_widget, ele, values, lobatto_locs, scale_factor, color, u_type, polygons_buffer)
+                self._draw_element_diagram_detailed(plot_widget, ele, values, lobatto_locs, scale_factor, color, u_type, polygons_buffer)
 
         # 3. Dibujar TODOS los polígonos del modelo de una sola vez sumados linealmente
         if polygons_buffer:
