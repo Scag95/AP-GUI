@@ -1,0 +1,132 @@
+{
+    "materials": [
+        {
+            "tag": 1,
+            "name": "Mat_Concreto_1",
+            "rho": 2500,
+            "type": "Concrete01",
+            "fpc": 25000000.0,
+            "epsc0": 0.002,
+            "fpcu": 25000000.0,
+            "epsu": 0.0035,
+            "minmax": null
+        },
+        {
+            "tag": 2,
+            "name": "Mat_Acero_2",
+            "rho": 7850,
+            "type": "Steel01",
+            "Fy": 500000000.0,
+            "E0": 200000000000.0,
+            "b": 1e-06,
+            "a1": 0.0,
+            "a2": 1.0,
+            "a3": 0.0,
+            "a4": 1.0,
+            "minmax": null
+        }
+    ],
+    "sections": [
+        {
+            "tag": 1,
+            "name": "Columnas",
+            "type": "FiberSection",
+            "patches": [
+                {
+                    "type": "RectPatch",
+                    "material_tag": 1,
+                    "yI": -0.25,
+                    "zI": -0.25,
+                    "yJ": 0.25,
+                    "zJ": 0.25,
+                    "nIy": 15,
+                    "nIz": 15
+                }
+            ],
+            "layers": [
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 5,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.21,
+                    "zStart": -0.21,
+                    "yEnd": 0.21,
+                    "zEnd": 0.21
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 5,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.21,
+                    "zStart": -0.21,
+                    "yEnd": -0.21,
+                    "zEnd": 0.21
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 2,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.07,
+                    "zStart": -0.21,
+                    "yEnd": -0.07,
+                    "zEnd": -0.21
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 2,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.07,
+                    "zStart": 0.21,
+                    "yEnd": -0.07,
+                    "zEnd": 0.21
+                }
+            ]
+        },
+        {
+            "tag": 2,
+            "name": "Vigas",
+            "type": "FiberSection",
+            "patches": [
+                {
+                    "type": "RectPatch",
+                    "material_tag": 1,
+                    "yI": -0.2,
+                    "zI": -0.15,
+                    "yJ": 0.2,
+                    "zJ": 0.15,
+                    "nIy": 15,
+                    "nIz": 15
+                }
+            ],
+            "layers": [
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.16,
+                    "zStart": -0.11,
+                    "yEnd": 0.16,
+                    "zEnd": 0.11
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.16,
+                    "zStart": -0.11,
+                    "yEnd": -0.16,
+                    "zEnd": 0.11
+                }
+            ]
+        }
+    ],
+    "nodes": [],
+    "elements": [],
+    "patterns": []
+}
