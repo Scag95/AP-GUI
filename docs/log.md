@@ -17,6 +17,26 @@ Cada entrada sigue el formato:
 - `refactor` - Reestructuración de la wiki
 - `migration` - Movimiento de archivos
 
+### [2026-08-07] refactor | Reestructuración del repositorio, unificación de documentación y limpieza de Git
+
+**Cambios de estructura del repositorio:**
+- Migrada carpeta de documentación `md/` a `docs/`, omitiendo archivos de configuración de Obsidian (`.obsidian`).
+- Movidos `ARCHITECTURE.md`, `TODO.md` y `NEXT_SESSION_PROMPT.md` a `docs/`.
+- Creada carpeta `samples/` para organizar los archivos JSON de modelos de prueba (`1DOF.json`, `Viga empotrada.json`, `Prueba TFM.json`, etc.).
+- Creada carpeta `tests/` para scripts de pruebas (`test.py`, `model_debug.py`).
+- Creada carpeta `scripts/` para utilidades auxiliares (`create_calibration_model.py`).
+- Creado `README.md` principal en la raíz del repositorio con guía de instalación, estructura y enlaces.
+
+**Configuración de Git:**
+- Actualizado `.gitignore` para ignorar salidas temporales de simulación (`*.out`, `pushover_data/`, `debug_reactions.csv`) y `.obsidian/`.
+- Desrastreadas del control de versiones las carpetas `.agents/` y `.claude/`.
+
+**Páginas wiki actualizadas:**
+- `schema.md` — Actualizada la ruta base de documentación de `md/` a `docs/`.
+- `index.md` — Confirmada la integridad de los enlaces wiki internos `[[...]]`.
+
+---
+
 ### [2026-04-27] update | Fix bugs yield pipeline + optimización YieldRenderer
 
 **Archivos de código modificados:**

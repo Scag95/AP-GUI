@@ -5,8 +5,7 @@ Este documento define las convenciones para mantener la wiki de documentación d
 ## Estructura de Carpetas
 
 ```
-md/
-├── raw/                    # Documentos fuente originales (inmutables)
+docs/
 ├── wiki/                   # Wiki generada por el LLM (el LLM escribe aquí)
 ├── index.md                # Portada con índice
 ├── schema.md               # Este archivo (convenciones)
