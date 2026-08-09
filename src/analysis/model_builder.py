@@ -1,3 +1,4 @@
+import os
 import openseespy.opensees as ops
 from src.analysis.manager import ProjectManager
 from src.analysis.materials import Concrete01, Steel01, Elastic, Hysteretic, HystereticSM
@@ -36,7 +37,8 @@ class ModelBuilder:
         print("[OpenSees] Iniciando construcción del modelo...")
         
         # Create/Overwrite debug file
-        self.debug_file = open("model_debug.py", "w")
+        debug_path = os.path.join("tests", "model_debug.py") if os.path.exists("tests") else "model_debug.py"
+        self.debug_file = open(debug_path, "w", encoding="utf-8")
         self.debug_file.write("# Auto-generated debug script from AP-GUI\n")
         self.debug_file.write("from openseespy.opensees import *\n\n")
 

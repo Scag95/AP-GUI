@@ -1,3 +1,4 @@
+import os
 from PyQt6.QtWidgets import QSpinBox
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout,
                              QComboBox, QPushButton, QCheckBox, QProgressBar, QLabel)
@@ -190,7 +191,8 @@ class PushoverDialog(QDialog):
 
         # Reabrir archivo existente para que registre log de pushover
         try:
-            translator.builder.debug_file = open("model_debug.py", "a", encoding="utf-8")
+            debug_path = os.path.join("tests", "model_debug.py") if os.path.exists("tests") else "model_debug.py"
+            translator.builder.debug_file = open(debug_path, "a", encoding="utf-8")
             translator.builder.debug_file.write("\n\n# ====== CONFIGURACION DE PUSHOVER ======\n")
         except Exception as e:
             print(f"Aviso: No se pudo reabrir model_debug.py ({e})")

@@ -44,7 +44,7 @@ Desktop.ini
 .LSOverride
 
 # ==========================================
-# Específicos del Proyecto (AP-GUI)
+# Específicos del Proyecto (AP-GUI) y Testing
 # ==========================================
 .agent/
 .agents/
@@ -54,4 +54,6 @@ debug_reactions.csv
 *.out
 Modelo/
 .claude/
-.agents/
+.pytest_cache/
+model_debug.py
+tests/model_debug.py

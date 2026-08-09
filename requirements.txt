@@ -4,3 +4,5 @@ numpy
 pandas
 pyqt6
 pyqtgraph
+pytest
+pytest-qt
