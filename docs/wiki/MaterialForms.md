@@ -16,7 +16,9 @@ Conjunto de `QWidget` que exponen los parámetros de entrada de cada material. U
 |------|------------------|-------------------|
 | `ConcreteForm` | Concrete04 | fc, ec0, ecu, ft, Ets, beta |
 | `SteelForm` | Steel01 | Fy, E0, b, a1-a4, sigInit |
+| `Steel02Form` | Steel02 | Fy, E0, b, R0, cR1, cR2, a1-a4, sigInit |
 | `ElasticForm` | Elastic | E |
+| `ElasticPPGapForm` | ElasticPPGap | E, Fy, gap, eta, damage |
 | `HystereticForm` | Hysteretic | s1p/n, e1p/n, s2p/n, e2p/n, s3p/n, e3p/n, pinchX/Y, damage1/2, beta |
 | `HystereticSMForm` | HystereticSM | Igual que Hysteretic + preview de curva |
 

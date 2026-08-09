@@ -90,6 +90,42 @@ class HystereticSM(Material):
     ]
 ```
 
+### Steel02
+
+Modelo de acero Giuffré-Menegetto-Pinto con endurecimiento isotrópico.
+
+```python
+class Steel02(Material):
+    __slots__ = ['Fy', 'E0', 'b', 'R0', 'cR1', 'cR2', 'a1', 'a2', 'a3', 'a4', 'sigInit', 'minmax']
+```
+
+| Atributo | Descripción |
+|----------|-------------|
+| `Fy` | Esfuerzo de fluencia |
+| `E0` | Módulo de elasticidad inicial |
+| `b` | Ratio de endurecimiento post-fluencia |
+| `R0, cR1, cR2` | Parámetros de transición elasto-plástica (Giuffré-Menegetto-Pinto) |
+| `a1, a2, a3, a4` | Parámetros de endurecimiento isotrópico |
+| `sigInit` | Esfuerzo inicial |
+
+### ElasticPPGap
+
+Material elástico perfecto plástico con holgura (gap) e impacto.
+
+```python
+class ElasticPPGap(Material):
+    __slots__ = ['E', 'Fy', 'gap', 'eta', 'damage']
+```
+
+| Atributo | Descripción |
+|----------|-------------|
+| `E` | Módulo elástico |
+| `Fy` | Esfuerzo de fluencia |
+| `gap` | Apertura de la holgura inicial (gap) |
+| `eta` | Ratio de endurecimiento post-fluencia |
+| `damage` | Tipo de acumulación de daño (`noDamage` / `damage`) |
+
+
 ## Métodos por Clase
 
 | Clase | Método | Descripción | Retorna |

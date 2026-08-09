@@ -48,6 +48,12 @@ Documentación completa del proyecto **AP-GUI** — Análisis Estructural 2D con
 | [[FrameGenerator]] | Generador de pórticos planos regulares y paramétricos |
 | [[LoadPushoverGenerator]] | Generador de patrones de carga lateral Pushover |
 
+## 🧪 Pruebas Automatizadas
+
+| Artículo | Descripción |
+|----------|-------------|
+| [[RunTests]] | Lanzador unificado de la suite de pruebas del proyecto (`pytest`) |
+
 ## 🖥️ Interfaz Gráfica (UI Core)
 
 | Artículo | Descripción |

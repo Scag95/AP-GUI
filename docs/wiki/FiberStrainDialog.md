@@ -2,12 +2,15 @@
 
 Widget MDI anclable que visualiza la sección transversal de fibras coloreada por deformación unitaria (strain) para cada paso del análisis pushover.
 
-**Clase:** `FiberStrainDialog(QWidget)`  
+**Clases:** `FiberStrainDialog(QWidget)`, `FiberStressStrainDialog(QWidget)`  
 **Archivo:** `src/ui/dialogs/fiber_strain_dialog.py`
 
 ## Propósito
 
-Permite inspeccionar la evolución de deformaciones en cada fibra de la sección a lo largo del pushover. Diferencia entre `FiberSection` (visualizable) y `AggregatorSection` (sin fibras → mensaje informativo).
+Permite inspeccionar la evolución de deformaciones y esfuerzos en cada fibra de la sección a lo largo del análisis Pushover. Diferencia entre `FiberSection` (visualizable) y `AggregatorSection` (sin fibras → mensaje informativo).
+
+- `FiberStrainDialog`: Muestra mapa 2D de deformaciones unitarias (strains) en la sección.
+- `FiberStressStrainDialog`: Muestra diagrama de historia de esfuerzo vs. deformación por fibra.
 
 ## Clases internas
 

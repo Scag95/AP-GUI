@@ -332,4 +332,22 @@ Documentación completa de clases que faltaban en la wiki.
 - 67 artículos verificados.
 - 0 archivos vacíos (0 bytes).
 - 0 enlaces internos rotos.
-- 100% de los artículos categorizados e indexados en `docs/index.md`.
+- 100% de los artículos categorizados e indexados en `docs/index.md`.
+
+---
+
+### [2026-08-09] ingest | Cobertura 100% código fuente vs wiki + clases faltantes y test runner
+
+**Auditoría de código realizada:**
+- Comprobados los 61 archivos de código Python (`src/` y raíz).
+- Comprobadas todas las clases declaradas en el proyecto.
+
+**Páginas creadas y actualizadas:**
+- `RunTests.md` (nueva) — Documentación del lanzador unificado `run_tests.py` y ejecución de `pytest`.
+- `Materials.md` — Documentación de las clases `Steel02` y `ElasticPPGap` (parámetros y métodos).
+- `MaterialForms.md` — Documentación de los formularios `Steel02Form` y `ElasticPPGapForm`.
+- `FiberStrainDialog.md` — Documentación de la clase `FiberStressStrainDialog`.
+- `index.md` — Añadida la sección "🧪 Pruebas Automatizadas" (100% de los 68 artículos indexados).
+
+**Resultado final:** Cobertura de código y clases en la wiki del **100%**.
+
