@@ -150,34 +150,11 @@ class PushoverSolver:
         ops.reactions()
 
         total_shear = 0.0
-        
-        # --- CHIVATO: Logueando en .csv ---
-        import os
-        log_file = os.path.join(self.manager.base_dir if hasattr(self.manager, 'base_dir') else '.', "debug_reactions.csv")
-        
-        # Si es el primer paso de la primera ronda, limpiar o crear cabecera
-        if step_idx == 1 and cycle_idx == 0:
-            with open(log_file, "w", encoding="utf-8") as f:
-                f.write("Cycle,Step,NodeTag,IsGhost,ReacX,ReacY,ReacZ\n")
-        # ----------------------------------
 
         for b_node in self.active_support_nodes:
             reacs = ops.nodeReaction(b_node)
-
             if reacs:
-                is_ghost = b_node >= 2000000
-                
-                # --- Guardamos el valor exacto devuelto por OpenSees ---
-                with open(log_file, "a", encoding="utf-8") as f:
-                    # reacs suele tener 3 valores (Fx, Fy, Mz) para 2D, protegido por si falla.
-                    rx = reacs[0] if len(reacs) > 0 else 0.0
-                    ry = reacs[1] if len(reacs) > 1 else 0.0
-                    rz = reacs[2] if len(reacs) > 2 else 0.0
-                    f.write(f"{cycle_idx},{step_idx},{b_node},{is_ghost},{rx},{ry},{rz}\n")
-                # -------------------------------------------------------
-
-                # por lo que invertimos su reacción.
-                    total_shear += reacs[0]
+                total_shear += reacs[0]
 
         return -total_shear
 
