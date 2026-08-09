@@ -20,12 +20,13 @@ AP-GUI/
 ├── docs/             # Documentación técnica, arquitectura e índice wiki
 ├── samples/          # Archivos de modelos de prueba en formato JSON
 ├── scripts/          # Scripts auxiliares y herramientas de desarrollo
-├── tests/            # Scripts de prueba y depuración
+├── tests/            # Batería de pruebas automatizadas (pytest y pytest-qt)
 ├── src/              # Código fuente principal de la aplicación
 │   ├── analysis/     # Modelo de datos, gestor de proyecto y traductores OpenSees
 │   ├── ui/           # Interfaz gráfica (ventanas, paneles, visualizadores, diálogos)
 │   └── utils/        # Gestión de unidades, factores de escala y utilidades
 ├── main.py           # Punto de entrada principal de la aplicación
+├── run_tests.py      # Lanzador unificado de la batería de pruebas
 └── requirements.txt  # Dependencias del proyecto
 ```
 
@@ -55,6 +56,16 @@ pip install -r requirements.txt
 
 ```bash
 python main.py
+```
+
+### 4. Ejecutar la batería de pruebas
+
+Para verificar el funcionamiento del modelo y la aplicación mediante la suite de pruebas automatizadas:
+
+```bash
+python run_tests.py
+# O directamente con pytest:
+pytest
 ```
 
 ---
