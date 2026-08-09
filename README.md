@@ -78,3 +78,11 @@ Para consultar la arquitectura detallada, el flujo de llamadas o las guías de c
 - [Documento de Arquitectura Principal](file:///c:/Users/alber/AP-GUI/docs/ARCHITECTURE.md)
 - [Esquema de datos JSON](file:///c:/Users/alber/AP-GUI/docs/schema.md)
 - [Registro de cambios y desarrollo](file:///c:/Users/alber/AP-GUI/docs/log.md)
+
+---
+
+## 📄 Licencia
+
+Este proyecto se distribuye bajo la licencia **Creative Commons Atribución-NoComercial-CompartirIgual 4.0 Internacional (CC BY-NC-SA 4.0)**. 
+Para más detalles, consulta el archivo [LICENSE](file:///c:/Users/alber/AP-GUI/LICENSE).
+
