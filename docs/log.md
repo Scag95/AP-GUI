@@ -318,3 +318,18 @@ Documentación completa de clases que faltaban en la wiki.
 - `GridDialog` - Generador de mallas estructurales
 - `CommandConsole` - Widget CLI
 - `UnitSelectorWidget` - Selector de unidades con presets
+
+---
+
+### [2026-08-09] lint | 3 issues found, 3 auto-fixed
+
+**Verificaciones de salud realizadas:**
+- `docs/wiki/AnimationToolbar.md`: Archivo de 0 bytes completado y documentado con la arquitectura y métodos de la clase `AnimationToolbar`.
+- `docs/wiki/Visualizers.md`: Corregido enlace interno roto `[[MassivePolygonsItem]]` a `[[ForceDiagramRenderer]]`.
+- `docs/index.md`: Reestructurado y completado el índice global indexando y categorizando el 100% de las 67 páginas de la wiki.
+
+**Resultado final de la auditoría:**
+- 67 artículos verificados.
+- 0 archivos vacíos (0 bytes).
+- 0 enlaces internos rotos.
+- 100% de los artículos categorizados e indexados en `docs/index.md`.

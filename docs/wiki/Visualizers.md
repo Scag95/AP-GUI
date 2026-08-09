@@ -162,7 +162,7 @@ Dibuja diagramas de fuerzas (Momento, Cortante, Axial).
 
 **Estrategia de cortante:** usa solo los extremos del vector `localForce` (`v_i = [1]`, `v_j = [4]`) para trazar una línea recta exacta en lugar de interpolar puntos interiores.
 
-**Relacionado:** [[MassivePolygonsItem]], [[ProjectManager]], [[ScaleManager]]
+**Relacionado:** [[ForceDiagramRenderer]], [[ProjectManager]], [[ScaleManager]]
 
 ---
 
