@@ -57,3 +57,4 @@ Modelo/
 .pytest_cache/
 model_debug.py
 tests/model_debug.py
+.codebase-memory

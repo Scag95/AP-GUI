@@ -1,0 +1,356 @@
+{
+    "materials": [
+        {
+            "tag": 1,
+            "name": "Mat_Concreto_1",
+            "rho": 2500,
+            "type": "Concrete01",
+            "fpc": 25000000.0,
+            "epsc0": 0.002,
+            "fpcu": 25000000.0,
+            "epsu": 0.0035,
+            "minmax": null
+        },
+        {
+            "tag": 2,
+            "name": "Mat_Acero_2",
+            "rho": 7850,
+            "type": "Steel01",
+            "Fy": 500000000.0,
+            "E0": 200000000000.0,
+            "b": 1e-06,
+            "a1": 0.0,
+            "a2": 1.0,
+            "a3": 0.0,
+            "a4": 1.0,
+            "minmax": null
+        }
+    ],
+    "sections": [
+        {
+            "tag": 1,
+            "name": "Columna 500x500",
+            "type": "FiberSection",
+            "patches": [
+                {
+                    "type": "RectPatch",
+                    "material_tag": 1,
+                    "yI": -0.25,
+                    "zI": -0.25,
+                    "yJ": 0.25,
+                    "zJ": 0.25,
+                    "nIy": 10,
+                    "nIz": 10
+                }
+            ],
+            "layers": [
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 4,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.21,
+                    "zStart": -0.21,
+                    "yEnd": 0.21,
+                    "zEnd": 0.21
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 4,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.21,
+                    "zStart": -0.21,
+                    "yEnd": -0.21,
+                    "zEnd": 0.21
+                }
+            ]
+        },
+        {
+            "tag": 2,
+            "name": "Viga 300x400",
+            "type": "FiberSection",
+            "patches": [
+                {
+                    "type": "RectPatch",
+                    "material_tag": 1,
+                    "yI": -0.2,
+                    "zI": -0.15,
+                    "yJ": 0.2,
+                    "zJ": 0.15,
+                    "nIy": 10,
+                    "nIz": 10
+                }
+            ],
+            "layers": [
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": 0.16,
+                    "zStart": -0.11,
+                    "yEnd": 0.16,
+                    "zEnd": 0.11
+                },
+                {
+                    "type": "LayerStraight",
+                    "material_tag": 2,
+                    "num_bars": 3,
+                    "area_bar": 0.0003141592653589793,
+                    "yStart": -0.16,
+                    "zStart": -0.11,
+                    "yEnd": -0.16,
+                    "zEnd": 0.11
+                }
+            ]
+        }
+    ],
+    "nodes": [
+        {
+            "tag": 1,
+            "x": 0.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ]
+        },
+        {
+            "tag": 2,
+            "x": 0.0,
+            "y": 3.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 3,
+            "x": 0.0,
+            "y": 6.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 4,
+            "x": 0.0,
+            "y": 9.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 5,
+            "x": 3.0,
+            "y": 0.0,
+            "fixity": [
+                1,
+                1,
+                1
+            ]
+        },
+        {
+            "tag": 6,
+            "x": 3.0,
+            "y": 3.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 7,
+            "x": 3.0,
+            "y": 6.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "tag": 8,
+            "x": 3.0,
+            "y": 9.0,
+            "fixity": [
+                0,
+                0,
+                0
+            ]
+        }
+    ],
+    "elements": [
+        {
+            "type": "ForceBeamColumn",
+            "tag": 1,
+            "node_i": 1,
+            "node_j": 2,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 625.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 2,
+            "node_i": 2,
+            "node_j": 3,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 625.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 3,
+            "node_i": 3,
+            "node_j": 4,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 625.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 4,
+            "node_i": 5,
+            "node_j": 6,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 625.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 5,
+            "node_i": 6,
+            "node_j": 7,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 625.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 6,
+            "node_i": 7,
+            "node_j": 8,
+            "section_tag": 1,
+            "transf_tag": 1,
+            "mass_density": 625.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 7,
+            "node_i": 2,
+            "node_j": 6,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 300.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 8,
+            "node_i": 3,
+            "node_j": 7,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 300.0,
+            "integration_points": 5
+        },
+        {
+            "type": "ForceBeamColumn",
+            "tag": 9,
+            "node_i": 4,
+            "node_j": 8,
+            "section_tag": 2,
+            "transf_tag": 1,
+            "mass_density": 300.0,
+            "integration_points": 5
+        }
+    ],
+    "patterns": [
+        {
+            "type": "LoadPattern",
+            "tag": 1,
+            "name": "Dead",
+            "factor": 1.0,
+            "loads": [
+                {
+                    "type": "ElementLoad",
+                    "tag": 1,
+                    "element_tag": 1,
+                    "wx": -6131.25,
+                    "wy": -0.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 2,
+                    "element_tag": 2,
+                    "wx": -6131.25,
+                    "wy": -0.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 3,
+                    "element_tag": 3,
+                    "wx": -6131.25,
+                    "wy": -0.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 4,
+                    "element_tag": 4,
+                    "wx": -6131.25,
+                    "wy": -0.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 5,
+                    "element_tag": 5,
+                    "wx": -6131.25,
+                    "wy": -0.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 6,
+                    "element_tag": 6,
+                    "wx": -6131.25,
+                    "wy": -0.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 7,
+                    "element_tag": 7,
+                    "wx": -0.0,
+                    "wy": -2943.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 8,
+                    "element_tag": 8,
+                    "wx": -0.0,
+                    "wy": -2943.0
+                },
+                {
+                    "type": "ElementLoad",
+                    "tag": 9,
+                    "element_tag": 9,
+                    "wx": -0.0,
+                    "wy": -2943.0
+                }
+            ]
+        }
+    ]
+}
