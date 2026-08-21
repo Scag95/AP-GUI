@@ -241,10 +241,6 @@ class SteelForm(QWidget):
             "Fy": self.spin_Fy.get_value_base(),
             "E0": self.spin_E0.get_value_base(),
             "b": self.spin_b.value(),
-            "a1": 0.0,
-            "a2": 1.0,
-            "a3": 0.0,
-            "a4": 1.0,
             "minmax": None
         }
         

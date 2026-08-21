@@ -446,7 +446,7 @@ class PushoverSolver:
 
 
 
-    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, defined_pattern_tag=None, progress_callback=None):
+    def run_adaptative_pushover(self, control_node_tag, max_disp, steps, load_pattern_type, sensitivity=None, freeze_method="spring", max_drift=None, defined_pattern_tag=None, progress_callback=None, cross_beams=False, cross_columns=False):
         """
         Análisis Pushover secuancial
         Corre Pushover iterativamente delegando la matemática; cuando un planta colapsa, la congela y reinicia.
@@ -570,7 +570,7 @@ class PushoverSolver:
                 }
 
                 # El builder retorna los nodos fantasma Y los pares diagonales para render
-                new_ghosts, cross_pairs = self.builder.freeze_floor(floor_state, freeze_method)
+                new_ghosts, cross_pairs = self.builder.freeze_floor(floor_state, freeze_method, cross_beams=cross_beams, cross_columns=cross_columns)
                 consolidated["frozen_columns"][y_fail] = cross_pairs
 
                 # Actualizamos nuestra memoria global de apoyos activos
