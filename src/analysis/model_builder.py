@@ -226,7 +226,7 @@ class ModelBuilder:
                     self.log_command('eleLoad', '-ele', load.element_tag, '-type', '-beamUniform', load.wy, load.wx)
 
 
-    def freeze_floor(self, floor_state, method="spring"):
+    def freeze_floor(self, floor_state, method="spring", cross_beams=False, cross_columns=False):
         """
         Freeze logic SRP: Recibe el estado deformado desde el Solver.
         Inyecta restricciones en el modelo (Opensees) temporalmente.
@@ -320,17 +320,21 @@ class ModelBuilder:
 
                 self.log_command('element', 'Truss', base_ele_tag + 1, bot_left,  top_right, A, mat_tag)
                 self.log_command('element', 'Truss', base_ele_tag + 2, bot_right, top_left,  A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 3, top_left,  top_right, A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 4, bot_left,  bot_right, A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 5, bot_left,  top_left,  A, mat_tag)
-                self.log_command('element', 'Truss', base_ele_tag + 6, bot_right, top_right, A, mat_tag)
 
                 cross_pairs.append((bot_left,  top_right))
                 cross_pairs.append((bot_right, top_left))
-                cross_pairs.append((top_left,  top_right))
-                cross_pairs.append((bot_left,  bot_right))
-                cross_pairs.append((bot_left,  top_left))
-                cross_pairs.append((bot_right, top_right))
+
+                if cross_beams:
+                    self.log_command('element', 'Truss', base_ele_tag + 3, top_left,  top_right, A, mat_tag)
+                    self.log_command('element', 'Truss', base_ele_tag + 4, bot_left,  bot_right, A, mat_tag)
+                    cross_pairs.append((top_left,  top_right))
+                    cross_pairs.append((bot_left,  bot_right))
+
+                if cross_columns:
+                    self.log_command('element', 'Truss', base_ele_tag + 5, bot_left,  top_left,  A, mat_tag)
+                    self.log_command('element', 'Truss', base_ele_tag + 6, bot_right, top_right, A, mat_tag)
+                    cross_pairs.append((bot_left,  top_left))
+                    cross_pairs.append((bot_right, top_right))
 
             return created_nodes, cross_pairs
 

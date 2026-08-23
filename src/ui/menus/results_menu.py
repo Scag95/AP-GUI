@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 from src.ui.dialogs.pushover_result_dialog import PushoverResultsWidget
+from src.ui.dialogs.pushover_log_dialog import PushoverLogDialog
 from src.ui.dialogs.moment_curvature_dialog import MomentCurvatureWidget
 from src.ui.dialogs.fiber_strain_dialog import FiberStrainDialog
 from src.analysis.manager import ProjectManager
@@ -33,6 +34,10 @@ class ResultsMenu(QMenu):
         act_push = QAction("Curva Pushover", self)
         act_push.triggered.connect(self._show_curve_pushover)
         self.addAction(act_push)
+
+        act_log = QAction("Ver Logs del Último Pushover", self)
+        act_log.triggered.connect(self._show_pushover_logs)
+        self.addAction(act_log)
 
         act_sec = QAction("Análisis de Sección (M-phi)", self)
         act_sec.triggered.connect(self._show_section_results)
@@ -71,6 +76,16 @@ class ResultsMenu(QMenu):
             return
         widget = PushoverResultsWidget(results)
         self.parent().add_tool_window(widget, "Curva de Capacidad (Pushover)")
+
+    def _show_pushover_logs(self):
+        log_text = getattr(ProjectManager.instance(), "pushover_log_text", None)
+        if not log_text:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Sin logs",
+                                    "Aún no se ha ejecutado ningún análisis pushover.")
+            return
+        dialog = PushoverLogDialog(log_text, self.parent())
+        dialog.exec()
 
     def _show_section_results(self):
         widget = MomentCurvatureWidget()

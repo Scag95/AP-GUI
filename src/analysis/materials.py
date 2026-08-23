@@ -75,7 +75,7 @@ class Concrete01(Material):
 
 class Steel01(Material):
     __slots__ = ['Fy', 'E0', 'b', 'a1', 'a2', 'a3', 'a4', 'minmax']
-    def __init__(self,tag,name,Fy,E0,b, rho=7850.0,a1=0.0, a2=0.0, a3=0.0, a4=0.0, minmax=None):
+    def __init__(self,tag,name,Fy,E0,b, rho=7850.0,a1=None, a2=None, a3=None, a4=None, minmax=None):
         super().__init__(tag,name, rho)
         
         self.Fy = Fy
@@ -93,8 +93,13 @@ class Steel01(Material):
         return self.Fy / self.E0
 
     def get_opensees_args(self):
-        return ["Steel01", self.tag, self.Fy, self.E0, self.b, self.a1, self.a2, self.a3, self.a4]
-    
+        args = ["Steel01", self.tag, self.Fy, self.E0, self.b]
+        # a1-a4 son opcionales en OpenSees y se pasan como grupo;
+        # solo se incluyen si los cuatro están definidos
+        if all(v is not None for v in (self.a1, self.a2, self.a3, self.a4)):
+            args.extend([self.a1, self.a2, self.a3, self.a4])
+        return args
+
     def to_dict(self):
         data=super().to_dict()
 
@@ -103,10 +108,12 @@ class Steel01(Material):
         data["E0"] = self.E0
         data["b"] = self.b
         data["rho"] = self.rho
-        data["a1"] = self.a1
-        data["a2"] = self.a2
-        data["a3"] = self.a3
-        data["a4"] = self.a4
+        # Solo serializar a1-a4 si están definidos
+        if all(v is not None for v in (self.a1, self.a2, self.a3, self.a4)):
+            data["a1"] = self.a1
+            data["a2"] = self.a2
+            data["a3"] = self.a3
+            data["a4"] = self.a4
         data["minmax"] = self.minmax
         return data
 
@@ -119,10 +126,10 @@ class Steel01(Material):
             E0 = data["E0"],
             b = data["b"],
             rho = data.get("rho",7850.0),
-            a1 = data.get("a1", 0.0),
-            a2 = data.get("a2", 0.0),
-            a3 = data.get("a3", 0.0),
-            a4 = data.get("a4", 0.0),
+            a1 = data.get("a1", None),
+            a2 = data.get("a2", None),
+            a3 = data.get("a3", None),
+            a4 = data.get("a4", None),
             minmax = data.get("minmax", None)
         )
 

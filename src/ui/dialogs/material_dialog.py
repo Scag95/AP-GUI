@@ -238,6 +238,11 @@ class MaterialDialog(QDialog):
             for key, value in new_data.items():
                 if hasattr(material, key):
                     setattr(material,key, value)
+            # Si los opcionales no vienen en el form (checkbox desmarcado),
+            # resetearlos a None para que no queden valores obsoletos
+            for opt in ("a1", "a2", "a3", "a4"):
+                if opt not in new_data:
+                    setattr(material, opt, None)
         
         elif isinstance(material, Elastic):
             new_data = self.form_elastic.get_data()
