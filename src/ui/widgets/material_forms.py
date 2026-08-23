@@ -209,18 +209,19 @@ class SteelForm(QWidget):
         self.spin_E0.set_value_base(material.E0)
         self.spin_b.setValue(material.b)
 
-        a1 = getattr(material, 'a1', 0.0)
-        a2 = getattr(material, 'a2', 1.0)
-        a3 = getattr(material, 'a3', 0.0)
-        a4 = getattr(material, 'a4', 1.0)
-        
+        # None = opcional no definido; mostrar los defaults de OpenSees en el form
+        a1 = material.a1 if material.a1 is not None else 0.0
+        a2 = material.a2 if material.a2 is not None else 1.0
+        a3 = material.a3 if material.a3 is not None else 0.0
+        a4 = material.a4 if material.a4 is not None else 1.0
+
         self.spin_a1.setValue(a1)
         self.spin_a2.setValue(a2)
         self.spin_a3.setValue(a3)
         self.spin_a4.setValue(a4)
-        
+
         has_minmax = getattr(material, 'minmax', None) is not None
-        has_a = any(v != 0.0 for v in [a1, a2, a3, a4])
+        has_a = any(v is not None for v in (material.a1, material.a2, material.a3, material.a4))
         
         if has_minmax or has_a:
             self.chk_optional.setChecked(True)
